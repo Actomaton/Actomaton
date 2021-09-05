@@ -496,6 +496,7 @@ This indirection allows us to build more sophisticated UI architecture including
 ## References
 
 - [Functional iOS Architecture for SwiftUI - Speaker Deck](https://speakerdeck.com/inamiy/functional-ios-architecture-for-swiftui)
+- [Functional iOS Architecture for SwiftUI (English)](https://zenn.dev/inamiy/books/3dd014a50f321040a047)
 
 ## License
 
