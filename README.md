@@ -113,6 +113,8 @@ NOTE: There are 5 ways of creating `Effect` in Actomaton:
 
 ### Example 1-2. Login-Logout (and ForceLogout)
 
+![login-diagram](https://user-images.githubusercontent.com/138476/132146518-686deb5f-ff01-489a-abf2-e2ef2a2adb03.png)
+
 ```swift
 enum State {
     case loggedOut, loggingIn, loggedIn, loggingOut
