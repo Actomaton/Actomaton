@@ -324,7 +324,7 @@ In this example, `Effect(id:sequence:)` is used for timer effect, which yields `
 
 [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery) provides a good example of how `Reducer`s can be combined together into one big Reducer using `Reducer.combine`.
 
-In this example, [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) is used as a counterpart of `WritableKeyPath`, so we we use both, we can easily construct Mega-Reducer without a hussle.
+In this example, [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) is used as a counterpart of `WritableKeyPath`, so if we use both, we can easily construct Mega-Reducer without a hussle.
 
 (NOTE: `CasePath` is useful when dealing with enums, e.g. `enum Action` and `enum Current` in this example)
 
