@@ -1,4 +1,5 @@
 import SwiftUI
+import CasePaths
 
 extension Binding
 {
@@ -25,6 +26,23 @@ extension Binding
         Binding<SubValue>(
             get: { self.wrappedValue[keyPath: keyPath] },
             set: { self.wrappedValue[keyPath: keyPath] = $0 }
+        )
+    }
+
+    /// Transforms `<Value>` to `<SubValue?>` using `CasePath`.
+    /// - Note: `Value` should be enum value.
+    public subscript<SubValue>(casePath casePath: CasePath<Value, SubValue>)
+        -> Binding<SubValue?>
+    {
+        Binding<SubValue?>(
+            get: {
+                casePath.extract(from: self.wrappedValue)
+            },
+            set: { value in
+                if let value = value {
+                    self.wrappedValue = casePath.embed(value)
+                }
+            }
         )
     }
 }
