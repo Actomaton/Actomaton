@@ -91,8 +91,8 @@ extension Effect
     {
         .init(kinds: self.kinds.map { kind in
             switch kind {
-            case let .single(runner):
-                return .single(runner.map(action: f))
+            case let .single(single):
+                return .single(single.map(action: f))
 
             case let .sequence(sequence):
                 return .sequence(sequence.map(action: f))
@@ -108,8 +108,8 @@ extension Effect
     {
         .init(kinds: self.kinds.map { kind in
             switch kind {
-            case let .single(runner):
-                return .single(runner.map(id: f))
+            case let .single(single):
+                return .single(single.map(id: f))
 
             case let .sequence(sequence):
                 return .sequence(sequence.map(id: f))
@@ -127,7 +127,7 @@ extension Effect
 {
     internal var singles: [Single]
     {
-        self.kinds.compactMap { $0.runner }
+        self.kinds.compactMap { $0.single }
     }
 
     internal var sequences: [_Sequence]
@@ -149,7 +149,7 @@ extension Effect
         case sequence(_Sequence)
         case cancel((EffectID) -> Bool)
 
-        internal var runner: Single?
+        internal var single: Single?
         {
             guard case let .single(value) = self else { return nil }
             return value
