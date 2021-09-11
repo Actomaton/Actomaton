@@ -22,9 +22,14 @@ public struct Reducer<Action, State, Environment>
         }
     }
 
-    public static func combine(_ reducers: Reducer...) -> Reducer
+    public static func combine(_ reducers: [Reducer]) -> Reducer
     {
         reducers.reduce(into: .empty, { $0 = $0 + $1 })
+    }
+
+    public static func combine(_ reducers: Reducer...) -> Reducer
+    {
+        self.combine(reducers)
     }
 
     // MARK: - Contravariant Functor

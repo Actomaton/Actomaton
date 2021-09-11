@@ -70,6 +70,16 @@ extension Effect
     {
         .init(kinds: l.kinds + r.kinds)
     }
+
+    public static func combine(_ effects: [Effect]) -> Effect
+    {
+        effects.reduce(into: .empty, { $0 = $0 + $1 })
+    }
+
+    public static func combine(_ effects: Effect...) -> Effect
+    {
+        self.combine(effects)
+    }
 }
 
 // MARK: - Functor
