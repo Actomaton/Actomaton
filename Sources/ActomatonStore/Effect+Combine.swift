@@ -9,7 +9,7 @@ extension Publisher where Failure == Never
         id: EffectID? = nil
     ) -> Effect<Output>
     {
-        Effect(id: id, sequence: self.toAsync())
+        Effect(id: id, sequence: self.toAsyncStream())
     }
 }
 
@@ -25,17 +25,15 @@ extension Publisher
     }
 }
 
-// MARK: - Private
+// MARK: - toAsyncStream
 
 extension Publisher
 {
     /// `Publisher` to `AsyncStream`.
-    private func toAsync() -> AsyncStream<Output> where Failure == Never
+    public func toAsyncStream() -> AsyncStream<Output> where Failure == Never
     {
         AsyncStream(Output.self) { continuation in
-            var subscriptions = [AnyCancellable]()
-
-            self
+            let cancellable = self
                 .sink(
                     receiveCompletion: { completion in
                         switch completion {
@@ -45,16 +43,13 @@ extension Publisher
                             continuation.yield(with: .failure(error))
                         }
                     },
-                    receiveValue: {
-                        output in continuation.yield(output)
+                    receiveValue: { output in
+                        continuation.yield(output)
                     }
                 )
-                .store(in: &subscriptions)
-
-            let subs = subscriptions
 
             continuation.onTermination = { @Sendable _ in
-                _ = subs
+                withExtendedLifetime(cancellable, {})
             }
         }
     }
