@@ -41,11 +41,22 @@ public actor Actomaton<Action, State>
 
     /// Sends `action` to `Actomaton`.
     ///
+    /// - Parameters:
+    ///   - priority:
+    ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
+    ///   - tracksFeedbacks:
+    ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
+    ///     so that their wait-for-all and cancellations are possible.
+    ///     Default is `false`.
+    ///
     /// - Returns:
     ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
-    ///   Note that this task won't handle any consecutive feedback effects.
     @discardableResult
-    public func send(_ action: Action) -> Task<(), Never>?
+    public func send(
+        _ action: Action,
+        priority: TaskPriority? = nil,
+        tracksFeedbacks: Bool = false
+    ) -> Task<(), Never>?
     {
         let effect = reducer.run(action, &state, ())
 
@@ -72,12 +83,15 @@ public actor Actomaton<Action, State>
                 previousTask?.cancel()
             }
 
-            let task = Task {
+            let task = Task(priority: priority) {
                 let nextAction = await single.run()
 
                 // Feed back `nextAction`.
                 if let nextAction = nextAction, !Task.isCancelled {
-                    send(nextAction)
+                    let feedbackTask = send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+                    if tracksFeedbacks {
+                        await feedbackTask?.value
+                    }
                 }
             }
 
@@ -96,14 +110,33 @@ public actor Actomaton<Action, State>
                 previousTask?.cancel()
             }
 
-            let task = Task {
+            let task = Task(priority: priority) {
                 do {
+                    var feedbackTasks: [Task<(), Never>] = []
+
                     for try await nextAction in sequence.sequence {
                         if Task.isCancelled { break }
 
                         // Feed back `nextAction`.
-                        send(nextAction)
+                        let feedbackTask = send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+
+                        if let feedbackTask = feedbackTask {
+                            feedbackTasks.append(feedbackTask)
+                        }
                     }
+
+                    if tracksFeedbacks {
+                        await withTaskGroup(of: Void.self) { group in
+                            for feedbackTask in feedbackTasks {
+                                group.addTask(priority: priority) {
+                                    await feedbackTask.value
+                                }
+                            }
+
+                            await group.waitForAll()
+                        }
+                    }
+
                 } catch {
                     // print("[Actomaton] Warning: AsyncSequence error is ignored: \(error)")
                 }

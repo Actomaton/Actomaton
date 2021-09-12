@@ -31,6 +31,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                         if Task.isCancelled {
                             Debug.print("_1To2 cancelled")
                             self.is1To2Cancelled = true
+                            return nil
                         }
                         return ._2To3
                     }
@@ -44,6 +45,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                         if Task.isCancelled {
                             Debug.print("_2To3 cancelled")
                             self.is2To3Cancelled = true
+                            return nil
                         }
                         return ._3To4
                     }
