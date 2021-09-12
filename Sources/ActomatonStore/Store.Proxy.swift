@@ -9,9 +9,9 @@ extension Store
         @Binding
         public private(set) var state: State
 
-        public let send: (Action) -> Void
+        public let send: (Action, TaskPriority) -> Void
 
-        public init(state: Binding<State>, send: @escaping (Action) -> Void)
+        public init(state: Binding<State>, send: @escaping (Action, TaskPriority) -> Void)
         {
             self._state = state
             self.send = send
@@ -29,7 +29,7 @@ extension Store
         public func contramap<Action2>(action f: @escaping (Action2) -> Action)
             -> Store<Action2, State>.Proxy
         {
-            .init(state: self.$state, send: { self.send(f($0)) })
+            .init(state: self.$state, send: { self.send(f($0), $1) })
         }
 
         // MARK: - To Binding
@@ -54,7 +54,7 @@ extension Store
                 },
                 set: {
                     if let action = onChange($0) {
-                        self.send(action)
+                        self.send(action, stateBindingTaskPriority)
                     }
                 }
             )
