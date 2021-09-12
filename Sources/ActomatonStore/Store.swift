@@ -56,8 +56,6 @@ public final class Store<Action, State>: ObservableObject
 
 }
 
-let stateBindingTaskPriority: TaskPriority = .high
-
 // MARK: - Private
 
 // NOTE:
@@ -66,10 +64,10 @@ let stateBindingTaskPriority: TaskPriority = .high
 // To call these methods, use `proxy` instead.
 extension Store
 {
-    private func send(_ action: Action, priority: TaskPriority? = nil)
+    private func send(_ action: Action, priority: TaskPriority? = nil, tracksFeedbacks: Bool) -> Task<(), Never>
     {
         Task(priority: priority) {
-            await self.actomaton.send(.action(action), priority: priority)
+            await self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
         }
     }
 
@@ -80,8 +78,8 @@ extension Store
                 self.state
             },
             set: { newValue in
-                Task(priority: stateBindingTaskPriority) {
-                    await self.actomaton.send(.state(newValue), priority: stateBindingTaskPriority)
+                Task {
+                    await self.actomaton.send(.state(newValue))
                 }
             }
         )
