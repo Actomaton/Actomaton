@@ -11,10 +11,23 @@ extension Store
 
         private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Never>?
 
-        public init(state: Binding<State>, send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Never>?)
+        /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
+        public init(
+            state: Binding<State>,
+            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Never>?
+        )
         {
             self._state = state
             self._send = send
+        }
+
+        /// Initializer with simple `send`, mainly for mocking purpose.
+        public init(state: Binding<State>, send: @escaping (Action) -> Void)
+        {
+            self.init(state: state, send: { action, _, _ in
+                send(action)
+                return nil
+            })
         }
 
         /// Sends `action` to `Store.Proxy`.
