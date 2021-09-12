@@ -46,3 +46,15 @@ extension Binding
         )
     }
 }
+
+// MARK: - Traversable
+
+extension Binding where Value: OptionalProtocol
+{
+    /// Transforms `Binding<Value?>` to `Binding<Value>?`.
+    public var sequence: Binding<Value.Wrapped>?
+    {
+        let binding: Binding<Value.Wrapped?> = self[casePath: CasePath(embed: Value.init, extract: { $0.asOptional() })]
+        return Binding<Value.Wrapped>(binding)
+    }
+}
