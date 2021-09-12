@@ -52,6 +52,8 @@ extension Store
             self._send(action, priority, tracksFeedbacks)
         }
 
+        // MARK: - Functor
+
         /// Transforms `<Action, State>` to `<Action, SubState>` using keyPath `@dynamicMemberLookup`.
         public subscript<SubState>(
             dynamicMember keyPath: WritableKeyPath<State, SubState>
@@ -60,11 +62,26 @@ extension Store
             .init(state: self.$state[dynamicMember: keyPath], send: self.send)
         }
 
+        /// Transforms `<Action, State>` to `<Action, SubState?>` using casePath.
+        public subscript<SubState>(
+            casePath casePath: CasePath<State, SubState>
+        ) -> Store<Action, SubState?>.Proxy
+        {
+            .init(state: self.$state[casePath: casePath], send: self.send)
+        }
+
         /// Transforms `Action` to `Action2`.
         public func contramap<Action2>(action f: @escaping (Action2) -> Action)
             -> Store<Action2, State>.Proxy
         {
             .init(state: self.$state, send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) })
+        }
+
+        /// Transforms `Action` to `Action2` using casePath.
+        public func map<Action2>(action: CasePath<Action, Action2>)
+            -> Store<Action2, State>.Proxy
+        {
+            self.contramap(action: action.embed)
         }
 
         // MARK: - To Binding
