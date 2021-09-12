@@ -38,7 +38,7 @@ enum Action {
     case decrement
 }
 
-typealias Enviornment = Void
+typealias Environment = Void
 
 let reducer: Reducer<Action, State, Environment>
 reducer = Reducer { action, state, environment in
