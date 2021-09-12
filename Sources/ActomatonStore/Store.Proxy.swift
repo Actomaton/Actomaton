@@ -113,3 +113,19 @@ extension Store
         }
     }
 }
+
+// MARK: - Traversable
+
+extension Store.Proxy where State: OptionalProtocol
+{
+    /// Transforms `Store.Proxy<Action, State?>` to `Store.Proxy<Action, State>?`.
+    public var sequence: Store<Action, State.Wrapped>.Proxy?
+    {
+        guard let binding = $state.sequence else { return nil }
+
+        return Store<Action, State.Wrapped>.Proxy(
+            state: binding,
+            send: self.send
+        )
+    }
+}
