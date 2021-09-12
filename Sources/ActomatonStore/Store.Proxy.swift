@@ -9,12 +9,34 @@ extension Store
         @Binding
         public private(set) var state: State
 
-        public let send: (Action, TaskPriority) -> Void
+        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Never>?
 
-        public init(state: Binding<State>, send: @escaping (Action, TaskPriority) -> Void)
+        public init(state: Binding<State>, send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Never>?)
         {
             self._state = state
-            self.send = send
+            self._send = send
+        }
+
+        /// Sends `action` to `Store.Proxy`.
+        ///
+        /// - Parameters:
+        ///   - priority:
+        ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
+        ///   - tracksFeedbacks:
+        ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
+        ///     so that their wait-for-all and cancellations are possible.
+        ///     Default is `false`.
+        ///
+        /// - Returns:
+        ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
+        @discardableResult
+        public func send(
+            _ action: Action,
+            priority: TaskPriority? = nil,
+            tracksFeedbacks: Bool = false
+        ) -> Task<(), Never>?
+        {
+            self._send(action, priority, tracksFeedbacks)
         }
 
         /// Transforms `<Action, State>` to `<Action, SubState>` using keyPath `@dynamicMemberLookup`.
@@ -29,7 +51,7 @@ extension Store
         public func contramap<Action2>(action f: @escaping (Action2) -> Action)
             -> Store<Action2, State>.Proxy
         {
-            .init(state: self.$state, send: { self.send(f($0), $1) })
+            .init(state: self.$state, send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) })
         }
 
         // MARK: - To Binding
@@ -54,7 +76,7 @@ extension Store
                 },
                 set: {
                     if let action = onChange($0) {
-                        self.send(action, stateBindingTaskPriority)
+                        self.send(action)
                     }
                 }
             )
