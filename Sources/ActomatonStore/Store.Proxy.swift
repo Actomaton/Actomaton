@@ -51,66 +51,41 @@ extension Store
         {
             self._send(action, priority, tracksFeedbacks)
         }
+    }
+}
 
-        // MARK: - Functor
+// MARK: - Functor
 
-        /// Transforms `<Action, State>` to `<Action, SubState>` using keyPath `@dynamicMemberLookup`.
-        public subscript<SubState>(
-            dynamicMember keyPath: WritableKeyPath<State, SubState>
-        ) -> Store<Action, SubState>.Proxy
-        {
-            .init(state: self.$state[dynamicMember: keyPath], send: self.send)
-        }
+extension Store.Proxy
+{
+    /// Transforms `<Action, State>` to `<Action, SubState>` using keyPath `@dynamicMemberLookup`.
+    public subscript<SubState>(
+        dynamicMember keyPath: WritableKeyPath<State, SubState>
+    ) -> Store<Action, SubState>.Proxy
+    {
+        .init(state: self.$state[dynamicMember: keyPath], send: self.send)
+    }
 
-        /// Transforms `<Action, State>` to `<Action, SubState?>` using casePath.
-        public subscript<SubState>(
-            casePath casePath: CasePath<State, SubState>
-        ) -> Store<Action, SubState?>.Proxy
-        {
-            .init(state: self.$state[casePath: casePath], send: self.send)
-        }
+    /// Transforms `<Action, State>` to `<Action, SubState?>` using casePath.
+    public subscript<SubState>(
+        casePath casePath: CasePath<State, SubState>
+    ) -> Store<Action, SubState?>.Proxy
+    {
+        .init(state: self.$state[casePath: casePath], send: self.send)
+    }
 
-        /// Transforms `Action` to `Action2`.
-        public func contramap<Action2>(action f: @escaping (Action2) -> Action)
-            -> Store<Action2, State>.Proxy
-        {
-            .init(state: self.$state, send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) })
-        }
+    /// Transforms `Action` to `Action2`.
+    public func contramap<Action2>(action f: @escaping (Action2) -> Action)
+        -> Store<Action2, State>.Proxy
+    {
+        .init(state: self.$state, send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) })
+    }
 
-        /// Transforms `Action` to `Action2` using casePath.
-        public func map<Action2>(action: CasePath<Action, Action2>)
-            -> Store<Action2, State>.Proxy
-        {
-            self.contramap(action: action.embed)
-        }
-
-        // MARK: - To Binding
-
-        /// Indirect state-to-action conversion binding to create `Binding<State>`.
-        public func stateBinding(
-            onChange: @escaping (State) -> Action?
-        ) -> Binding<State>
-        {
-            self.stateBinding(get: { $0 }, onChange: onChange)
-        }
-
-        /// Indirect state-to-action conversion binding to create `Binding<SubState>`.
-        public func stateBinding<SubState>(
-            get: @escaping (State) -> SubState,
-            onChange: @escaping (SubState) -> Action?
-        ) -> Binding<SubState>
-        {
-            Binding<SubState>(
-                get: {
-                    get(self.state)
-                },
-                set: {
-                    if let action = onChange($0) {
-                        self.send(action)
-                    }
-                }
-            )
-        }
+    /// Transforms `Action` to `Action2` using casePath.
+    public func map<Action2>(action: CasePath<Action, Action2>)
+        -> Store<Action2, State>.Proxy
+    {
+        self.contramap(action: action.embed)
     }
 }
 
@@ -130,5 +105,36 @@ extension Store.Proxy
         }
 
         return .init(state: state, send: self.send)
+    }
+}
+
+// MARK: - To Binding
+
+extension Store.Proxy
+{
+    /// Indirect state-to-action conversion binding to create `Binding<State>`.
+    public func stateBinding(
+        onChange: @escaping (State) -> Action?
+    ) -> Binding<State>
+    {
+        self.stateBinding(get: { $0 }, onChange: onChange)
+    }
+
+    /// Indirect state-to-action conversion binding to create `Binding<SubState>`.
+    public func stateBinding<SubState>(
+        get: @escaping (State) -> SubState,
+        onChange: @escaping (SubState) -> Action?
+    ) -> Binding<SubState>
+    {
+        Binding<SubState>(
+            get: {
+                get(self.state)
+            },
+            set: {
+                if let action = onChange($0) {
+                    self.send(action)
+                }
+            }
+        )
     }
 }

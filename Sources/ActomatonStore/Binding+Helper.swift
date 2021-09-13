@@ -1,6 +1,8 @@
 import SwiftUI
 import CasePaths
 
+// MARK: - Functor
+
 extension Binding
 {
     /// Transforms `<Value>` to `<SubValue>` using `get` and `set`.
@@ -25,6 +27,19 @@ extension Binding
     {
         Binding<SubValue>(
             get: { self.wrappedValue[keyPath: keyPath] },
+            set: { self.wrappedValue[keyPath: keyPath] = $0 }
+        )
+    }
+
+    public subscript<SubValue>(_ keyPath: WritableKeyPath<Value, SubValue?>)
+        -> Binding<SubValue>?
+    {
+        guard let subValue = self.wrappedValue[keyPath: keyPath] else {
+            return nil
+        }
+
+        return Binding<SubValue>(
+            get: { subValue },
             set: { self.wrappedValue[keyPath: keyPath] = $0 }
         )
     }
