@@ -116,16 +116,19 @@ extension Store
 
 // MARK: - Traversable
 
-extension Store.Proxy where State: OptionalProtocol
+extension Store.Proxy
 {
-    /// Transforms `Store.Proxy<Action, State?>` to `Store.Proxy<Action, State>?`.
-    public var sequence: Store<Action, State.Wrapped>.Proxy?
+    /// Moves `SubState?`'s optional part outside of `Store.Proxy`.
+    ///
+    /// - Note:
+    ///   Use `traverse(\.self)` as the conversion from `Store.Proxy<A, State?>` to `Store.Proxy<A, State>?`.
+    public func traverse<SubState>(_ keyPath: WritableKeyPath<State, SubState?>)
+        -> Store<Action, SubState>.Proxy?
     {
-        guard let binding = $state.sequence else { return nil }
+        guard let state = self.$state[dynamicMember: keyPath].traverse(\.self) else {
+            return nil
+        }
 
-        return Store<Action, State.Wrapped>.Proxy(
-            state: binding,
-            send: self.send
-        )
+        return .init(state: state, send: self.send)
     }
 }

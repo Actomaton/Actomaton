@@ -49,12 +49,23 @@ extension Binding
 
 // MARK: - Traversable
 
-extension Binding where Value: OptionalProtocol
+extension Binding
 {
-    /// Transforms `Binding<Value?>` to `Binding<Value>?`.
-    public var sequence: Binding<Value.Wrapped>?
+    /// Moves `SubValue?`'s optional part outside of `Binding`.
+    ///
+    /// - Note:
+    ///   `traverse(\.self)` will be same as `Bind.init?` (failable initializer),
+    ///   which turns `Binding<Value?>` into `Binding<Value>?`.
+    public func traverse<SubValue>(_ keyPath: WritableKeyPath<Value, SubValue?>)
+        -> Binding<SubValue>?
     {
-        let binding: Binding<Value.Wrapped?> = self[casePath: CasePath(embed: Value.init, extract: { $0.asOptional() })]
-        return Binding<Value.Wrapped>(binding)
+        guard let subValue = self.wrappedValue[keyPath: keyPath] else {
+            return nil
+        }
+
+        return Binding<SubValue>(
+            get: { subValue },
+            set: { self.wrappedValue[keyPath: keyPath] = $0 }
+        )
     }
 }
