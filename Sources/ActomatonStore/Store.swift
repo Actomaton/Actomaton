@@ -3,6 +3,7 @@ import SwiftUI
 import Combine
 
 /// Store of `Actomaton` optimized for SwiftUI's 2-way binding.
+@MainActor
 public final class Store<Action, State>: ObservableObject
 {
     private let actomaton: Actomaton<BindableAction, State>
@@ -64,7 +65,7 @@ public final class Store<Action, State>: ObservableObject
 // To call these methods, use `proxy` instead.
 extension Store
 {
-    private func send(_ action: Action, priority: TaskPriority? = nil, tracksFeedbacks: Bool) -> Task<(), Never>
+    private nonisolated func send(_ action: Action, priority: TaskPriority? = nil, tracksFeedbacks: Bool) -> Task<(), Never>
     {
         Task(priority: priority) {
             await self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
