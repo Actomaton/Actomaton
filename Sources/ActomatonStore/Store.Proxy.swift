@@ -4,6 +4,7 @@ extension Store
 {
     /// Lightweight `Store` proxy that is state-bindable and action-sendable without duplicating internal state.
     @dynamicMemberLookup
+    @MainActor
     public struct Proxy
     {
         @Binding
@@ -43,7 +44,7 @@ extension Store
         /// - Returns:
         ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
         @discardableResult
-        public func send(
+        public nonisolated func send(
             _ action: Action,
             priority: TaskPriority? = nil,
             tracksFeedbacks: Bool = false
