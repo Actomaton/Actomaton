@@ -4,7 +4,7 @@ import Combine
 
 /// Store of `Actomaton` optimized for SwiftUI's 2-way binding.
 @MainActor
-public final class Store<Action, State>: ObservableObject
+open class Store<Action, State>: ObservableObject
 {
     private let actomaton: Actomaton<BindableAction, State>
 
