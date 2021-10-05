@@ -20,16 +20,29 @@ extension Newest1EffectQueueProtocol
     }
 }
 
-// MARK: - Oldest1EffectQueueProtocol
+// MARK: - Oldest1DiscardNewEffectQueueProtocol
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .discardNew)`.
-public protocol Oldest1EffectQueueProtocol: EffectQueueProtocol {}
+public protocol Oldest1DiscardNewEffectQueueProtocol: EffectQueueProtocol {}
 
-extension Oldest1EffectQueueProtocol
+extension Oldest1DiscardNewEffectQueueProtocol
 {
     public var effectQueuePolicy: EffectQueuePolicy
     {
         .runOldest(maxCount: 1, .discardNew)
+    }
+}
+
+// MARK: - Oldest1SuspendNewEffectQueueProtocol
+
+/// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .suspendNew)`.
+public protocol Oldest1SuspendNewEffectQueueProtocol: EffectQueueProtocol {}
+
+extension Oldest1SuspendNewEffectQueueProtocol
+{
+    public var effectQueuePolicy: EffectQueuePolicy
+    {
+        .runOldest(maxCount: 1, .suspendNew)
     }
 }
 
