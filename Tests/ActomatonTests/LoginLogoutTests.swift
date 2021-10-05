@@ -13,7 +13,7 @@ final class LoginLogoutTests: XCTestCase
     {
         isLoginCancelled = false
 
-        struct LoginFlowEffectID: EffectIDProtocol {}
+        struct LoginFlowEffectQueue: Newest1EffectQueueProtocol {}
 
         let actomaton = Actomaton<Action, State>(
             state: .loggedOut,
@@ -21,7 +21,7 @@ final class LoginLogoutTests: XCTestCase
                 switch (action, state) {
                 case (.login, .loggedOut):
                     state = .loggingIn
-                    return Effect(id: LoginFlowEffectID()) {
+                    return Effect(queue: LoginFlowEffectQueue()) {
                         await tick(1)
                         if Task.isCancelled {
                             self.isLoginCancelled = true
@@ -38,7 +38,7 @@ final class LoginLogoutTests: XCTestCase
                     (.forceLogout, .loggingIn),
                     (.forceLogout, .loggedIn):
                     state = .loggingOut
-                    return Effect(id: LoginFlowEffectID()) {
+                    return Effect(queue: LoginFlowEffectQueue()) {
                         await tick(1)
                         return .logoutOK
                     }
