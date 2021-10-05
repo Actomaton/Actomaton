@@ -4,12 +4,6 @@ public struct Effect<Action>
     internal let kinds: [Kind]
 }
 
-/// Effect identifier for manual cancellation via `Effect.cancel`
-/// or automatic cancellation by sending another effect with same identifier.
-public typealias EffectID = AnyHashable
-
-public protocol EffectIDProtocol: Hashable {}
-
 // MARK: - Public Initializers
 
 extension Effect
@@ -18,7 +12,16 @@ extension Effect
     /// - Parameter id: Cancellation identifier.
     public init(id: EffectID? = nil, run: @escaping () async -> Action?)
     {
-        self.init(kinds: [.single(Single(id: id, run: run))])
+        self.init(kinds: [.single(Single(id: id, queue: nil, run: run))])
+    }
+
+    /// Single-`async` side-effect.
+    /// - Parameter id: Cancellation identifier.
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    public init<Queue>(id: EffectID? = nil, queue: Queue? = nil, run: @escaping () async -> Action?)
+        where Queue: EffectQueueProtocol
+    {
+        self.init(kinds: [.single(Single(id: id, queue: queue.map(AnyEffectQueue.init), run: run))])
     }
 
     /// `AsyncSequence` side-effect.
@@ -26,16 +29,45 @@ extension Effect
     public init<S>(id: EffectID? = nil, sequence: S)
         where S: AsyncSequence, S.Element == Action
     {
-        self.init(kinds: [.sequence(_Sequence(id: id, sequence: sequence.typeErased))])
+        self.init(kinds: [.sequence(_Sequence(id: id, queue: nil, sequence: sequence.typeErased))])
+    }
+
+    /// `AsyncSequence` side-effect.
+    /// - Parameter id: Cancellation identifier.
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    public init<S, Queue>(id: EffectID? = nil, queue: Queue? = nil, sequence: S)
+        where S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
+    {
+        self.init(kinds: [.sequence(_Sequence(id: id, queue: queue.map(AnyEffectQueue.init), sequence: sequence.typeErased))])
     }
 
     /// Single-`async` side-effect without returning next action.
-    public static func fireAndForget(id: EffectID? = nil, run: @escaping () async -> ()) -> Effect<Action>
+    /// - Parameter id: Cancellation identifier.
+    public static func fireAndForget(
+        id: EffectID? = nil,
+        run: @escaping () async -> ()
+    ) -> Effect<Action>
     {
-        self.init(kinds: [.single(Single(id: id, run: { 
+        self.init(id: id, run: {
             await run()
             return nil
-        }))])
+        })
+    }
+
+    /// Single-`async` side-effect without returning next action.
+    /// - Parameter id: Cancellation identifier.
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    public static func fireAndForget<Queue>(
+        id: EffectID? = nil,
+        queue: Queue? = nil,
+        run: @escaping () async -> ()
+    ) -> Effect<Action>
+        where Queue: EffectQueueProtocol
+    {
+        self.init(id: id, queue: queue, run: {
+            await run()
+            return nil
+        })
     }
 
     /// No `async` side-effect, only returning next action.
@@ -166,30 +198,61 @@ extension Effect
             guard case let .cancel(value) = self else { return nil }
             return value
         }
+
+        internal var id: EffectID?
+        {
+            switch self {
+            case let .single(single):
+                return single.id
+            case let .sequence(sequence):
+                return sequence.id
+            case .cancel:
+                return nil
+            }
+        }
+
+        internal var queue: AnyEffectQueue?
+        {
+            switch self {
+            case let .single(single):
+                return single.queue
+            case let .sequence(sequence):
+                return sequence.queue
+            case .cancel:
+                return nil
+            }
+        }
     }
 
     /// Wrapper of `async`.
     internal struct Single
     {
         internal let id: EffectID?
+        internal let queue: AnyEffectQueue?
         internal let run: () async -> Action?
 
-        internal init(id: EffectID? = nil, run: @escaping () async -> Action?)
+        internal init(id: EffectID? = nil, queue: AnyEffectQueue? = nil, run: @escaping () async -> Action?)
         {
             self.id = id
+            self.queue = queue
             self.run = run
         }
 
         internal func map<Action2>(action f: @escaping (Action) -> Action2) -> Effect<Action2>.Single
         {
-            .init(id: id) {
+            .init(id: id, queue: queue) {
                 (await run()).map(f)
             }
         }
 
         internal func map(id f: @escaping (EffectID?) -> EffectID?) -> Effect.Single
         {
-            .init(id: f(id), run: run)
+            .init(id: f(id), queue: queue, run: run)
+        }
+
+        internal func map(queue f: @escaping (AnyEffectQueue?) -> AnyEffectQueue?) -> Effect.Single
+        {
+            .init(id: id, queue: f(queue), run: run)
         }
     }
 
@@ -197,22 +260,30 @@ extension Effect
     internal struct _Sequence
     {
         internal let id: EffectID?
+        internal let queue: AnyEffectQueue?
         internal let sequence: AnyAsyncSequence<Action>
 
-        internal init(id: EffectID? = nil, sequence: AnyAsyncSequence<Action>)
+        internal init(id: EffectID? = nil, queue: AnyEffectQueue? = nil, sequence: AnyAsyncSequence<Action>)
         {
             self.id = id
+            self.queue = queue
             self.sequence = sequence
         }
 
         internal func map<Action2>(action f: @escaping (Action) -> Action2) -> Effect<Action2>._Sequence
         {
-            .init(id: id, sequence: sequence.map(f).typeErased)
+            .init(id: id, queue: queue, sequence: sequence.map(f).typeErased)
         }
 
         internal func map(id f: @escaping (EffectID?) -> EffectID?) -> Effect._Sequence
         {
-            .init(id: f(id), sequence: sequence)
+            .init(id: f(id), queue: queue, sequence: sequence)
+        }
+
+        internal func map<Queue>(queue f: @escaping (EffectQueue?) -> Queue?) -> Effect._Sequence
+            where Queue: EffectQueueProtocol
+        {
+            .init(id: id, queue: f(queue).map(AnyEffectQueue.init), sequence: sequence)
         }
     }
 }

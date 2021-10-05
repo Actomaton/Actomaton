@@ -13,9 +13,17 @@ public actor Actomaton<Action, State>
     public private(set) var state: State
 #endif
 
+    /// State-transforming function wrapper that is triggered by Action.
     private let reducer: Reducer<Action, State, ()>
 
-    private var runningTasks: [EffectID: Task<(), Never>] = [:]
+    /// Effect-identified tasks for manual cancellation.
+    private var idTasks: [EffectID: Set<Task<(), Never>>] = [:]
+
+    /// Effect-queue-designated tasks for automatic cancellation & suspension.
+    private var queues: [EffectQueue: [Task<(), Never>]] = [:]
+
+    /// Suspended effects.
+    private var pendingEffectKinds: [EffectQueue: [Effect<Action>.Kind]] = [:]
 
     /// Initializer without `environment`.
     public init(
@@ -58,96 +66,16 @@ public actor Actomaton<Action, State>
         tracksFeedbacks: Bool = false
     ) -> Task<(), Never>?
     {
+        Debug.print("[send] \(action), priority = \(String(describing: priority)), tracksFeedbacks = \(tracksFeedbacks)")
+
         let effect = reducer.run(action, &state, ())
-
-        for cancel in effect.cancels {
-            for id in runningTasks.keys {
-                if cancel(id) {
-                    let previousTask = runningTasks.removeValue(forKey: id)
-                    previousTask?.cancel()
-                }
-            }
-        }
-
-        let singles = effect.singles
-        let sequences = effect.sequences
-
-        guard !singles.isEmpty || !sequences.isEmpty else { return nil }
 
         var tasks: [Task<(), Never>] = []
 
-        for single in singles {
-            // Cancel previous running task with same `EffectID`.
-            if let id = single.id {
-                let previousTask = runningTasks.removeValue(forKey: id)
-                previousTask?.cancel()
+        for effectKind in effect.kinds {
+            if let task = performEffectKind(effectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+                tasks.append(task)
             }
-
-            let task = Task(priority: priority) {
-                let nextAction = await single.run()
-
-                // Feed back `nextAction`.
-                if let nextAction = nextAction, !Task.isCancelled {
-                    let feedbackTask = send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
-                    if tracksFeedbacks {
-                        await feedbackTask?.value
-                    }
-                }
-            }
-
-            // Register task.
-            if let id = single.id {
-                runningTasks[id] = task
-            }
-
-            tasks.append(task)
-        }
-
-        for sequence in sequences {
-            // Cancel previous running task with same `EffectID`.
-            if let id = sequence.id {
-                let previousTask = runningTasks.removeValue(forKey: id)
-                previousTask?.cancel()
-            }
-
-            let task = Task(priority: priority) {
-                do {
-                    var feedbackTasks: [Task<(), Never>] = []
-
-                    for try await nextAction in sequence.sequence {
-                        if Task.isCancelled { break }
-
-                        // Feed back `nextAction`.
-                        let feedbackTask = send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
-
-                        if let feedbackTask = feedbackTask {
-                            feedbackTasks.append(feedbackTask)
-                        }
-                    }
-
-                    if tracksFeedbacks {
-                        await withTaskGroup(of: Void.self) { group in
-                            for feedbackTask in feedbackTasks {
-                                group.addTask(priority: priority) {
-                                    await feedbackTask.value
-                                }
-                            }
-
-                            await group.waitForAll()
-                        }
-                    }
-
-                } catch {
-                    // print("[Actomaton] Warning: AsyncSequence error is ignored: \(error)")
-                }
-            }
-
-            // Register task.
-            if let id = sequence.id {
-                runningTasks[id] = task
-            }
-
-            tasks.append(task)
         }
 
         let tasks_ = tasks
@@ -165,6 +93,205 @@ public actor Actomaton<Action, State>
                     }
                 }
                 await group.waitForAll()
+            }
+        }
+    }
+}
+
+// MARK: - Private
+
+extension Actomaton
+{
+    private func performEffectKind(
+        _ effectKind: Effect<Action>.Kind,
+        priority: TaskPriority? = nil,
+        tracksFeedbacks: Bool = false
+    ) -> Task<(), Never>?
+    {
+        switch effectKind {
+        case let .single(single):
+            guard self.checkQueuePolicy(effectKind: effectKind) else { return nil }
+
+            return makeTask(single: single, priority: priority, tracksFeedbacks: tracksFeedbacks)
+
+        case let .sequence(sequence):
+            guard self.checkQueuePolicy(effectKind: effectKind) else { return nil }
+
+            return makeTask(sequence: sequence, priority: priority, tracksFeedbacks: tracksFeedbacks)
+
+        case let .cancel(predicate):
+            for id in idTasks.keys {
+                if predicate(id), let previousTasks = idTasks.removeValue(forKey: id) {
+                    for previousTask in previousTasks {
+                        previousTask.cancel()
+                    }
+                }
+            }
+
+            return nil
+        }
+    }
+
+    /// Checks `EffectQueuePolicy`, dropping old running tasks or enqueue new effect to pending buffer if needed.
+    /// - Returns: Flag whether `effectKind` can be immediately executed as `Task` or not.
+    private func checkQueuePolicy(effectKind: Effect<Action>.Kind) -> Bool
+    {
+        guard let queue = effectKind.queue else { return true }
+
+        switch queue.effectQueuePolicy {
+        case let .runNewest(maxCount):
+            // NOTE: +1 to make a space for new effect.
+            let droppingCount = (self.queues[queue]?.count ?? 0) - maxCount + 1
+            if droppingCount > 0 {
+                for _ in 0 ..< droppingCount {
+                    let droppingTask = self.queues[queue]?.removeFirst()
+                    Debug.print("[checkQueuePolicy] [runNewest] Cancel old task")
+                    droppingTask?.cancel()
+                }
+            }
+
+            // `Task` should be created.
+            return true
+
+        case let .runOldest(maxCount, overflowPolicy):
+            let overflowCount = (self.queues[queue]?.count ?? 0) - maxCount
+            if overflowCount >= 0 {
+                if overflowPolicy == .suspendNew {
+                    let queue = queue
+                    let maxCount = maxCount
+                    let currentTaskCount = self.queues[queue]?.count ?? 0
+
+                    if currentTaskCount >= maxCount {
+                        // Enqueue to pending buffer.
+                        Debug.print("[checkQueuePolicy] [runOldest-suspendNew] Enqueue to pending buffer")
+                        self.pendingEffectKinds[queue, default: []].append(effectKind)
+                    }
+                }
+
+                // Overflown, so `Task` should NOT be created.
+                return false
+            }
+            else {
+                // `Task` should be created.
+                return true
+            }
+        }
+    }
+
+    /// Makes `Task` from `async`.
+    private func makeTask(single: Effect<Action>.Single, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Never>
+    {
+        let task = Task(priority: priority) {
+            let nextAction = await single.run()
+
+            // Feed back `nextAction`.
+            if let nextAction = nextAction, !Task.isCancelled {
+                let feedbackTask = self.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+                if tracksFeedbacks {
+                    await feedbackTask?.value
+                }
+            }
+        }
+
+        self.enqueueTask(task, id: single.id, queue: single.queue, priority: priority, tracksFeedbacks: tracksFeedbacks)
+
+        return task
+    }
+
+    /// Makes `Task` from `AsyncSequence`.
+    func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Never>
+    {
+        let task = Task(priority: priority) {
+            do {
+                var feedbackTasks: [Task<(), Never>] = []
+
+                for try await nextAction in sequence.sequence {
+                    if Task.isCancelled { break }
+
+                    // Feed back `nextAction`.
+                    let feedbackTask = self.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+
+                    if let feedbackTask = feedbackTask {
+                        feedbackTasks.append(feedbackTask)
+                    }
+                }
+
+                if tracksFeedbacks {
+                    await withTaskGroup(of: Void.self) { group in
+                        for feedbackTask in feedbackTasks {
+                            group.addTask(priority: priority) {
+                                await feedbackTask.value
+                            }
+                        }
+
+                        await group.waitForAll()
+                    }
+                }
+
+            } catch {
+                Debug.print("Warning: AsyncSequence error is ignored: \(error)")
+            }
+        }
+
+        self.enqueueTask(task, id: sequence.id, queue: sequence.queue, priority: priority, tracksFeedbacks: tracksFeedbacks)
+
+        return task
+    }
+
+    /// Enqueues running `task` or pending `effectKind` to the buffer, and dequeue after completed.
+    private func enqueueTask(
+        _ task: Task<(), Never>,
+        id: EffectID?,
+        queue: AnyEffectQueue?,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool
+    )
+    {
+        // Register task.
+        if let id = id {
+            Debug.print("[enqueueTask] Append id-task: \(id)")
+            self.idTasks[id, default: []].insert(task)
+        }
+
+        if let queue = queue {
+            Debug.print("[enqueueTask] Append queue-task: \(queue)")
+            self.queues[queue, default: []].append(task)
+        }
+
+        // Clean up after `task` is completed.
+        Task<(), Never>(priority: priority) {
+            Debug.print("[enqueueTask] Task completed")
+            await task.value
+
+            if let id = id {
+                Debug.print("[enqueueTask] Remove completed id-task: \(id)")
+                self.idTasks[id]?.remove(task)
+            }
+
+            if let queue = queue {
+                if let removingIndex = self.queues[queue]?.firstIndex(where: { $0 == task }) {
+                    Debug.print("[enqueueTask] Remove completed queue-task: \(queue)")
+                    self.queues[queue]?.remove(at: removingIndex)
+                }
+
+                switch queue.effectQueuePolicy {
+                case .runOldest(_, .suspendNew):
+                    guard self.pendingEffectKinds[queue]?.isEmpty == false else { break }
+
+                    if let pendingEffectKind = self.pendingEffectKinds[queue]?.removeFirst() {
+                        Debug.print("[enqueueTask] Extracted pending effect")
+
+                        if let _ = self.performEffectKind(pendingEffectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+                            Debug.print("[enqueueTask] Pending effect started running")
+                        }
+                        else {
+                            Debug.print("[enqueueTask] Pending effect failed running")
+                        }
+                    }
+
+                default:
+                    break
+                }
             }
         }
     }

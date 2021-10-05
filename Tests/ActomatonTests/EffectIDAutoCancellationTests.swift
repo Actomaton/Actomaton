@@ -3,7 +3,7 @@ import XCTest
 
 import Combine
 
-/// Tests for same `EffectID` where previous effect will be automatically cancelled by the next effect.
+/// Tests for `Newest1EffectQueueProtocol` where previous effect will be automatically cancelled by the next effect.
 final class EffectIDAutoCancellationTests: XCTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
@@ -16,7 +16,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
         is1To2Cancelled = false
         is2To3Cancelled = false
 
-        let commonEffectID = "id"
+        struct Newest1EffectQueue: Newest1EffectQueueProtocol {}
 
         let actomaton = Actomaton<Action, State>(
             state: ._1,
@@ -26,7 +26,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                     guard state == ._1 else { return .empty }
 
                     state = ._2
-                    return Effect(id: commonEffectID) {
+                    return Effect(queue: Newest1EffectQueue()) {
                         await tick(1)
                         if Task.isCancelled {
                             Debug.print("_1To2 cancelled")
@@ -40,7 +40,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                     guard state == ._2 else { return .empty }
 
                     state = ._3
-                    return Effect(id: commonEffectID) {
+                    return Effect(queue: Newest1EffectQueue()) {
                         await tick(1)
                         if Task.isCancelled {
                             Debug.print("_2To3 cancelled")
@@ -58,7 +58,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
 
                 case ._toEnd:
                     state = ._end
-                    return Effect(id: commonEffectID) {
+                    return Effect(queue: Newest1EffectQueue()) {
                         await tick(1)
                         return nil
                     }
