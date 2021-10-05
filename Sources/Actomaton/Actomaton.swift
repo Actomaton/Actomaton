@@ -286,16 +286,11 @@ extension Actomaton
             }
 
             if let queue = queue {
-                if let removingIndex = await self?.queues[queue]?.firstIndex(where: { $0 == task }) {
-                    Debug.print("[enqueueTask] Remove completed queue-task: \(queue)")
-                    await self?.removeTask(at: removingIndex, in: queue)
-                }
+                await self?.removeTaskIfNeeded(task: task, in: queue)
 
                 switch queue.effectQueuePolicy {
                 case .runOldest(_, .suspendNew):
-                    guard await self?.pendingEffectKinds[queue]?.isEmpty == false else { break }
-
-                    if let pendingEffectKind = await self?.dequeuePendingEffectKind(queue: queue) {
+                    if let pendingEffectKind = await self?.dequeuePendingEffectKindIfPossible(queue: queue) {
                         Debug.print("[enqueueTask] Extracted pending effect")
 
                         if let _ = await self?.performEffectKind(pendingEffectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
@@ -318,13 +313,19 @@ extension Actomaton
         self.idTasks[id]?.remove(task)
     }
 
-    private func removeTask(at index: Int, in queue: AnyEffectQueue)
+    private func removeTaskIfNeeded(task: Task<(), Never>, in queue: AnyEffectQueue)
     {
-        self.queues[queue]?.remove(at: index)
+        // NOTE: Finding `removingIndex` and `remove` must be atomic.
+        if let removingIndex = self.queues[queue]?.firstIndex(where: { $0 == task }) {
+            Debug.print("[enqueueTask] Remove completed queue-task: \(queue) \(removingIndex)")
+            self.queues[queue]?.remove(at: removingIndex)
+        }
     }
 
-    private func dequeuePendingEffectKind(queue: AnyEffectQueue) -> Effect<Action>.Kind?
+    private func dequeuePendingEffectKindIfPossible(queue: AnyEffectQueue) -> Effect<Action>.Kind?
     {
-        self.pendingEffectKinds[queue]?.removeFirst()
+        // NOTE: `isEmpty` check and `removeFirst` must be atomic.
+        guard self.pendingEffectKinds[queue]?.isEmpty == false else { return nil }
+        return self.pendingEffectKinds[queue]?.removeFirst()
     }
 }
