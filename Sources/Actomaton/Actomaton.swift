@@ -47,6 +47,23 @@ public actor Actomaton<Action, State>
         })
     }
 
+    deinit
+    {
+        Debug.print("[deinit] \(String(format: "%p", ObjectIdentifier(self).hashValue))")
+
+        for idTask in self.idTasks {
+            for task in idTask.value {
+                task.cancel()
+            }
+        }
+
+        for queue in self.queues {
+            for task in queue.value {
+                task.cancel()
+            }
+        }
+    }
+
     /// Sends `action` to `Actomaton`.
     ///
     /// - Parameters:
@@ -181,12 +198,12 @@ extension Actomaton
     /// Makes `Task` from `async`.
     private func makeTask(single: Effect<Action>.Single, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Never>
     {
-        let task = Task(priority: priority) {
+        let task = Task(priority: priority) { [weak self] in
             let nextAction = await single.run()
 
             // Feed back `nextAction`.
             if let nextAction = nextAction, !Task.isCancelled {
-                let feedbackTask = self.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+                let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
                 if tracksFeedbacks {
                     await feedbackTask?.value
                 }
@@ -201,7 +218,7 @@ extension Actomaton
     /// Makes `Task` from `AsyncSequence`.
     func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Never>
     {
-        let task = Task(priority: priority) {
+        let task = Task(priority: priority) { [weak self] in
             do {
                 var feedbackTasks: [Task<(), Never>] = []
 
@@ -209,7 +226,7 @@ extension Actomaton
                     if Task.isCancelled { break }
 
                     // Feed back `nextAction`.
-                    let feedbackTask = self.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+                    let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
                     if let feedbackTask = feedbackTask {
                         feedbackTasks.append(feedbackTask)
@@ -259,29 +276,29 @@ extension Actomaton
         }
 
         // Clean up after `task` is completed.
-        Task<(), Never>(priority: priority) {
+        Task<(), Never>(priority: priority) { [weak self] in
             Debug.print("[enqueueTask] Task completed")
             await task.value
 
             if let id = id {
                 Debug.print("[enqueueTask] Remove completed id-task: \(id)")
-                self.idTasks[id]?.remove(task)
+                await self?.removeTask(id: id, task: task)
             }
 
             if let queue = queue {
-                if let removingIndex = self.queues[queue]?.firstIndex(where: { $0 == task }) {
+                if let removingIndex = await self?.queues[queue]?.firstIndex(where: { $0 == task }) {
                     Debug.print("[enqueueTask] Remove completed queue-task: \(queue)")
-                    self.queues[queue]?.remove(at: removingIndex)
+                    await self?.removeTask(at: removingIndex, in: queue)
                 }
 
                 switch queue.effectQueuePolicy {
                 case .runOldest(_, .suspendNew):
-                    guard self.pendingEffectKinds[queue]?.isEmpty == false else { break }
+                    guard await self?.pendingEffectKinds[queue]?.isEmpty == false else { break }
 
-                    if let pendingEffectKind = self.pendingEffectKinds[queue]?.removeFirst() {
+                    if let pendingEffectKind = await self?.dequeuePendingEffectKind(queue: queue) {
                         Debug.print("[enqueueTask] Extracted pending effect")
 
-                        if let _ = self.performEffectKind(pendingEffectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+                        if let _ = await self?.performEffectKind(pendingEffectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
                             Debug.print("[enqueueTask] Pending effect started running")
                         }
                         else {
@@ -294,5 +311,20 @@ extension Actomaton
                 }
             }
         }
+    }
+
+    private func removeTask(id: EffectID, task: Task<(), Never>)
+    {
+        self.idTasks[id]?.remove(task)
+    }
+
+    private func removeTask(at index: Int, in queue: AnyEffectQueue)
+    {
+        self.queues[queue]?.remove(at: index)
+    }
+
+    private func dequeuePendingEffectKind(queue: AnyEffectQueue) -> Effect<Action>.Kind?
+    {
+        self.pendingEffectKinds[queue]?.removeFirst()
     }
 }
