@@ -12,7 +12,7 @@ on:
 jobs:
   # TODO: Enable when new macOS is ready.
   # xcodebuild-macOS:
-  #   runs-on: macos-latest
+  #   runs-on: macos-11
   #   steps:
   #   - uses: actions/checkout@v2
   #   - name: Select Xcode version
@@ -21,7 +21,7 @@ jobs:
   #     run: make test-macOS
 
   xcodebuild-iOS:
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
     - name: Select Xcode version
@@ -30,7 +30,7 @@ jobs:
       run: make test-iOS
 
   xcodebuild-tvOS:
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
     - name: Select Xcode version
@@ -39,7 +39,7 @@ jobs:
       run: make test-tvOS
 
   xcodebuild-watchOS:
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
     - name: Select Xcode version
