@@ -1,3 +1,5 @@
+#if os(iOS) || os(tvOS)
+
 import UIKit
 import Combine
 import SwiftUI
@@ -69,3 +71,5 @@ private struct StoreView<Action, State, V: View>: View
         self.makeView(self.store.proxy)
     }
 }
+
+#endif
