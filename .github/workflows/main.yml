@@ -1,0 +1,48 @@
+# https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions
+# https://github.com/actions/virtual-environments/blob/master/images/macos
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - ci/**
+  pull_request:
+
+jobs:
+  # TODO: Enable when new macOS is ready.
+  # xcodebuild-macOS:
+  #   runs-on: macos-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Select Xcode version
+  #     run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
+  #   - name: Run tests
+  #     run: make test-macOS
+
+  xcodebuild-iOS:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Select Xcode version
+      run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
+    - name: Run tests
+      run: make test-iOS
+
+  xcodebuild-tvOS:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Select Xcode version
+      run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
+    - name: Run tests
+      run: make test-tvOS
+
+  xcodebuild-watchOS:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Select Xcode version
+      run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
+    - name: Build watchOS (no tests)
+      run: make test-watchOS
