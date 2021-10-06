@@ -1,8 +1,7 @@
-# TODO: Enable macOS when async/await is ready.
-# test-macOS:
-# 	xcodebuild test -scheme Actomaton-Package -destination 'platform=OS X' | xcpretty
+test-macOS:
+	xcodebuild test -scheme Actomaton-Package -destination 'platform=OS X' | xcpretty
 
-test-ios:
+test-iOS:
 	xcodebuild test -scheme Actomaton-Package -destination 'platform=iOS Simulator,name=iPhone 13 Pro' | xcpretty
 
 test-watchOS:
