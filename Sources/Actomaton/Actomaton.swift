@@ -277,8 +277,10 @@ extension Actomaton
 
         // Clean up after `task` is completed.
         Task<(), Never>(priority: priority) { [weak self] in
-            Debug.print("[enqueueTask] Task completed")
+            // Wait for `task` to complete.
             await task.value
+
+            Debug.print("[enqueueTask] Task completed")
 
             if let id = id {
                 Debug.print("[enqueueTask] Remove completed id-task: \(id)")
