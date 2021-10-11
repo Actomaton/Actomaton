@@ -151,7 +151,7 @@ extension Effect
     public static func cancel<ID>(id: ID) -> Effect<Action>
         where ID: EffectIDProtocol
     {
-        Effect(kinds: [.cancel { $0 == id as AnyHashable }])
+        Effect(kinds: [.cancel { $0 == id as EffectID }])
     }
 }
 
