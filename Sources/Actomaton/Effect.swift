@@ -202,7 +202,8 @@ extension Effect
     }
 
     /// Changes `EffectID`.
-    public func map(id f: @escaping (EffectID?) -> EffectID?) -> Effect
+    public func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect
+        where ID: EffectIDProtocol
     {
         .init(kinds: self.kinds.map { kind in
             switch kind {
@@ -211,6 +212,24 @@ extension Effect
 
             case let .sequence(sequence):
                 return .sequence(sequence.map(id: f))
+
+            case let .cancel(predicate):
+                return .cancel(predicate)
+            }
+        })
+    }
+
+    /// Changes `EffectQueue`.
+    public func map<Queue>(queue f: @escaping (EffectQueue?) -> Queue?) -> Effect
+        where Queue: EffectQueueProtocol
+    {
+        .init(kinds: self.kinds.map { kind in
+            switch kind {
+            case let .single(single):
+                return .single(single.map(queue: f))
+
+            case let .sequence(sequence):
+                return .sequence(sequence.map(queue: f))
 
             case let .cancel(predicate):
                 return .cancel(predicate)
@@ -311,14 +330,16 @@ extension Effect
             }
         }
 
-        internal func map(id f: @escaping (EffectID?) -> EffectID?) -> Effect.Single
+        internal func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect.Single
+            where ID: EffectIDProtocol
         {
             .init(id: f(id), queue: queue, run: run)
         }
 
-        internal func map(queue f: @escaping (AnyEffectQueue?) -> AnyEffectQueue?) -> Effect.Single
+        internal func map<Queue>(queue f: @escaping (AnyEffectQueue?) -> Queue?) -> Effect.Single
+            where Queue: EffectQueueProtocol
         {
-            .init(id: id, queue: f(queue), run: run)
+            .init(id: id, queue: f(queue).map(AnyEffectQueue.init), run: run)
         }
     }
 
@@ -341,12 +362,13 @@ extension Effect
             .init(id: id, queue: queue, sequence: sequence.map(f).typeErased)
         }
 
-        internal func map(id f: @escaping (EffectID?) -> EffectID?) -> Effect._Sequence
+        internal func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect._Sequence
+            where ID: EffectIDProtocol
         {
             .init(id: f(id), queue: queue, sequence: sequence)
         }
 
-        internal func map<Queue>(queue f: @escaping (EffectQueue?) -> Queue?) -> Effect._Sequence
+        internal func map<Queue>(queue f: @escaping (AnyEffectQueue?) -> Queue?) -> Effect._Sequence
             where Queue: EffectQueueProtocol
         {
             .init(id: id, queue: f(queue).map(AnyEffectQueue.init), sequence: sequence)
