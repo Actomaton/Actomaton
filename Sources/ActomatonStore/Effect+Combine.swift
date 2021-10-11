@@ -1,27 +1,80 @@
 import Combine
 import Actomaton
 
-// MARK: - toEffect / toResultEffect
+// MARK: - toEffect
 
 extension Publisher where Failure == Never
 {
-    public func toEffect(
-        id: EffectID? = nil
+    public func toEffect() -> Effect<Output>
+    {
+        Effect(sequence: self.toAsyncStream())
+    }
+
+    public func toEffect<ID>(
+        id: ID? = nil
     ) -> Effect<Output>
+        where ID: EffectIDProtocol
     {
         Effect(id: id, sequence: self.toAsyncStream())
     }
+
+    public func toEffect<Queue>(
+        queue: Queue? = nil
+    ) -> Effect<Output>
+        where Queue: EffectQueueProtocol
+    {
+        Effect(queue: queue, sequence: self.toAsyncStream())
+    }
+
+    public func toEffect<ID, Queue>(
+        id: ID? = nil,
+        queue: Queue? = nil
+    ) -> Effect<Output>
+        where ID: EffectIDProtocol, Queue: EffectQueueProtocol
+    {
+        Effect(id: id, queue: queue, sequence: self.toAsyncStream())
+    }
 }
+
+// MARK: - toResultEffect
 
 extension Publisher
 {
-    public func toResultEffect(
-        id: EffectID? = nil
+    public func toResultEffect() -> Effect<Result<Output, Failure>>
+    {
+        self.map(Result.success)
+            .catch { Just(.failure($0)) }
+            .toEffect()
+    }
+
+    public func toResultEffect<ID>(
+        id: ID? = nil
     ) -> Effect<Result<Output, Failure>>
+        where ID: EffectIDProtocol
     {
         self.map(Result.success)
             .catch { Just(.failure($0)) }
             .toEffect(id: id)
+    }
+
+    public func toResultEffect<Queue>(
+        queue: Queue? = nil
+    ) -> Effect<Result<Output, Failure>>
+        where Queue: EffectQueueProtocol
+    {
+        self.map(Result.success)
+            .catch { Just(.failure($0)) }
+            .toEffect(queue: queue)
+    }
+    public func toResultEffect<ID, Queue>(
+        id: ID? = nil,
+        queue: Queue? = nil
+    ) -> Effect<Result<Output, Failure>>
+        where ID: EffectIDProtocol, Queue: EffectQueueProtocol
+    {
+        self.map(Result.success)
+            .catch { Just(.failure($0)) }
+            .toEffect(id: id, queue: queue)
     }
 }
 
