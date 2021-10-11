@@ -8,45 +8,92 @@ public struct Effect<Action>
 
 extension Effect
 {
+    // MARK: - Single async
+
+    /// Single-`async` side-effect.
+    public init(run: @escaping () async -> Action?)
+    {
+        self.init(kinds: [.single(Single(id: nil, queue: nil, run: run))])
+    }
+
     /// Single-`async` side-effect.
     /// - Parameter id: Cancellation identifier.
-    public init(id: EffectID? = nil, run: @escaping () async -> Action?)
+    public init<ID>(id: ID? = nil, run: @escaping () async -> Action?)
+        where ID: EffectIDProtocol
     {
         self.init(kinds: [.single(Single(id: id, queue: nil, run: run))])
     }
 
     /// Single-`async` side-effect.
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    public init<Queue>(queue: Queue? = nil, run: @escaping () async -> Action?)
+        where Queue: EffectQueueProtocol
+    {
+        self.init(kinds: [.single(Single(id: nil, queue: queue.map(AnyEffectQueue.init), run: run))])
+    }
+
+    /// Single-`async` side-effect.
     /// - Parameter id: Cancellation identifier.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<Queue>(id: EffectID? = nil, queue: Queue? = nil, run: @escaping () async -> Action?)
-        where Queue: EffectQueueProtocol
+    public init<ID, Queue>(id: ID? = nil, queue: Queue? = nil, run: @escaping () async -> Action?)
+        where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
         self.init(kinds: [.single(Single(id: id, queue: queue.map(AnyEffectQueue.init), run: run))])
     }
 
+    // MARK: - AsyncSequence
+
     /// `AsyncSequence` side-effect.
     /// - Parameter id: Cancellation identifier.
-    public init<S>(id: EffectID? = nil, sequence: S)
+    public init<S>(sequence: S)
         where S: AsyncSequence, S.Element == Action
+    {
+        self.init(kinds: [.sequence(_Sequence(id: nil, queue: nil, sequence: sequence.typeErased))])
+    }
+
+    /// `AsyncSequence` side-effect.
+    /// - Parameter id: Cancellation identifier.
+    public init<ID, S>(id: ID? = nil, sequence: S)
+        where ID: EffectIDProtocol, S: AsyncSequence, S.Element == Action
     {
         self.init(kinds: [.sequence(_Sequence(id: id, queue: nil, sequence: sequence.typeErased))])
     }
 
     /// `AsyncSequence` side-effect.
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    public init<S, Queue>(queue: Queue? = nil, sequence: S)
+        where S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
+    {
+        self.init(kinds: [.sequence(_Sequence(id: nil, queue: queue.map(AnyEffectQueue.init), sequence: sequence.typeErased))])
+    }
+
+    /// `AsyncSequence` side-effect.
     /// - Parameter id: Cancellation identifier.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<S, Queue>(id: EffectID? = nil, queue: Queue? = nil, sequence: S)
-        where S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
+    public init<ID, S, Queue>(id: ID? = nil, queue: Queue? = nil, sequence: S)
+        where ID: EffectIDProtocol, S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
     {
         self.init(kinds: [.sequence(_Sequence(id: id, queue: queue.map(AnyEffectQueue.init), sequence: sequence.typeErased))])
     }
 
+    // MARK: - fireAndForget
+
+    /// Single-`async` side-effect without returning next action.
+    public static func fireAndForget(run: @escaping () async -> ()) -> Effect<Action>
+    {
+        self.init(run: {
+            await run()
+            return nil
+        })
+    }
+
     /// Single-`async` side-effect without returning next action.
     /// - Parameter id: Cancellation identifier.
-    public static func fireAndForget(
-        id: EffectID? = nil,
+    public static func fireAndForget<ID>(
+        id: ID? = nil,
         run: @escaping () async -> ()
     ) -> Effect<Action>
+        where ID: EffectIDProtocol
     {
         self.init(id: id, run: {
             await run()
@@ -55,14 +102,28 @@ extension Effect
     }
 
     /// Single-`async` side-effect without returning next action.
-    /// - Parameter id: Cancellation identifier.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
     public static func fireAndForget<Queue>(
-        id: EffectID? = nil,
         queue: Queue? = nil,
         run: @escaping () async -> ()
     ) -> Effect<Action>
         where Queue: EffectQueueProtocol
+    {
+        self.init(queue: queue, run: {
+            await run()
+            return nil
+        })
+    }
+
+    /// Single-`async` side-effect without returning next action.
+    /// - Parameter id: Cancellation identifier.
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    public static func fireAndForget<ID, Queue>(
+        id: ID? = nil,
+        queue: Queue? = nil,
+        run: @escaping () async -> ()
+    ) -> Effect<Action>
+        where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
         self.init(id: id, queue: queue, run: {
             await run()
@@ -70,11 +131,15 @@ extension Effect
         })
     }
 
+    // MARK: - nextAction
+
     /// No `async` side-effect, only returning next action.
     public static func nextAction(_ action: Action) -> Effect<Action>
     {
         self.init(kinds: [.single(Single { action })])
     }
+
+    // MARK: - cancel
 
     /// Cancels running `async`s by specifying `ids`.
     public static func cancel(ids: @escaping (EffectID) -> Bool) -> Effect<Action>
@@ -83,9 +148,10 @@ extension Effect
     }
 
     /// Cancels running `async`s by specifying `identifier`.
-    public static func cancel(id: EffectID) -> Effect<Action>
+    public static func cancel<ID>(id: ID) -> Effect<Action>
+        where ID: EffectIDProtocol
     {
-        Effect(kinds: [.cancel { $0 == id }])
+        Effect(kinds: [.cancel { $0 == id as EffectID }])
     }
 }
 
