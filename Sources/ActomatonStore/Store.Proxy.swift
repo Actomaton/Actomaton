@@ -81,13 +81,6 @@ extension Store.Proxy
     {
         .init(state: self.$state, send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) })
     }
-
-    /// Transforms `Action` to `Action2` using casePath.
-    public func map<Action2>(action: CasePath<Action, Action2>)
-        -> Store<Action2, State>.Proxy
-    {
-        self.contramap(action: action.embed)
-    }
 }
 
 // MARK: - Traversable
