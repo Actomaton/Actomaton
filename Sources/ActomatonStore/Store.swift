@@ -65,7 +65,7 @@ open class Store<Action, State>: ObservableObject
 // To call these methods, use `proxy` instead.
 extension Store
 {
-    private nonisolated func send(_ action: Action, priority: TaskPriority? = nil, tracksFeedbacks: Bool) -> Task<(), Never>
+    private func send(_ action: Action, priority: TaskPriority? = nil, tracksFeedbacks: Bool) -> Task<(), Never>
     {
         Task(priority: priority) {
             await self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
