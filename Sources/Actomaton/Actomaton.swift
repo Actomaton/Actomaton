@@ -17,10 +17,10 @@ public actor Actomaton<Action, State>
     private let reducer: Reducer<Action, State, ()>
 
     /// Effect-identified tasks for manual cancellation.
-    private var idTasks: [EffectID: Set<Task<(), Never>>] = [:]
+    private var idTasks: [EffectID: Set<Task<(), Error>>] = [:]
 
     /// Effect-queue-designated tasks for automatic cancellation & suspension.
-    private var queues: [EffectQueue: [Task<(), Never>]] = [:]
+    private var queues: [EffectQueue: [Task<(), Error>]] = [:]
 
     /// Suspended effects.
     private var pendingEffectKinds: [EffectQueue: [Effect<Action>.Kind]] = [:]
@@ -81,13 +81,13 @@ public actor Actomaton<Action, State>
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Never>?
+    ) -> Task<(), Error>?
     {
         Debug.print("[send] \(action), priority = \(String(describing: priority)), tracksFeedbacks = \(tracksFeedbacks)")
 
         let effect = reducer.run(action, &state, ())
 
-        var tasks: [Task<(), Never>] = []
+        var tasks: [Task<(), Error>] = []
 
         for effectKind in effect.kinds {
             if let task = performEffectKind(effectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
@@ -99,17 +99,17 @@ public actor Actomaton<Action, State>
 
         // Unifies `tasks`.
         return Task {
-            await withTaskGroup(of: Void.self) { group in
+            try await withThrowingTaskGroup(of: Void.self) { group in
                 for task in tasks_ {
                     await withTaskCancellationHandler {
                         group.addTask {
-                            await task.value
+                            try await task.value
                         }
                     } onCancel: {
                         task.cancel()
                     }
                 }
-                await group.waitForAll()
+                try await group.waitForAll()
             }
         }
     }
@@ -123,7 +123,7 @@ extension Actomaton
         _ effectKind: Effect<Action>.Kind,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Never>?
+    ) -> Task<(), Error>?
     {
         switch effectKind {
         case let .single(single):
@@ -196,16 +196,16 @@ extension Actomaton
     }
 
     /// Makes `Task` from `async`.
-    private func makeTask(single: Effect<Action>.Single, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Never>
+    private func makeTask(single: Effect<Action>.Single, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>
     {
         let task = Task(priority: priority) { [weak self] in
-            let nextAction = await single.run()
+            let nextAction = try await single.run()
 
             // Feed back `nextAction`.
             if let nextAction = nextAction, !Task.isCancelled {
                 let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
                 if tracksFeedbacks {
-                    await feedbackTask?.value
+                    try await feedbackTask?.value
                 }
             }
         }
@@ -216,11 +216,11 @@ extension Actomaton
     }
 
     /// Makes `Task` from `AsyncSequence`.
-    func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Never>
+    func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>
     {
-        let task = Task(priority: priority) { [weak self] in
+        let task = Task<(), Error>(priority: priority) { [weak self] in
             do {
-                var feedbackTasks: [Task<(), Never>] = []
+                var feedbackTasks: [Task<(), Error>] = []
 
                 for try await nextAction in sequence.sequence {
                     if Task.isCancelled { break }
@@ -234,14 +234,14 @@ extension Actomaton
                 }
 
                 if tracksFeedbacks {
-                    await withTaskGroup(of: Void.self) { group in
+                    try await withThrowingTaskGroup(of: Void.self) { group in
                         for feedbackTask in feedbackTasks {
                             group.addTask(priority: priority) {
-                                await feedbackTask.value
+                                try await feedbackTask.value
                             }
                         }
 
-                        await group.waitForAll()
+                        try await group.waitForAll()
                     }
                 }
 
@@ -257,7 +257,7 @@ extension Actomaton
 
     /// Enqueues running `task` or pending `effectKind` to the buffer, and dequeue after completed.
     private func enqueueTask(
-        _ task: Task<(), Never>,
+        _ task: Task<(), Error>,
         id: EffectID?,
         queue: AnyEffectQueue?,
         priority: TaskPriority?,
@@ -276,9 +276,9 @@ extension Actomaton
         }
 
         // Clean up after `task` is completed.
-        Task<(), Never>(priority: priority) { [weak self] in
+        Task<(), Error>(priority: priority) { [weak self] in
             // Wait for `task` to complete.
-            await task.value
+            try await task.value
 
             Debug.print("[enqueueTask] Task completed")
 
@@ -310,12 +310,12 @@ extension Actomaton
         }
     }
 
-    private func removeTask(id: EffectID, task: Task<(), Never>)
+    private func removeTask(id: EffectID, task: Task<(), Error>)
     {
         self.idTasks[id]?.remove(task)
     }
 
-    private func removeTaskIfNeeded(task: Task<(), Never>, in queue: AnyEffectQueue)
+    private func removeTaskIfNeeded(task: Task<(), Error>, in queue: AnyEffectQueue)
     {
         // NOTE: Finding `removingIndex` and `remove` must be atomic.
         if let removingIndex = self.queues[queue]?.firstIndex(where: { $0 == task }) {

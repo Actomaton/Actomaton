@@ -45,7 +45,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
 
                     state = ._4(count: 0)
                     return Effect(sequence: AsyncStream<Action> { continuation in
-                        let task = Task<(), Never> {
+                        let task = Task<(), Error> {
                             for _ in 1 ... 2 {
                                 await tick(1)
                                 if Task.isCancelled {
@@ -119,7 +119,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
         let task = await actomaton.send(._1To2, tracksFeedbacks: false)
 
         // Wait for `._1To2`'s effect only (upto `_2To3`'s next state-transition without its effect)
-        await task?.value
+        try await task?.value
 
         assertEqual(await actomaton.state, ._3,
                     """
@@ -155,7 +155,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
         let task = await actomaton.send(._1To2, tracksFeedbacks: true)
 
         // Wait for all: `._1To2`, `._2To3`, `._3To4`, `._increment`, `._4To5`, `._5To6`.
-        await task?.value
+        try await task?.value
 
         assertEqual(await actomaton.state, ._6,
                     "Should wait for final result `._6` because `tracksFeedbacks = true`")
@@ -172,7 +172,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
         let task = await actomaton.send(._3To4, tracksFeedbacks: true)
 
         // Wait for all: `._3To4`, `._increment`, `._4To5`, `._5To6`.
-        await task?.value
+        try await task?.value
 
         assertEqual(await actomaton.state, ._6,
                     "Should wait for final result `._5` because `tracksFeedbacks = true`")

@@ -11,14 +11,14 @@ extension Effect
     // MARK: - Single async
 
     /// Single-`async` side-effect.
-    public init(run: @escaping () async -> Action?)
+    public init(run: @escaping () async throws -> Action?)
     {
         self.init(kinds: [.single(Single(id: nil, queue: nil, run: run))])
     }
 
     /// Single-`async` side-effect.
     /// - Parameter id: Cancellation identifier.
-    public init<ID>(id: ID? = nil, run: @escaping () async -> Action?)
+    public init<ID>(id: ID? = nil, run: @escaping () async throws -> Action?)
         where ID: EffectIDProtocol
     {
         self.init(kinds: [.single(Single(id: id, queue: nil, run: run))])
@@ -26,7 +26,7 @@ extension Effect
 
     /// Single-`async` side-effect.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<Queue>(queue: Queue? = nil, run: @escaping () async -> Action?)
+    public init<Queue>(queue: Queue? = nil, run: @escaping () async throws -> Action?)
         where Queue: EffectQueueProtocol
     {
         self.init(kinds: [.single(Single(id: nil, queue: queue.map(AnyEffectQueue.init), run: run))])
@@ -35,7 +35,7 @@ extension Effect
     /// Single-`async` side-effect.
     /// - Parameter id: Cancellation identifier.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<ID, Queue>(id: ID? = nil, queue: Queue? = nil, run: @escaping () async -> Action?)
+    public init<ID, Queue>(id: ID? = nil, queue: Queue? = nil, run: @escaping () async throws -> Action?)
         where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
         self.init(kinds: [.single(Single(id: id, queue: queue.map(AnyEffectQueue.init), run: run))])
@@ -79,10 +79,10 @@ extension Effect
     // MARK: - fireAndForget
 
     /// Single-`async` side-effect without returning next action.
-    public static func fireAndForget(run: @escaping () async -> ()) -> Effect<Action>
+    public static func fireAndForget(run: @escaping () async throws -> ()) -> Effect<Action>
     {
         self.init(run: {
-            await run()
+            try await run()
             return nil
         })
     }
@@ -91,12 +91,12 @@ extension Effect
     /// - Parameter id: Cancellation identifier.
     public static func fireAndForget<ID>(
         id: ID? = nil,
-        run: @escaping () async -> ()
+        run: @escaping () async throws -> ()
     ) -> Effect<Action>
         where ID: EffectIDProtocol
     {
         self.init(id: id, run: {
-            await run()
+            try await run()
             return nil
         })
     }
@@ -105,12 +105,12 @@ extension Effect
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
     public static func fireAndForget<Queue>(
         queue: Queue? = nil,
-        run: @escaping () async -> ()
+        run: @escaping () async throws -> ()
     ) -> Effect<Action>
         where Queue: EffectQueueProtocol
     {
         self.init(queue: queue, run: {
-            await run()
+            try await run()
             return nil
         })
     }
@@ -121,12 +121,12 @@ extension Effect
     public static func fireAndForget<ID, Queue>(
         id: ID? = nil,
         queue: Queue? = nil,
-        run: @escaping () async -> ()
+        run: @escaping () async throws -> ()
     ) -> Effect<Action>
         where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
         self.init(id: id, queue: queue, run: {
-            await run()
+            try await run()
             return nil
         })
     }
@@ -314,9 +314,9 @@ extension Effect
     {
         internal let id: EffectID?
         internal let queue: AnyEffectQueue?
-        internal let run: () async -> Action?
+        internal let run: () async throws -> Action?
 
-        internal init(id: EffectID? = nil, queue: AnyEffectQueue? = nil, run: @escaping () async -> Action?)
+        internal init(id: EffectID? = nil, queue: AnyEffectQueue? = nil, run: @escaping () async throws -> Action?)
         {
             self.id = id
             self.queue = queue
@@ -326,7 +326,7 @@ extension Effect
         internal func map<Action2>(action f: @escaping (Action) -> Action2) -> Effect<Action2>.Single
         {
             .init(id: id, queue: queue) {
-                (await run()).map(f)
+                (try await run()).map(f)
             }
         }
 
