@@ -142,4 +142,16 @@ extension Store.Proxy
     {
         self._state
     }
+
+    /// Creates `Binding<Bool>` as SwiftUI presentation binding from optional `State`, and sends `Action` on dismissal.
+    public func isPresented<Wrapped>(onDismiss: @autoclosure @escaping () -> Action) -> Binding<Bool>
+        where State == Wrapped?
+    {
+        self.stateBinding(
+            get: { $0 != nil },
+            onChange: { isPresented in
+                isPresented ? nil : onDismiss()
+            }
+        )
+    }
 }
