@@ -101,12 +101,8 @@ public actor Actomaton<Action, State>
         return Task {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 for task in tasks_ {
-                    await withTaskCancellationHandler {
-                        group.addTask {
-                            try await task.value
-                        }
-                    } onCancel: {
-                        task.cancel()
+                    group.addTask {
+                        try await task.value
                     }
                 }
                 try await group.waitForAll()
