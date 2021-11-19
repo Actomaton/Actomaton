@@ -195,7 +195,7 @@ let actomaton = Actomaton<Action, State>(
 @main
 enum Main {
     static func test_login_logout() async {
-        var t: Task<(), Never>?
+        var t: Task<(), Error>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -215,7 +215,7 @@ enum Main {
     }
 
     static func test_login_forceLogout() async throws {
-        var t: Task<(), Never>?
+        var t: Task<(), Error>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -236,11 +236,11 @@ enum Main {
 }
 ```
 
-Here we see the notions of `EffectID`, `Environment`, and `let task: Task<(), Never> = actomaton.send(...)`
+Here we see the notions of `EffectID`, `Environment`, and `let task: Task<(), Error> = actomaton.send(...)`
 
 - `EffectID` is for both manual & automatic cancellation of previous running effects. In this example, `forceLogout` will cancel `login`'s networking effect.
 - `Environment` is useful for injecting effects to be called inside `Reducer` so that they become replaceable. **`Environment` is known as Dependency Injection** (using Reader monad).
-- (Optional) `Task<(), Never>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await task.value` to wait for all of them to be completed, or `task.cancel()` to cancel all. Note that `Actomaton` already manages such `task`s for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
+- (Optional) `Task<(), Error>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await task.value` to wait for all of them to be completed, or `task.cancel()` to cancel all. Note that `Actomaton` already manages such `task`s for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
 
 ### Example 1-3. Timer (using `AsyncSequence`)
 

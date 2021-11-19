@@ -76,20 +76,20 @@ final class LoginLogoutTests: XCTestCase
     // `loggedOut => loggingIn => loggedIn => loggingOut => loggedOut` succeeds.
     func test_login_logout() async throws
     {
-        var t: Task<(), Never>?
+        var t: Task<(), Error>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
         t = await actomaton.send(.login)
         assertEqual(await actomaton.state, .loggingIn)
 
-        await t?.value // wait for previous effect
+        try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedIn)
 
         t = await actomaton.send(.logout)
         assertEqual(await actomaton.state, .loggingOut)
 
-        await t?.value // wait for previous effect
+        try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         XCTAssertFalse(isLoginCancelled)
@@ -98,7 +98,7 @@ final class LoginLogoutTests: XCTestCase
     // `loggedOut => loggingIn ==(ForceLogout)==> loggingOut => loggedOut` succeeds.
     func test_login_forceLogout() async throws
     {
-        var t: Task<(), Never>?
+        var t: Task<(), Error>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -111,7 +111,7 @@ final class LoginLogoutTests: XCTestCase
 
         assertEqual(await actomaton.state, .loggingOut)
 
-        await t?.value // wait for previous effect
+        try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         XCTAssertTrue(isLoginCancelled,

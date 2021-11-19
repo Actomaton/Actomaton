@@ -44,7 +44,7 @@ final class DeinitTests: XCTestCase
         self.actomaton = nil
         XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
 
-        await task?.value
+        try await task?.value
 
         let results = await resultsCollector.results
         XCTAssertEqual(

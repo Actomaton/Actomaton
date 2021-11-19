@@ -10,12 +10,12 @@ extension Store
         @Binding
         public private(set) var state: State
 
-        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Never>?
+        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
 
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
         public init(
             state: Binding<State>,
-            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Never>?
+            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
         )
         {
             self._state = state
@@ -48,7 +48,7 @@ extension Store
             _ action: Action,
             priority: TaskPriority? = nil,
             tracksFeedbacks: Bool = false
-        ) -> Task<(), Never>?
+        ) -> Task<(), Error>?
         {
             self._send(action, priority, tracksFeedbacks)
         }
