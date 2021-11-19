@@ -31,19 +31,6 @@ extension Binding
         )
     }
 
-    public subscript<SubValue>(_ keyPath: WritableKeyPath<Value, SubValue?>)
-        -> Binding<SubValue>?
-    {
-        guard let subValue = self.wrappedValue[keyPath: keyPath] else {
-            return nil
-        }
-
-        return Binding<SubValue>(
-            get: { subValue },
-            set: { self.wrappedValue[keyPath: keyPath] = $0 }
-        )
-    }
-
     /// Transforms `<Value>` to `<SubValue?>` using `CasePath`.
     /// - Note: `Value` should be enum value.
     public subscript<SubValue>(casePath casePath: CasePath<Value, SubValue>)
