@@ -3,6 +3,7 @@ import SwiftUI
 extension Store
 {
     /// Lightweight `Store` proxy that is state-bindable and action-sendable without duplicating internal state.
+    /// - Note: This is a common sub-store type for SwiftUI-based app.
     @dynamicMemberLookup
     @MainActor
     public struct Proxy
