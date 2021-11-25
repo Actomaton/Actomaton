@@ -8,15 +8,40 @@ import SwiftUI
 @MainActor
 open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewController
 {
-    private let store: Store<Action, State>
+    private let storeProxy: Store<Action, State>.Proxy?
     private let makeView: @MainActor (Store<Action, State>.Proxy) -> V
 
+    /// Strong reference for `Store` if needed.
+    private let store: Any?
+
+    /// Initializer for `Store` with retaining it inside.
     public init(
         store: Store<Action, State>,
         makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
     )
     {
         self.store = store
+        self.storeProxy = store.proxy
+        self.makeView = makeView
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    /// Initializer for `Store.ObservableProxy`.
+    ///
+    /// - Important:
+    ///   Calling this initializer should be the same time as `ObservableProxy.state` (publisher) emits value.
+    ///   Otherwise, `makeView`'s result will be `EmptyView` until first new state is arrived.
+    ///
+    /// - Important:
+    ///   `Store.Proxy` passed to `makeView` as argument ignores setter-state-binding which doesn't support direct-state changes,
+    ///   so developer must use `storeProxy.stateBinding` to convert them into new actions.
+    public init(
+        store: Store<Action, State>.ObservableProxy,
+        makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
+    )
+    {
+        self.store = nil
+        self.storeProxy = store.unsafeProxy.traverse(\.self)
         self.makeView = makeView
         super.init(nibName: nil, bundle: nil)
     }
@@ -30,7 +55,7 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
     {
         super.viewDidLoad()
 
-        let rootView = StoreView(store: self.store, makeView: self.makeView)
+        let rootView = StoreView(storeProxy: self.storeProxy, makeView: self.makeView)
         let hostVC = UIHostingController(rootView: rootView)
         hostVC.view.translatesAutoresizingMaskIntoConstraints = false
 
@@ -49,26 +74,29 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
 
 // MARK: - Private
 
-/// View to hold `Store` as `@ObservedObject`.
 private struct StoreView<Action, State, V: View>: View
 {
-    @ObservedObject
-    var store: Store<Action, State>
+    private let storeProxy: Store<Action, State>.Proxy?
 
     private let makeView: @MainActor (Store<Action, State>.Proxy) -> V
 
     init(
-        store: Store<Action, State>,
+        storeProxy: Store<Action, State>.Proxy?,
         makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
     )
     {
-        self.store = store
+        self.storeProxy = storeProxy
         self.makeView = makeView
     }
 
     var body: some View
     {
-        self.makeView(self.store.proxy)
+        if let storeProxy = self.storeProxy {
+            self.makeView(storeProxy)
+        }
+        else {
+            let _ = print("[ActomatonStore] `HostingViewController` failed to make view due to missing initial state arrival from `Store.ObservableProxy.state`.")
+        }
     }
 }
 

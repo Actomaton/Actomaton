@@ -49,12 +49,19 @@ open class Store<Action, State>: ObservableObject
         }
     }
 
-    /// Lightweight `Store` proxy without duplicating internal state.
+    /// Lightweight `Store` proxy that is state-bindable and action-sendable without duplicating internal state.
+    /// - Note: This is a common sub-store type for SwiftUI-based app.
     public var proxy: Proxy
     {
         Proxy(state: self.stateBinding, send: self.send)
     }
 
+    /// Lightweight `Store` proxy that is state-observable and action-sendable.
+    /// - Note: This is a common sub-store type for UIKit-Navigation-based app.
+    public var observableProxy: ObservableProxy
+    {
+        ObservableProxy(state: self.$state, send: self.send)
+    }
 }
 
 // MARK: - Private
