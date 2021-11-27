@@ -54,3 +54,20 @@ public struct SendRouteEnvironment<Environment, Route>
         self.sendRoute = sendRoute
     }
 }
+
+// MARK: - Reducer.forwardActions
+
+extension Reducer
+{
+    /// `RouteStore` reducer type that forwards all input `Action`s as output routes without state changes.
+    public static func forwardActions<InnerEnvironment>()
+        -> Reducer<Action, State, SendRouteEnvironment<InnerEnvironment, Action>>
+        where Environment == SendRouteEnvironment<InnerEnvironment, Action>
+    {
+        .init { action, state, env in
+            Effect.fireAndForget {
+                env.sendRoute(action)
+            }
+        }
+    }
+}
