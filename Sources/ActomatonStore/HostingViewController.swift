@@ -8,21 +8,14 @@ import SwiftUI
 @MainActor
 open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewController
 {
-    private let storeProxy: Store<Action, State>.Proxy?
-    private let makeView: @MainActor (Store<Action, State>.Proxy) -> V
+    private let rootView: AnyView
 
-    /// Strong reference for `Store` if needed.
-    private let store: Any?
-
-    /// Initializer for `Store` with retaining it inside.
     public init(
         store: Store<Action, State>,
         makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
     )
     {
-        self.store = store
-        self.storeProxy = store.proxy
-        self.makeView = makeView
+        self.rootView = AnyView(StoreView(store: store, makeView: makeView))
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -40,9 +33,7 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
         makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
     )
     {
-        self.store = nil
-        self.storeProxy = store.unsafeProxy.traverse(\.self)
-        self.makeView = makeView
+        self.rootView = AnyView(ObservableProxyView(store: store, makeView: makeView))
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -55,7 +46,6 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
     {
         super.viewDidLoad()
 
-        let rootView = StoreView(storeProxy: self.storeProxy, makeView: self.makeView)
         let hostVC = UIHostingController(rootView: rootView)
         hostVC.view.translatesAutoresizingMaskIntoConstraints = false
 
@@ -74,24 +64,49 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
 
 // MARK: - Private
 
+/// View to hold `Store` as `@ObservedObject`.
 private struct StoreView<Action, State, V: View>: View
 {
-    private let storeProxy: Store<Action, State>.Proxy?
+    @ObservedObject
+    var store: Store<Action, State>
 
     private let makeView: @MainActor (Store<Action, State>.Proxy) -> V
 
     init(
-        storeProxy: Store<Action, State>.Proxy?,
+        store: Store<Action, State>,
         makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
     )
     {
-        self.storeProxy = storeProxy
+        self.store = store
         self.makeView = makeView
     }
 
     var body: some View
     {
-        if let storeProxy = self.storeProxy {
+        self.makeView(self.store.proxy)
+    }
+}
+
+/// View to hold `Store.ObservableProxy` as `@ObservedObject`.
+private struct ObservableProxyView<Action, State, V: View>: View
+{
+    @ObservedObject
+    var store: Store<Action, State>.ObservableProxy
+
+    let makeView: @MainActor (Store<Action, State>.Proxy) -> V
+
+    init(
+        store: Store<Action, State>.ObservableProxy,
+        makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
+    )
+    {
+        self.store = store
+        self.makeView = makeView
+    }
+
+    var body: some View
+    {
+        if let storeProxy = self.store.unsafeProxy.traverse(\.self) {
             self.makeView(storeProxy)
         }
         else {
