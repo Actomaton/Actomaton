@@ -51,14 +51,12 @@ public actor Actomaton<Action, State>
     {
         Debug.print("[deinit] \(String(format: "%p", ObjectIdentifier(self).hashValue))")
 
+        // NOTE:
+        // All effects are now identified using `EffectID`,
+        // so should be able to cancel all remaining tasks here
+        // and no need to for-loop over `self.queues`.
         for idTask in self.idTasks {
             for task in idTask.value {
-                task.cancel()
-            }
-        }
-
-        for queue in self.queues {
-            for task in queue.value {
                 task.cancel()
             }
         }
@@ -260,11 +258,11 @@ extension Actomaton
         tracksFeedbacks: Bool
     )
     {
+        let effectID = id ?? (DefaultEffectID() as EffectID)
+
         // Register task.
-        if let id = id {
-            Debug.print("[enqueueTask] Append id-task: \(id)")
-            self.idTasks[id, default: []].insert(task)
-        }
+        Debug.print("[enqueueTask] Append id-task: \(effectID)")
+        self.idTasks[effectID, default: []].insert(task)
 
         if let queue = queue {
             Debug.print("[enqueueTask] Append queue-task: \(queue)")
@@ -276,12 +274,8 @@ extension Actomaton
             // Wait for `task` to complete.
             try await task.value
 
-            Debug.print("[enqueueTask] Task completed")
-
-            if let id = id {
-                Debug.print("[enqueueTask] Remove completed id-task: \(id)")
-                await self?.removeTask(id: id, task: task)
-            }
+            Debug.print("[enqueueTask] Task completed, removing id-task: \(effectID)")
+            await self?.removeTask(id: effectID, task: task)
 
             if let queue = queue {
                 await self?.removeTaskIfNeeded(task: task, in: queue)
