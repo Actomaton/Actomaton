@@ -49,6 +49,31 @@ open class Store<Action, State>: ObservableObject
         }
     }
 
+    /// Sends `action` to `Store`.
+    ///
+    /// - Parameters:
+    ///   - priority:
+    ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
+    ///   - tracksFeedbacks:
+    ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
+    ///     so that their wait-for-all and cancellations are possible.
+    ///     Default is `false`.
+    ///
+    /// - Returns:
+    ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
+    @discardableResult
+    public nonisolated func send(
+        _ action: Action,
+        priority: TaskPriority? = nil,
+        tracksFeedbacks: Bool = false
+    ) -> Task<(), Error>
+    {
+        Task(priority: priority) {
+            let task = await self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
+            try await task?.value
+        }
+    }
+
     /// Lightweight `Store` proxy that is state-bindable and action-sendable without duplicating internal state.
     /// - Note: This is a common sub-store type for SwiftUI-based app.
     public var proxy: Proxy
@@ -72,13 +97,6 @@ open class Store<Action, State>: ObservableObject
 // To call these methods, use `proxy` instead.
 extension Store
 {
-    private nonisolated func send(_ action: Action, priority: TaskPriority? = nil, tracksFeedbacks: Bool) -> Task<(), Error>
-    {
-        Task(priority: priority) {
-            await self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
-        }
-    }
-
     private var stateBinding: Binding<State>
     {
         return Binding<State>(
