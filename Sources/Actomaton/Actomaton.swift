@@ -93,6 +93,8 @@ public actor Actomaton<Action, State>
             }
         }
 
+        if tasks.isEmpty { return nil }
+
         let tasks_ = tasks
 
         // Unifies `tasks`.
