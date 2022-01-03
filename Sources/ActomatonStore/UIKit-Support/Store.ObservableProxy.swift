@@ -13,7 +13,7 @@ extension Store
         /// - Note: Not guranteed to emit first value immediately on `subscribe`, as it may be some filtered sub-state.
         public let state: AnyPublisher<State, Never>
 
-        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
+        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
         public var objectWillChange: AnyPublisher<State, Never>
         {
@@ -23,7 +23,7 @@ extension Store
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
         public init<P>(
             state: P,
-            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
+            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
         )
             where P: Publisher, P.Output == State, P.Failure == Never
         {
@@ -37,7 +37,7 @@ extension Store
         {
             self.init(state: state, send: { action, _, _ in
                 send(action)
-                return nil
+                return Task {}
             })
         }
 
@@ -58,7 +58,7 @@ extension Store
             _ action: Action,
             priority: TaskPriority? = nil,
             tracksFeedbacks: Bool = false
-        ) -> Task<(), Error>?
+        ) -> Task<(), Error>
         {
             self._send(action, priority, tracksFeedbacks)
         }
