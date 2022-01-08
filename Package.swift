@@ -8,13 +8,14 @@ let package = Package(
     products: [
         .library(
             name: "Actomaton",
-            targets: ["Actomaton"]),
+            targets: ["Actomaton", "ActomatonDebugging"]),
         .library(
             name: "ActomatonStore",
-            targets: ["ActomatonStore"]),
+            targets: ["ActomatonStore", "ActomatonDebugging"])
     ],
     dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0")
+        .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
+        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "0.3.0")
     ],
     targets: [
         .target(
@@ -25,6 +26,12 @@ let package = Package(
             dependencies: [
                 "Actomaton",
                 .product(name: "CasePaths", package: "swift-case-paths")
+            ]),
+        .target(
+            name: "ActomatonDebugging",
+            dependencies: [
+                "Actomaton",
+                .product(name: "CustomDump", package: "swift-custom-dump")
             ]),
         .testTarget(
             name: "ActomatonTests",
