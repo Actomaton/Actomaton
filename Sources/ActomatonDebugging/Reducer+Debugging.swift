@@ -24,7 +24,7 @@ extension Reducer
     public static func debug(
         name: String? = nil,
         action actionLogFormat: ActionDebugLogFormat? = .all(maxDepth: .max),
-        state stateLogFormat: StateDebugLogFormat? = .all(maxDepth: .max),
+        state stateLogFormat: StateDebugLogFormat? = .diff,
         _ nextRun: @escaping (Action, inout State, Environment) -> Effect<Action> = Reducer.empty.run
     ) -> Reducer
     {
