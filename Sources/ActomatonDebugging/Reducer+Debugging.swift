@@ -97,58 +97,6 @@ extension Reducer
     }
 }
 
-// MARK: - ActionDebugLogFormat
-
-/// Action debug-logging format for `Reducer.debug` .
-/// Available formats are: ``simple``, ``all(maxDepth:)``.
-public struct ActionDebugLogFormat: Equatable
-{
-    fileprivate let format: _LogFormat
-
-    /// Simple oneline-printing mode.
-    public static let simple = ActionDebugLogFormat(format: .simple)
-
-    /// Uses `CustomDump` to multiline-print all data.
-    public static func all(maxDepth: Int = .max) -> ActionDebugLogFormat
-    {
-        ActionDebugLogFormat(format: .all(maxDepth: maxDepth))
-    }
-
-    fileprivate enum _LogFormat: Equatable
-    {
-        case simple
-        case all(maxDepth: Int = .max)
-    }
-}
-
-// MARK: - StateDebugLogFormat
-
-/// State debug-logging format for `Reducer.debug` .
-/// Available formats are: ``simple``, ``all(maxDepth:)``, ``diff``.
-public struct StateDebugLogFormat: Equatable
-{
-    fileprivate let format: _LogFormat
-
-    /// Simple oneline-printing mode.
-    public static let simple = StateDebugLogFormat(format: .simple)
-
-    /// Uses `CustomDump` to multiline-print all data.
-    public static func all(maxDepth: Int = .max) -> StateDebugLogFormat
-    {
-        StateDebugLogFormat(format: .all(maxDepth: maxDepth))
-    }
-
-    /// State diff-printing.
-    public static let diff = StateDebugLogFormat(format: .diff)
-
-    fileprivate enum _LogFormat: Equatable
-    {
-        case simple
-        case all(maxDepth: Int = .max)
-        case diff
-    }
-}
-
 // MARK: - Private
 
 // Code from swift-composable-architecture:
