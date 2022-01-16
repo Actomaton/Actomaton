@@ -17,34 +17,26 @@ jobs:
     runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
-    - name: Select Xcode version
-      run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
     - name: Run tests
-      run: make test-macOS
+      run: make build-macOS
 
   xcodebuild-iOS:
     runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
-    - name: Select Xcode version
-      run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
     - name: Run tests
-      run: make test-iOS
+      run: make build-iOS
 
   xcodebuild-tvOS:
     runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
-    - name: Select Xcode version
-      run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
     - name: Run tests
-      run: make test-tvOS
+      run: make build-tvOS
 
   xcodebuild-watchOS:
     runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
-    - name: Select Xcode version
-      run: sudo xcode-select -s '/Applications/Xcode_13.0.app'
     - name: Run tests
-      run: make test-watchOS
+      run: make build-watchOS
