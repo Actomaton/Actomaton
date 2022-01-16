@@ -1,15 +1,22 @@
-test-macOS:
-	$(MAKE) test DESTINATION='platform=OS X'
+# NOTE: Async tests are currently disabled due to its indeterminacy nature of effectful computation.
 
-test-iOS:
-	$(MAKE) test DESTINATION='platform=iOS Simulator,name=iPhone 13 Pro'
+.PHONY: build-macOS
+build-macOS:
+	$(MAKE) build DESTINATION='platform=OS X'
 
-test-watchOS:
-	$(MAKE) test DESTINATION='platform=watchOS Simulator,name=Apple Watch Series 7 - 45mm'
+.PHONY: build-iOS
+build-iOS:
+	$(MAKE) build DESTINATION='platform=iOS Simulator,name=iPhone 13 Pro'
 
-test-tvOS:
-	$(MAKE) test DESTINATION='platform=tvOS Simulator,name=Apple TV 4K'
+.PHONY: build-watchOS
+build-watchOS:
+	$(MAKE) build DESTINATION='platform=watchOS Simulator,name=Apple Watch Series 7 - 45mm'
 
-test:
+.PHONY: build-tvOS
+build-tvOS:
+	$(MAKE) build DESTINATION='platform=tvOS Simulator,name=Apple TV 4K'
+
+.PHONY: build
+build:
 	set -o pipefail && \
-		xcodebuild test -scheme Actomaton-Package -destination '${DESTINATION}' | xcpretty
+		xcodebuild build -scheme Actomaton-Package -destination '${DESTINATION}' | xcpretty
