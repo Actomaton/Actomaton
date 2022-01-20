@@ -11,7 +11,8 @@ extension ForEach where Content: View
         @ViewBuilder content: @escaping (Store<Action, C.Element>.Proxy) -> Content
     ) where
         Data == [Zip2Sequence<C.Indices, C>.Element],
-        C: MutableCollection, C: RandomAccessCollection, C.Index: Hashable
+        C: MutableCollection & RandomAccessCollection,
+        C.Index: Hashable & Sendable
     {
         let firstKeyPath = \Zip2Sequence<C.Indices, C>.Element.1
 
@@ -31,8 +32,10 @@ extension ForEach where Content: View
         @ViewBuilder content: @escaping (Store<Action, C.Element>.Proxy) -> Content
     ) where
         Data == [Zip2Sequence<C.Indices, C>.Element],
-        C: MutableCollection, C: RandomAccessCollection, C.Index: Hashable,
-        C.Element: Identifiable, C.Element.ID == ID
+        C: MutableCollection & RandomAccessCollection,
+        C.Index: Hashable & Sendable,
+        C.Element: Identifiable,
+        C.Element.ID == ID
     {
         self.init(store: store, id: \.id, content: content)
     }

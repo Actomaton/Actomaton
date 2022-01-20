@@ -1,9 +1,9 @@
 /// A composable, `State`-transforming function wrapper that is triggered by `Action`.
-public struct Reducer<Action, State, Environment>
+public struct Reducer<Action, State, Environment>: Sendable
 {
-    public let run: (Action, inout State, Environment) -> Effect<Action>
+    public let run: @Sendable (Action, inout State, Environment) -> Effect<Action>
 
-    public init(_ run: @escaping (Action, inout State, Environment) -> Effect<Action>)
+    public init(_ run: @Sendable @escaping (Action, inout State, Environment) -> Effect<Action>)
     {
         self.run = run
     }
@@ -48,7 +48,7 @@ public struct Reducer<Action, State, Environment>
                     &state,
                     environment
                 )
-                .map(toLocalAction.embed)
+                .map { toLocalAction.embed($0) }
         }
     }
 
@@ -86,7 +86,7 @@ public struct Reducer<Action, State, Environment>
 
     /// Transforms `Environment`.
     public func contramap<GlobalEnvironment>(
-        environment toLocalEnvironment: @escaping (GlobalEnvironment) -> Environment
+        environment toLocalEnvironment: @Sendable @escaping (GlobalEnvironment) -> Environment
     ) -> Reducer<Action, State, GlobalEnvironment>
     {
         .init { action, state, environment in

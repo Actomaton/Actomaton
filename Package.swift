@@ -20,13 +20,27 @@ let package = Package(
     targets: [
         .target(
             name: "Actomaton",
-            dependencies: [.product(name: "CasePaths", package: "swift-case-paths")]),
+            dependencies: [.product(name: "CasePaths", package: "swift-case-paths")],
+            swiftSettings: [
+                .unsafeFlags([
+                    "-Xfrontend", "-warn-concurrency",
+                    "-Xfrontend", "-enable-actor-data-race-checks",
+                ])
+            ]
+        ),
         .target(
             name: "ActomatonStore",
             dependencies: [
                 "Actomaton",
                 .product(name: "CasePaths", package: "swift-case-paths")
-            ]),
+            ],
+            swiftSettings: [
+                .unsafeFlags([
+                    "-Xfrontend", "-warn-concurrency",
+                    "-Xfrontend", "-enable-actor-data-race-checks",
+                ])
+            ]
+        ),
         .target(
             name: "ActomatonDebugging",
             dependencies: [
@@ -35,6 +49,13 @@ let package = Package(
             ]),
         .testTarget(
             name: "ActomatonTests",
-            dependencies: ["Actomaton"]),
+            dependencies: ["Actomaton"],
+            swiftSettings: [
+                .unsafeFlags([
+                    "-Xfrontend", "-warn-concurrency",
+                    "-Xfrontend", "-enable-actor-data-race-checks",
+                ])
+            ]
+        )
     ]
 )

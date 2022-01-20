@@ -5,8 +5,9 @@ import Combine
 /// without using `State` as a single source of truth.
 @MainActor
 open class RouteStore<Action, State, Route>: Store<Action, State>
+    where Action: Sendable, State: Sendable
 {
-    private let _routes = PassthroughSubject<Route, Never>()
+    private let _routes: PassthroughSubject<Route, Never>
     private var cancellables: [AnyCancellable] = []
 
     public init<Environment>(
@@ -16,10 +17,13 @@ open class RouteStore<Action, State, Route>: Store<Action, State>
         routeType: Route.Type = Route.self // for quick type-inference
     )
     {
+        let routes = PassthroughSubject<Route, Never>()
+        self._routes = routes
+
         super.init(
             state: state,
             reducer: reducer,
-            environment: .init(environment: environment, sendRoute: self._routes.send)
+            environment: .init(environment: environment, sendRoute: { routes.send($0) })
         )
     }
 
@@ -43,12 +47,13 @@ open class RouteStore<Action, State, Route>: Store<Action, State>
 // MARK: - SendRouteEnvironment
 
 /// Wrapper of original `environment` with attaching `sendRoute`.
-public struct SendRouteEnvironment<Environment, Route>
+public struct SendRouteEnvironment<Environment, Route>: Sendable
+    where Environment: Sendable
 {
     public var environment: Environment
-    public var sendRoute: (Route) -> Void
+    public var sendRoute: @Sendable (Route) -> Void
 
-    public init(environment: Environment, sendRoute: @escaping (Route) -> Void)
+    public init(environment: Environment, sendRoute: @Sendable @escaping (Route) -> Void)
     {
         self.environment = environment
         self.sendRoute = sendRoute
@@ -62,7 +67,9 @@ extension Reducer
     /// `RouteStore` reducer type that forwards all input `Action`s as output routes without state changes.
     public static func forwardActions<InnerEnvironment>()
         -> Reducer<Action, State, SendRouteEnvironment<InnerEnvironment, Action>>
-        where Environment == SendRouteEnvironment<InnerEnvironment, Action>
+    where
+        Environment == SendRouteEnvironment<InnerEnvironment, Action>,
+        Action: Sendable
     {
         .init { action, state, env in
             Effect.fireAndForget {
