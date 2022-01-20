@@ -8,19 +8,36 @@ final class EffectIDAutoCancellationTests: XCTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 
-    fileprivate var is1To2Cancelled = false
-    fileprivate var is2To3Cancelled = false
+    private var flags = Flags()
+
+    private actor Flags
+    {
+        var is1To2Cancelled = false
+        var is2To3Cancelled = false
+
+        func mark(
+            is1To2Cancelled: Bool? = nil,
+            is2To3Cancelled: Bool? = nil
+        )
+        {
+            if let is1To2Cancelled = is1To2Cancelled {
+                self.is1To2Cancelled = is1To2Cancelled
+            }
+            if let is2To3Cancelled = is2To3Cancelled {
+                self.is2To3Cancelled = is2To3Cancelled
+            }
+        }
+    }
 
     override func setUp() async throws
     {
-        is1To2Cancelled = false
-        is2To3Cancelled = false
+        flags = Flags()
 
         struct Newest1EffectQueue: Newest1EffectQueueProtocol {}
 
         let actomaton = Actomaton<Action, State>(
             state: ._1,
-            reducer: Reducer { action, state, _ in
+            reducer: Reducer { [flags] action, state, _ in
                 switch action {
                 case ._1To2:
                     guard state == ._1 else { return .empty }
@@ -30,7 +47,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                         await tick(1)
                         if Task.isCancelled {
                             Debug.print("_1To2 cancelled")
-                            self.is1To2Cancelled = true
+                            await flags.mark(is1To2Cancelled: true)
                             return nil
                         }
                         return ._2To3
@@ -44,7 +61,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                         await tick(1)
                         if Task.isCancelled {
                             Debug.print("_2To3 cancelled")
-                            self.is2To3Cancelled = true
+                            await flags.mark(is2To3Cancelled: true)
                             return nil
                         }
                         return ._3To4
@@ -90,7 +107,10 @@ final class EffectIDAutoCancellationTests: XCTestCase
         await tick(1.5)
         assertEqual(await actomaton.state, ._4)
 
+        let is1To2Cancelled = await flags.is1To2Cancelled
         XCTAssertFalse(is1To2Cancelled)
+
+        let is2To3Cancelled = await flags.is2To3Cancelled
         XCTAssertFalse(is2To3Cancelled)
     }
 
@@ -112,7 +132,10 @@ final class EffectIDAutoCancellationTests: XCTestCase
         assertEqual(await actomaton.state, ._end,
                     "Waited for enough time, and state should not change")
 
+        let is1To2Cancelled = await flags.is1To2Cancelled
         XCTAssertTrue(is1To2Cancelled)
+
+        let is2To3Cancelled = await flags.is2To3Cancelled
         XCTAssertFalse(is2To3Cancelled)
     }
 
@@ -138,7 +161,10 @@ final class EffectIDAutoCancellationTests: XCTestCase
         assertEqual(await actomaton.state, ._end,
                     "Waited for enough time, and state should not change")
 
+        let is1To2Cancelled = await flags.is1To2Cancelled
         XCTAssertFalse(is1To2Cancelled)
+
+        let is2To3Cancelled = await flags.is2To3Cancelled
         XCTAssertTrue(is2To3Cancelled)
     }
 }

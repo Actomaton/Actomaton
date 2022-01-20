@@ -7,24 +7,38 @@ final class LoginLogoutTests: XCTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 
-    private var isLoginCancelled = false
+    private var flags = Flags()
+
+    private actor Flags
+    {
+        var isLoginCancelled = false
+
+        func mark(
+            isLoginCancelled: Bool? = nil
+        )
+        {
+            if let isLoginCancelled = isLoginCancelled {
+                self.isLoginCancelled = isLoginCancelled
+            }
+        }
+    }
 
     override func setUp() async throws
     {
-        isLoginCancelled = false
+        flags = Flags()
 
         struct LoginFlowEffectQueue: Newest1EffectQueueProtocol {}
 
         let actomaton = Actomaton<Action, State>(
             state: .loggedOut,
-            reducer: Reducer { action, state, _ in
+            reducer: Reducer { [flags] action, state, _ in
                 switch (action, state) {
                 case (.login, .loggedOut):
                     state = .loggingIn
                     return Effect(queue: LoginFlowEffectQueue()) {
                         await tick(1)
                         if Task.isCancelled {
-                            self.isLoginCancelled = true
+                            await flags.mark(isLoginCancelled: true)
                             return nil
                         }
                         return .loginOK
@@ -70,6 +84,7 @@ final class LoginLogoutTests: XCTestCase
         await actomaton.send(.logout) // wrong action
         assertEqual(await actomaton.state, .loggedOut, "No change, because of wrong action")
 
+        let isLoginCancelled = await flags.isLoginCancelled
         XCTAssertFalse(isLoginCancelled)
     }
 
@@ -92,6 +107,7 @@ final class LoginLogoutTests: XCTestCase
         try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
+        let isLoginCancelled = await flags.isLoginCancelled
         XCTAssertFalse(isLoginCancelled)
     }
 
@@ -114,6 +130,7 @@ final class LoginLogoutTests: XCTestCase
         try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
+        let isLoginCancelled = await flags.isLoginCancelled
         XCTAssertTrue(isLoginCancelled,
                       "login's effect should be cancelled")
     }

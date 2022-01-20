@@ -181,7 +181,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
 
 // MARK: - Private
 
-private enum Action
+private enum Action: Sendable
 {
     case _1To2
     case _2To3
@@ -192,7 +192,7 @@ private enum Action
     case _toEnd
 }
 
-private enum State: Equatable
+private enum State: Equatable, Sendable
 {
     case _1
     case _2
