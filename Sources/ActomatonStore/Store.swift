@@ -5,6 +5,7 @@ import Combine
 /// Store of `Actomaton` optimized for SwiftUI's 2-way binding.
 @MainActor
 open class Store<Action, State>: ObservableObject
+    where Action: Sendable, State: Sendable
 {
     private let actomaton: Actomaton<BindableAction, State>
 
@@ -29,7 +30,7 @@ open class Store<Action, State>: ObservableObject
         state initialState: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment
-    )
+    ) where Environment: Sendable
     {
         self.state = initialState
 
@@ -120,7 +121,7 @@ extension Store
 
 extension Store {
     /// `action` as indirect messaging, or `state` that can directly replace `actomaton.state` via SwiftUI 2-way binding.
-    fileprivate enum BindableAction
+    fileprivate enum BindableAction: Sendable
     {
         case action(Action)
         case state(State)
@@ -136,7 +137,7 @@ private func lift<Action, State, Environment>(
         switch action {
         case let .action(innerAction):
             let effect = reducer.run(innerAction, &state, environment)
-            return effect.map(Store<Action, State>.BindableAction.action)
+            return effect.map { Store<Action, State>.BindableAction.action($0) }
 
         case let .state(newState):
             state = newState

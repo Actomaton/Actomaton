@@ -5,6 +5,7 @@ import Foundation
 /// Deterministic finite state machine that receives "action"
 /// and with "current state" transform to "next state" & additional "effect".
 public actor Actomaton<Action, State>
+    where Action: Sendable, State: Sendable
 {
 #if os(Linux)
     public private(set) var state: State
@@ -40,7 +41,7 @@ public actor Actomaton<Action, State>
         state: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment
-    )
+    ) where Environment: Sendable
     {
         self.init(state: state, reducer: Reducer { action, state, _ in
             reducer.run(action, &state, environment)

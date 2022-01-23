@@ -7,6 +7,7 @@ import SwiftUI
 /// SwiftUI `View` & `Store` wrapper view controller that holds `UIHostingController`.
 @MainActor
 open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewController
+    where Action: Sendable, State: Sendable
 {
     private let rootView: AnyView
 
@@ -66,6 +67,7 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
 
 /// View to hold `Store` as `@ObservedObject`.
 private struct StoreView<Action, State, V: View>: View
+    where Action: Sendable, State: Sendable
 {
     @ObservedObject
     var store: Store<Action, State>
@@ -89,6 +91,7 @@ private struct StoreView<Action, State, V: View>: View
 
 /// View to hold `Store.ObservableProxy` as `@ObservedObject`.
 private struct ObservableProxyView<Action, State, V: View>: View
+    where Action: Sendable, State: Sendable
 {
     @ObservedObject
     var store: Store<Action, State>.ObservableProxy
