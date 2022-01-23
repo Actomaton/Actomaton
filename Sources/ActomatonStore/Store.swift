@@ -13,6 +13,8 @@ open class Store<Action, State>: ObservableObject
 
     private var cancellables: [AnyCancellable] = []
 
+    private var task: Task<Void, Never>?
+
     /// Initializer without `environment`.
     public convenience init(
         state initialState: State,
@@ -39,14 +41,18 @@ open class Store<Action, State>: ObservableObject
             environment: environment
         )
 
-        Task {
-            let statePublisher = await self.actomaton.$state
+        self.task = Task { [weak self] in
+            guard let stream = await self?.actomaton.$state.toAsyncStream() else { return }
 
-            statePublisher
-                .receive(on: DispatchQueue.main)
-                .assign(to: \.state, on: self)
-                .store(in: &cancellables)
+            for await state in stream {
+                self?.state = state
+            }
         }
+    }
+
+    deinit
+    {
+        self.task?.cancel()
     }
 
     /// Sends `action` to `Store`.
