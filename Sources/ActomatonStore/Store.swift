@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import Combine
 
 /// Store of `Actomaton` optimized for SwiftUI's 2-way binding.
 @MainActor
@@ -11,8 +10,6 @@ open class Store<Action, State>: ObservableObject
 
     @Published
     public private(set) var state: State
-
-    private var cancellables: [AnyCancellable] = []
 
     private var task: Task<Void, Never>?
 
