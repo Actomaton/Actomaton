@@ -3,11 +3,11 @@ import Actomaton
 
 // MARK: - toEffect
 
-extension Publisher where Failure == Never
+extension Publisher
 {
     public func toEffect() -> Effect<Output> where Output: Sendable
     {
-        Effect(sequence: self.toAsyncStream())
+        Effect(sequence: self.toAsyncThrowingStream())
     }
 
     public func toEffect<ID>(
@@ -15,7 +15,7 @@ extension Publisher where Failure == Never
     ) -> Effect<Output>
         where ID: EffectIDProtocol
     {
-        Effect(id: id, sequence: self.toAsyncStream())
+        Effect(id: id, sequence: self.toAsyncThrowingStream())
     }
 
     public func toEffect<Queue>(
@@ -23,7 +23,7 @@ extension Publisher where Failure == Never
     ) -> Effect<Output>
         where Queue: EffectQueueProtocol
     {
-        Effect(queue: queue, sequence: self.toAsyncStream())
+        Effect(queue: queue, sequence: self.toAsyncThrowingStream())
     }
 
     public func toEffect<ID, Queue>(
@@ -32,7 +32,7 @@ extension Publisher where Failure == Never
     ) -> Effect<Output>
         where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
-        Effect(id: id, queue: queue, sequence: self.toAsyncStream())
+        Effect(id: id, queue: queue, sequence: self.toAsyncThrowingStream())
     }
 }
 
@@ -83,6 +83,31 @@ extension Publisher
 
 extension Publisher
 {
+    /// `Publisher` to `AsyncThrowingStream`.
+    public func toAsyncThrowingStream() -> AsyncThrowingStream<Output, Swift.Error>
+    {
+        AsyncThrowingStream<Output, Swift.Error>(Output.self) { continuation in
+            let cancellable = self
+                .sink(
+                    receiveCompletion: { completion in
+                        switch completion {
+                        case .finished:
+                            continuation.finish()
+                        case let .failure(error):
+                            continuation.yield(with: .failure(error))
+                        }
+                    },
+                    receiveValue: { output in
+                        continuation.yield(output)
+                    }
+                )
+
+            continuation.onTermination = { @Sendable _ in
+                withExtendedLifetime(cancellable, {})
+            }
+        }
+    }
+
     /// `Publisher` to `AsyncStream`.
     public func toAsyncStream() -> AsyncStream<Output> where Failure == Never
     {
@@ -93,8 +118,6 @@ extension Publisher
                         switch completion {
                         case .finished:
                             continuation.finish()
-                        case let .failure(error):
-                            continuation.yield(with: .failure(error))
                         }
                     },
                     receiveValue: { output in

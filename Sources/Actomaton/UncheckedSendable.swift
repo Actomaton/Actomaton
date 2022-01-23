@@ -5,8 +5,8 @@ import CasePaths
 extension AnyHashable: @unchecked Sendable {}
 
 extension AsyncMapSequence: @unchecked Sendable {}
-
 extension AsyncStream: @unchecked Sendable {}
+extension AsyncThrowingStream: @unchecked Sendable {}
 
 extension WritableKeyPath: @unchecked Sendable {}
 

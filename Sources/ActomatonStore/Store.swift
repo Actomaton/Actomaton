@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import Combine
 
 /// Store of `Actomaton` optimized for SwiftUI's 2-way binding.
 @MainActor
@@ -12,7 +11,7 @@ open class Store<Action, State>: ObservableObject
     @Published
     public private(set) var state: State
 
-    private var cancellables: [AnyCancellable] = []
+    private var task: Task<Void, Never>?
 
     /// Initializer without `environment`.
     public convenience init(
@@ -40,14 +39,18 @@ open class Store<Action, State>: ObservableObject
             environment: environment
         )
 
-        Task {
-            let statePublisher = await self.actomaton.$state
+        self.task = Task { [weak self] in
+            guard let stream = await self?.actomaton.$state.toAsyncStream() else { return }
 
-            statePublisher
-                .receive(on: DispatchQueue.main)
-                .assign(to: \.state, on: self)
-                .store(in: &cancellables)
+            for await state in stream {
+                self?.state = state
+            }
         }
+    }
+
+    deinit
+    {
+        self.task?.cancel()
     }
 
     /// Sends `action` to `Store`.
