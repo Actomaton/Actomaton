@@ -1,7 +1,7 @@
 // Code from: https://github.com/Apodini/Apodini/blob/develop/Sources/ApodiniExtension/AsyncSequenceHelpers/AnyAsyncSequence.swift
 
 /// A type-erased version of a `AsyncSequence` that contains values of type `Element`.
-public struct AnyAsyncSequence<Element>: AsyncSequence, Sendable
+struct AnyAsyncSequence<Element>: AsyncSequence, Sendable
 {
     private let _makeAsyncIterator: @Sendable () -> AsyncIterator
 
@@ -12,14 +12,15 @@ public struct AnyAsyncSequence<Element>: AsyncSequence, Sendable
         }
     }
 
-    public func makeAsyncIterator() -> AsyncIterator
+    func makeAsyncIterator() -> AsyncIterator
     {
         _makeAsyncIterator()
     }
 }
 
-extension AnyAsyncSequence {
-    public struct AsyncIterator: AsyncIteratorProtocol
+extension AnyAsyncSequence
+{
+    struct AsyncIterator: AsyncIteratorProtocol
     {
         private let _next: (Any) async throws -> (Any, Element?)
         private var iterator: Any
@@ -37,7 +38,7 @@ extension AnyAsyncSequence {
             }
         }
 
-        public mutating func next() async throws -> Element?
+        mutating func next() async throws -> Element?
         {
             let (iterator, next) = try await _next(self.iterator)
             self.iterator = iterator
