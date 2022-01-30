@@ -1,6 +1,6 @@
 /// State debug-logging format for `Reducer.debug` .
 /// Available formats are: ``simple``, ``all(maxDepth:)``, ``diff``.
-public struct StateDebugLogFormat: Equatable
+public struct StateDebugLogFormat: Equatable, Sendable
 {
     let format: _LogFormat
 

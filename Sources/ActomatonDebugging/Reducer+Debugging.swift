@@ -13,6 +13,7 @@ extension Reducer
         action actionLogFormat: ActionDebugLogFormat? = .all(maxDepth: .max),
         state stateLogFormat: StateDebugLogFormat? = .diff
     ) -> Reducer
+        where Action: Sendable, State: Sendable
     {
         Self.debug(name: name, action: actionLogFormat, state: stateLogFormat, self.run)
     }
@@ -27,6 +28,7 @@ extension Reducer
         state stateLogFormat: StateDebugLogFormat? = .diff,
         _ nextRun: @escaping (Action, inout State, Environment) -> Effect<Action> = Reducer.empty.run
     ) -> Reducer
+        where Action: Sendable, State: Sendable
     {
 #if DEBUG
         .init { action, state, environment in

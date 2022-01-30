@@ -1,6 +1,6 @@
 /// Action debug-logging format for `Reducer.debug` .
 /// Available formats are: ``simple``, ``all(maxDepth:)``.
-public struct ActionDebugLogFormat: Equatable
+public struct ActionDebugLogFormat: Equatable, Sendable
 {
     let format: _LogFormat
 
