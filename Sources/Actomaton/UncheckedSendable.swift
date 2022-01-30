@@ -2,8 +2,6 @@ import CasePaths
 
 // TODO: Remove `@unchecked Sendable` when `Sendable` is supported by each module.
 
-extension AnyHashable: @unchecked Sendable {}
-
 extension AsyncMapSequence: @unchecked Sendable {}
 extension AsyncStream: @unchecked Sendable {}
 extension AsyncThrowingStream: @unchecked Sendable {}

@@ -21,7 +21,7 @@ extension Effect
     public init<ID>(id: ID? = nil, run: @Sendable @escaping () async throws -> Action?)
         where ID: EffectIDProtocol
     {
-        self.init(kinds: [.single(Single(id: id, queue: nil, run: run))])
+        self.init(kinds: [.single(Single(id: id.map(EffectID.init), queue: nil, run: run))])
     }
 
     /// Single-`async` side-effect.
@@ -38,7 +38,7 @@ extension Effect
     public init<ID, Queue>(id: ID? = nil, queue: Queue? = nil, run: @Sendable @escaping () async throws -> Action?)
         where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
-        self.init(kinds: [.single(Single(id: id, queue: queue.map(AnyEffectQueue.init), run: run))])
+        self.init(kinds: [.single(Single(id: id.map(EffectID.init), queue: queue.map(AnyEffectQueue.init), run: run))])
     }
 
     // MARK: - AsyncSequence
@@ -56,7 +56,7 @@ extension Effect
     public init<ID, S>(id: ID? = nil, sequence: S)
         where ID: EffectIDProtocol, S: AsyncSequence, S: Sendable, S.Element == Action
     {
-        self.init(kinds: [.sequence(_Sequence(id: id, queue: nil, sequence: sequence.typeErased))])
+        self.init(kinds: [.sequence(_Sequence(id: id.map(EffectID.init), queue: nil, sequence: sequence.typeErased))])
     }
 
     /// `AsyncSequence` side-effect.
@@ -73,7 +73,7 @@ extension Effect
     public init<ID, S, Queue>(id: ID? = nil, queue: Queue? = nil, sequence: S)
         where ID: EffectIDProtocol, S: AsyncSequence, S: Sendable, S.Element == Action, Queue: EffectQueueProtocol
     {
-        self.init(kinds: [.sequence(_Sequence(id: id, queue: queue.map(AnyEffectQueue.init), sequence: sequence.typeErased))])
+        self.init(kinds: [.sequence(_Sequence(id: id.map(EffectID.init), queue: queue.map(AnyEffectQueue.init), sequence: sequence.typeErased))])
     }
 
     // MARK: - fireAndForget
@@ -152,7 +152,7 @@ extension Effect
     public static func cancel<ID>(id: ID) -> Effect<Action>
         where ID: EffectIDProtocol
     {
-        Effect(kinds: [.cancel { $0 == id as EffectID }])
+        Effect(kinds: [.cancel { $0 == EffectID(id) }])
     }
 }
 
@@ -227,10 +227,10 @@ extension Effect
         .init(kinds: self.kinds.map { kind in
             switch kind {
             case let .single(single):
-                return .single(single.map(queue: f))
+                return .single(single.map(queue: { f($0?.queue) }))
 
             case let .sequence(sequence):
-                return .sequence(sequence.map(queue: f))
+                return .sequence(sequence.map(queue: { f($0?.queue) }))
 
             case let .cancel(predicate):
                 return .cancel(predicate)
@@ -334,7 +334,7 @@ extension Effect
         internal func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect.Single
             where ID: EffectIDProtocol
         {
-            .init(id: f(id), queue: queue, run: run)
+            .init(id: f(id).map(EffectID.init), queue: queue, run: run)
         }
 
         internal func map<Queue>(queue f: @escaping (AnyEffectQueue?) -> Queue?) -> Effect.Single
@@ -366,7 +366,7 @@ extension Effect
         internal func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect._Sequence
             where ID: EffectIDProtocol
         {
-            .init(id: f(id), queue: queue, sequence: sequence)
+            .init(id: f(id).map(EffectID.init), queue: queue, sequence: sequence)
         }
 
         internal func map<Queue>(queue f: @escaping (AnyEffectQueue?) -> Queue?) -> Effect._Sequence
