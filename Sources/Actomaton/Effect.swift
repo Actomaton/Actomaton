@@ -1,5 +1,5 @@
 /// Effect type to run `async`, `AsyncSequence`, or cancellation.
-public struct Effect<Action>
+public struct Effect<Action>: Sendable
 {
     internal let kinds: [Kind]
 }
