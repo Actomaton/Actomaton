@@ -1,8 +1,22 @@
 /// Effect queue for automatic cancellation of existing tasks or suspending of new effects.
-public typealias EffectQueue = AnyHashable
+public struct EffectQueue: Hashable, Sendable
+{
+    private let _value: AnySendableHashable
+
+    internal init<Value>(_ value: Value) where Value: Hashable & Sendable
+    {
+        self._value = AnySendableHashable(value)
+    }
+
+    /// Raw value that conforms to `EffectQueueProtocol`.
+    public var value: AnyHashable
+    {
+        _value.value
+    }
+}
 
 /// A protocol that every effect queue should conform to, for automatic cancellation of existing tasks or suspending of new effects.
-public protocol EffectQueueProtocol: Hashable
+public protocol EffectQueueProtocol: Hashable, Sendable
 {
     var effectQueuePolicy: EffectQueuePolicy { get }
 }
@@ -56,7 +70,7 @@ struct AnyEffectQueue: EffectQueueProtocol, Sendable
     init<Queue>(_ queue: Queue)
         where Queue: EffectQueueProtocol
     {
-        self.queue = queue
+        self.queue = EffectQueue(queue)
         self.effectQueuePolicy = queue.effectQueuePolicy
     }
 }
