@@ -44,13 +44,13 @@ final class EffectIDAutoCancellationTests: XCTestCase
 
                     state = ._2
                     return Effect(queue: Newest1EffectQueue()) {
-                        await tick(1)
-                        if Task.isCancelled {
+                        try await tick(1) {
+                            return ._2To3
+                        } ifCancelled: {
                             Debug.print("_1To2 cancelled")
                             await flags.mark(is1To2Cancelled: true)
                             return nil
                         }
-                        return ._2To3
                     }
 
                 case ._2To3:
@@ -58,13 +58,13 @@ final class EffectIDAutoCancellationTests: XCTestCase
 
                     state = ._3
                     return Effect(queue: Newest1EffectQueue()) {
-                        await tick(1)
-                        if Task.isCancelled {
+                        try await tick(1) {
+                            return ._3To4
+                        } ifCancelled: {
                             Debug.print("_2To3 cancelled")
                             await flags.mark(is2To3Cancelled: true)
                             return nil
                         }
-                        return ._3To4
                     }
 
                 case ._3To4:
@@ -76,7 +76,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                 case ._toEnd:
                     state = ._end
                     return Effect(queue: Newest1EffectQueue()) {
-                        await tick(1)
+                        try await tick(1)
                         return nil
                     }
                 }
@@ -101,10 +101,10 @@ final class EffectIDAutoCancellationTests: XCTestCase
         await actomaton.send(._1To2)
         assertEqual(await actomaton.state, ._2)
 
-        await tick(1.5)
+        try await tick(1.5)
         assertEqual(await actomaton.state, ._3)
 
-        await tick(1.5)
+        try await tick(1.5)
         assertEqual(await actomaton.state, ._4)
 
         let is1To2Cancelled = await flags.is1To2Cancelled
@@ -121,14 +121,14 @@ final class EffectIDAutoCancellationTests: XCTestCase
         await actomaton.send(._1To2)
         assertEqual(await actomaton.state, ._2)
 
-        await tick(0.1)
+        try await tick(0.1)
         assertEqual(await actomaton.state, ._2,
                     "Only delta time has passed, so state should not change")
 
         await actomaton.send(._toEnd)
         assertEqual(await actomaton.state, ._end)
 
-        await tick(5)
+        try await tick(5)
         assertEqual(await actomaton.state, ._end,
                     "Waited for enough time, and state should not change")
 
@@ -147,17 +147,17 @@ final class EffectIDAutoCancellationTests: XCTestCase
         assertEqual(await actomaton.state, ._2)
 
         // Wait until `state = _3`.
-        await tick(1.3)
+        try await tick(1.3)
         assertEqual(await actomaton.state, ._3)
 
-        await tick(0.1)
+        try await tick(0.1)
         assertEqual(await actomaton.state, ._3,
                     "Only delta time has passed, so state should not change")
 
         await actomaton.send(._toEnd)
         assertEqual(await actomaton.state, ._end)
 
-        await tick(5)
+        try await tick(5)
         assertEqual(await actomaton.state, ._end,
                     "Waited for enough time, and state should not change")
 

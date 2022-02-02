@@ -36,12 +36,17 @@ final class LoginLogoutTests: XCTestCase
                 case (.login, .loggedOut):
                     state = .loggingIn
                     return Effect(queue: LoginFlowEffectQueue()) {
-                        await tick(1)
-                        if Task.isCancelled {
+                        do {
+                            try await tick(1)
+                            return .loginOK
+                        }
+                        catch is CancellationError {
                             await flags.mark(isLoginCancelled: true)
                             return nil
                         }
-                        return .loginOK
+                        catch {
+                            return nil
+                        }
                     }
 
                 case (.loginOK, .loggingIn):
@@ -53,7 +58,7 @@ final class LoginLogoutTests: XCTestCase
                     (.forceLogout, .loggedIn):
                     state = .loggingOut
                     return Effect(queue: LoginFlowEffectQueue()) {
-                        await tick(1)
+                        try await tick(1)
                         return .logoutOK
                     }
 
@@ -122,7 +127,7 @@ final class LoginLogoutTests: XCTestCase
         assertEqual(await actomaton.state, .loggingIn)
 
         // Wait for a while and interrupt by `forceLogout`.
-        await tick(0.1)
+        try await tick(0.1)
         t = await actomaton.send(.forceLogout)
 
         assertEqual(await actomaton.state, .loggingOut)

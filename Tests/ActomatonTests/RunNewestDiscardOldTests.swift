@@ -33,14 +33,14 @@ final class RunNewestDiscardOldTests: XCTestCase
                     state.count += 1
 
                     return Effect(queue: NewestEffectQueue(maxCount: maxCount)) { [state] in
-                        await tick(1)
-                        if Task.isCancelled {
+                        try await tick(1) {
+                            Debug.print("Effect success")
+                            return .effectCompleted
+                        } ifCancelled: {
                             await self.resultsCollector.append(state.count)
                             Debug.print("Effect cancelled: \(state.count)")
                             return nil
                         }
-                        Debug.print("Effect success")
-                        return .effectCompleted
                     }
 
                 case .effectCompleted:
@@ -66,7 +66,7 @@ final class RunNewestDiscardOldTests: XCTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 0))
 
-        await tick(3)
+        try await tick(3)
 
         assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 1),
                     "`effectCompletedCount` should increment by 1 (not 2) because of `NewestEffectQueue`")
@@ -75,7 +75,7 @@ final class RunNewestDiscardOldTests: XCTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 1))
 
-        await tick(3)
+        try await tick(3)
 
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2))
 
@@ -105,7 +105,7 @@ final class RunNewestDiscardOldTests: XCTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 0))
 
-        await tick(5)
+        try await tick(5)
 
         assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 2),
                     "`effectCompletedCount` will increment by 2 because of `NewestEffectQueue`")
@@ -114,7 +114,7 @@ final class RunNewestDiscardOldTests: XCTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 5, effectCompletedCount: 2))
 
-        await tick(3)
+        try await tick(3)
 
         assertEqual(await actomaton.state, State(count: 5, effectCompletedCount: 3))
 

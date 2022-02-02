@@ -21,13 +21,13 @@ final class DeinitTests: XCTestCase
                 state.count += 1
 
                 return Effect { [state, resultsCollector] in
-                    await tick(1)
-                    if Task.isCancelled {
+                    try await tick(1) {
+                        return .next
+                    } ifCancelled: {
                         Debug.print("Effect cancelled")
                         await resultsCollector.append(state.count)
                         return nil
                     }
-                    return .next
                 }
             }
         )
@@ -39,7 +39,7 @@ final class DeinitTests: XCTestCase
         weak var weakActomaton = self.actomaton
 
         let task = await actomaton.send(.next)
-        await tick(2.5)
+        try await tick(2.5)
 
         self.actomaton = nil
         XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")

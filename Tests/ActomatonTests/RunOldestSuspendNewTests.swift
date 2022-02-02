@@ -33,14 +33,14 @@ final class RunOldestSuspendNewTests: XCTestCase
                     state.count += 1
 
                     return Effect(queue: OldestSuspendNewEffectQueue(maxCount: maxCount)) { [state] in
-                        await tick(1)
-                        if Task.isCancelled {
+                        try await tick(1) {
+                            Debug.print("Effect success")
+                            return .effectCompleted
+                        } ifCancelled: {
                             await self.resultsCollector.append(state.count)
                             Debug.print("Effect cancelled")
                             return nil
                         }
-                        Debug.print("Effect success")
-                        return .effectCompleted
                     }
 
                 case .effectCompleted:
@@ -67,13 +67,13 @@ final class RunOldestSuspendNewTests: XCTestCase
         assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 0))
 
         // Wait until 1st effect is finished.
-        await tick(1.5)
+        try await tick(1.5)
 
         assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 1),
                     "`effectCompletedCount` should increment by 1 because of `OldestSuspendNewEffectQueue`.")
 
         // Wait until 2nd effect is finished.
-        await tick(1.5)
+        try await tick(1.5)
 
         assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 2),
                     "`effectCompletedCount` should increment by 2 because of `OldestSuspendNewEffectQueue`.")
@@ -82,7 +82,7 @@ final class RunOldestSuspendNewTests: XCTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2))
 
-        await tick(1.5)
+        try await tick(1.5)
 
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 3))
 
@@ -109,13 +109,13 @@ final class RunOldestSuspendNewTests: XCTestCase
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 0))
 
         // Wait until 1st & 2nd effect is finished.
-        await tick(1.5)
+        try await tick(1.5)
 
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2),
                     "`effectCompletedCount` should increment by 2 because of `OldestSuspendNewEffectQueue`.")
 
         // Wait until 3rd effect is finished.
-        await tick(1.5)
+        try await tick(1.5)
 
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 3),
                     "`effectCompletedCount` should increment by 3 because of `OldestSuspendNewEffectQueue`.")
@@ -124,7 +124,7 @@ final class RunOldestSuspendNewTests: XCTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 3))
 
-        await tick(1.5)
+        try await tick(1.5)
 
         assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 4))
 

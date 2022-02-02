@@ -19,12 +19,12 @@ final class FeedbackTrackingTaskTests: XCTestCase
 
                     state = ._2
                     return Effect {
-                        await tick(1)
-                        if Task.isCancelled {
+                        try await tick(1) {
+                            return ._2To3
+                        } ifCancelled: {
                             Debug.print("_1To2 cancelled")
                             return nil
                         }
-                        return ._2To3
                     }
 
                 case ._2To3:
@@ -32,12 +32,12 @@ final class FeedbackTrackingTaskTests: XCTestCase
 
                     state = ._3
                     return Effect {
-                        await tick(1)
-                        if Task.isCancelled {
+                        try await tick(1) {
+                            return ._3To4
+                        } ifCancelled: {
                             Debug.print("_2To3 cancelled")
                             return nil
                         }
-                        return ._3To4
                     }
 
                 case ._3To4: // 3-tick timer
@@ -47,15 +47,14 @@ final class FeedbackTrackingTaskTests: XCTestCase
                     return Effect(sequence: AsyncStream<Action> { continuation in
                         let task = Task<(), Error> {
                             for _ in 1 ... 2 {
-                                await tick(1)
-                                if Task.isCancelled {
+                                try await tick(1) {
+                                    continuation.yield(._increment)
+                                } ifCancelled: {
                                     Debug.print("_3To4 cancelled")
-                                    return
                                 }
-                                continuation.yield(._increment)
                             }
 
-                            await tick(1)
+                            try await tick(1)
                             continuation.yield(._4To5)
                             continuation.finish()
                         }
@@ -75,12 +74,12 @@ final class FeedbackTrackingTaskTests: XCTestCase
 
                     state = ._5
                     return Effect {
-                        await tick(1)
-                        if Task.isCancelled {
+                        try await tick(1) {
+                            return ._5To6
+                        } ifCancelled: {
                             Debug.print("_4To5 cancelled")
                             return nil
                         }
-                        return ._5To6
                     }
 
                 case ._5To6:
@@ -92,7 +91,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
                 case ._toEnd:
                     state = ._end
                     return Effect {
-                        await tick(1)
+                        try await tick(1)
                         return nil
                     }
                 }
@@ -127,20 +126,20 @@ final class FeedbackTrackingTaskTests: XCTestCase
                     as part of `._1To2`'s effect. (NOTE: `._2To3`'s effect won't be awaited)
                     """)
 
-        await tick(1.3)
+        try await tick(1.3)
         assertEqual(await actomaton.state, ._4(count: 0))
 
-        await tick(1.3)
+        try await tick(1.3)
         assertEqual(await actomaton.state, ._4(count: 1))
 
-        await tick(1.3)
+        try await tick(1.3)
         assertEqual(await actomaton.state, ._4(count: 2))
 
         // Comment-Out: A bit flaky to check this intermediate state, so ignore it.
-        //await tick(1.3)
+        //try await tick(1.3)
         //assertEqual(await actomaton.state, ._5)
 
-        await tick(2)
+        try await tick(2)
         assertEqual(await actomaton.state, ._6)
     }
 

@@ -3,12 +3,27 @@ import XCTest
 // MARK: - Tick
 
 /// - Note: For safe async testing, leeway should have at least 50 millisec (30 millsec isn't enough for MacBook Pro (15-inch, 2018)).
-func tick(_ n: Double) async
+func tick(_ n: Double) async throws
 {
-    await Task.sleep(UInt64(Double(tickTimeInterval) * n))
+    try await Task.sleep(nanoseconds: UInt64(Double(tickTimeInterval) * n))
 }
 
 private let tickTimeInterval: UInt64 = 50_000_000 // 50 ms
+
+func tick<T>(
+    _ n: Double,
+    ifSucceeded: () async throws -> T,
+    ifCancelled: () async throws -> T
+) async throws -> T
+{
+    do {
+        try await tick(n)
+        return try await ifSucceeded()
+    }
+    catch is CancellationError {
+        return try await ifCancelled()
+    }
+}
 
 // MARK: - Assert
 

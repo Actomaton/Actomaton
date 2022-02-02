@@ -15,7 +15,7 @@ final class TimerTests: XCTestCase
         let timer = AsyncStream<()> { continuation in
             let task = Task {
                 while true {
-                    await tick(1)
+                    try await tick(1)
                     continuation.yield(())
                 }
             }
@@ -59,18 +59,18 @@ final class TimerTests: XCTestCase
 
         assertEqual(await actomaton.state, 0)
 
-        await tick(1.3)
+        try await tick(1.3)
         assertEqual(await actomaton.state, 1)
 
-        await tick(1.3)
+        try await tick(1.3)
         assertEqual(await actomaton.state, 2)
 
-        await tick(1.3)
+        try await tick(1.3)
         assertEqual(await actomaton.state, 3)
 
         await actomaton.send(.stop)
 
-        await tick(3)
+        try await tick(3)
         assertEqual(await actomaton.state, 3,
                     "Should not increment because timer is stopped.")
     }
