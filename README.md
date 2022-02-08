@@ -92,7 +92,7 @@ reducer = Reducer { action, state, environment in
         state.count -= 1
         return Effect.fireAndForget {
             print("decrement and sleep...")
-            await Task.sleep(...) // NOTE: We can use `await`!
+            try await Task.sleep(...) // NOTE: We can use `await`!
             print("I'm awake!")
         }
     }
@@ -224,7 +224,7 @@ enum Main {
 
         // Wait for a while and interrupt by `forceLogout`.
         // Login's effect will be automatically cancelled because of same `EffectID.
-        await Task.sleep(/* 1 ms */)
+        try await Task.sleep(/* 1 ms */)
         t = await actomaton.send(.forceLogout)
 
         assertEqual(await actomaton.state, .loggingOut)
@@ -262,7 +262,7 @@ let environment = Environment(
         Effect(id: TimerID(), sequence: AsyncStream<()> { continuation in
             let task = Task {
                 while true {
-                    await Task.sleep(/* 1 sec */)
+                    try await Task.sleep(/* 1 sec */)
                     continuation.yield(())
                 }
             }
@@ -301,18 +301,18 @@ enum Main {
 
         assertEqual(await actomaton.state, 0)
 
-        await Task.sleep(/* 1 sec */)
+        try await Task.sleep(/* 1 sec */)
         assertEqual(await actomaton.state, 1)
 
-        await Task.sleep(/* 1 sec */)
+        try await Task.sleep(/* 1 sec */)
         assertEqual(await actomaton.state, 2)
 
-        await Task.sleep(/* 1 sec */)
+        try await Task.sleep(/* 1 sec */)
         assertEqual(await actomaton.state, 3)
 
         await actomaton.send(.stop)
 
-        await Task.sleep(/* long enough */)
+        try await Task.sleep(/* long enough */)
         assertEqual(await actomaton.state, 3,
                     "Should not increment because timer is stopped.")
     }
