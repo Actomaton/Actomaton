@@ -5,3 +5,5 @@ import Combine
 extension PassthroughSubject: @unchecked Sendable {}
 
 extension Published.Publisher: @unchecked Sendable {}
+
+extension AnyCancellable: @unchecked Sendable {}

@@ -5,7 +5,7 @@ import Actomaton
 
 extension Publisher
 {
-    public func toEffect() -> Effect<Output> where Output: Sendable
+    public func toEffect() -> Effect<Output>
     {
         Effect(sequence: self.toAsyncThrowingStream())
     }
@@ -41,7 +41,6 @@ extension Publisher
 extension Publisher
 {
     public func toResultEffect() -> Effect<Result<Output, Failure>>
-        where Output: Sendable
     {
         self.map(Result.success)
             .catch { Just(.failure($0)) }
@@ -67,6 +66,7 @@ extension Publisher
             .catch { Just(.failure($0)) }
             .toEffect(queue: queue)
     }
+
     public func toResultEffect<ID, Queue>(
         id: ID? = nil,
         queue: Queue? = nil
