@@ -25,6 +25,11 @@ This framework is a successor of the following projects:
 
 - [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery)
 
+## Documentation
+
+- Actomaton: https://actomaton.web.app/documentation/actomaton
+- ActomatonStore: https://actomaton.web.app/documentation/actomatonstore (Currently in Japanese only)
+
 ## 1. Actomaton (Core)
 
 ### Example 1-1. Simple Counter
