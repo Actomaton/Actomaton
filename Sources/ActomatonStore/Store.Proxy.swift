@@ -11,12 +11,12 @@ extension Store
         @Binding
         public private(set) var state: State
 
-        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
+        private let _send: @MainActor (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
         public init(
             state: Binding<State>,
-            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
+            send: @MainActor @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
         )
         {
             self._state = state
@@ -24,7 +24,7 @@ extension Store
         }
 
         /// Initializer with simple `send`, mainly for mocking purpose.
-        public init(state: Binding<State>, send: @escaping (Action) -> Void)
+        public init(state: Binding<State>, send: @MainActor @escaping (Action) -> Void)
         {
             self.init(state: state, send: { action, _, _ in
                 send(action)
@@ -45,7 +45,7 @@ extension Store
         /// - Returns:
         ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
         @discardableResult
-        public nonisolated func send(
+        public func send(
             _ action: Action,
             priority: TaskPriority? = nil,
             tracksFeedbacks: Bool = false
