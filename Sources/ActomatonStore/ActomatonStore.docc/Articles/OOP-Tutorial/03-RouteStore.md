@@ -90,8 +90,10 @@ reducer = Reducer { action, state, environment in
         state.count += 1
         return Effect.empty
     case .push:
-        // `sendRoute` を使った副作用
-        return environment.sendRoute(Route.push(count: state.count))
+        // `sendRoute` を使った副作用 (NOTE: Effect の中で呼ぶこと)
+        return Effect.fireAndForget {
+            environment.sendRoute(Route.push(count: state.count))
+        }
     }
 }
 ```

@@ -178,11 +178,11 @@ struct LoginFlowEffectQueue: Newest1EffectQueueProtocol {} // 空実装でOK
 
 let environment = Environment(
     login: { userId in
-        Effect(queue: LoginFlowEffectQueue()) { // EffectQueue 追加
+        Effect(queue: LoginFlowEffectQueue()) { // EffectQueue に追加
             ... // 実際のログイン処理
         }
     },
-    logout: Effect(queue: LoginFlowEffectQueue()) { // EffectQueue 追加
+    logout: Effect(queue: LoginFlowEffectQueue()) { // EffectQueue に追加
         ... // 実際のログアウト処理
     }
 )
