@@ -1,11 +1,11 @@
 // Code from: https://github.com/Apodini/Apodini/blob/develop/Sources/ApodiniExtension/AsyncSequenceHelpers/AnyAsyncSequence.swift
 
 /// A type-erased version of a `AsyncSequence` that contains values of type `Element`.
-struct AnyAsyncSequence<Element>: AsyncSequence, Sendable
+struct AnyAsyncSequence<Element>: AsyncSequence
 {
-    private let _makeAsyncIterator: @Sendable () -> AsyncIterator
+    private let _makeAsyncIterator: () -> AsyncIterator
 
-    init<S>(_ sequence: S) where S: AsyncSequence, S: Sendable, S.Element == Element
+    init<S>(_ sequence: S) where S: AsyncSequence, S.Element == Element
     {
         self._makeAsyncIterator = {
             AsyncIterator(sequence.makeAsyncIterator())
@@ -47,7 +47,7 @@ extension AnyAsyncSequence
     }
 }
 
-extension AsyncSequence where Self: Sendable
+extension AsyncSequence
 {
     var typeErased: AnyAsyncSequence<Element>
     {

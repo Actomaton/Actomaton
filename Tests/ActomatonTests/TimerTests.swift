@@ -12,26 +12,28 @@ final class TimerTests: XCTestCase
     {
         struct TimerID: EffectIDProtocol {}
 
-        let timer = AsyncStream<()> { continuation in
-            let task = Task {
-                while true {
-                    try await tick(1)
-                    continuation.yield(())
+        let timerEffect = Effect(id: TimerID(), sequence: {
+            AsyncStream<()> { continuation in
+                let task = Task {
+                    while true {
+                        try await tick(1)
+                        continuation.yield(())
+                    }
+                }
+
+                continuation.onTermination = { @Sendable _ in
+                    task.cancel()
                 }
             }
-
-            continuation.onTermination = { @Sendable _ in
-                task.cancel()
-            }
-        }
             .map { Action.tick }
+        })
 
         let actomaton = Actomaton<Action, State>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 switch action {
                 case .start:
-                    return .init(id: TimerID(), sequence: timer)
+                    return timerEffect
                 case .tick:
                     state += 1
                     return .empty
