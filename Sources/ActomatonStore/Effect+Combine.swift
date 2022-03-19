@@ -3,11 +3,11 @@ import Actomaton
 
 // MARK: - toEffect
 
-extension Publisher
+extension Publisher where Self: Sendable
 {
     public func toEffect() -> Effect<Output>
     {
-        Effect(sequence: self.toAsyncThrowingStream())
+        Effect(sequence: { self.toAsyncThrowingStream() })
     }
 
     public func toEffect<ID>(
@@ -15,7 +15,7 @@ extension Publisher
     ) -> Effect<Output>
         where ID: EffectIDProtocol
     {
-        Effect(id: id, sequence: self.toAsyncThrowingStream())
+        Effect(id: id, sequence: { self.toAsyncThrowingStream() })
     }
 
     public func toEffect<Queue>(
@@ -23,7 +23,7 @@ extension Publisher
     ) -> Effect<Output>
         where Queue: EffectQueueProtocol
     {
-        Effect(queue: queue, sequence: self.toAsyncThrowingStream())
+        Effect(queue: queue, sequence: { self.toAsyncThrowingStream() })
     }
 
     public func toEffect<ID, Queue>(
@@ -32,7 +32,7 @@ extension Publisher
     ) -> Effect<Output>
         where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
-        Effect(id: id, queue: queue, sequence: self.toAsyncThrowingStream())
+        Effect(id: id, queue: queue, sequence: { self.toAsyncThrowingStream() })
     }
 }
 
@@ -44,6 +44,7 @@ extension Publisher
     {
         self.map(Result.success)
             .catch { Just(.failure($0)) }
+            .eraseToAnyPublisher() // NOTE: For `@unchecked Sendable`
             .toEffect()
     }
 
@@ -54,6 +55,7 @@ extension Publisher
     {
         self.map(Result.success)
             .catch { Just(.failure($0)) }
+            .eraseToAnyPublisher() // NOTE: For `@unchecked Sendable`
             .toEffect(id: id)
     }
 
@@ -64,6 +66,7 @@ extension Publisher
     {
         self.map(Result.success)
             .catch { Just(.failure($0)) }
+            .eraseToAnyPublisher() // NOTE: For `@unchecked Sendable`
             .toEffect(queue: queue)
     }
 
@@ -75,6 +78,7 @@ extension Publisher
     {
         self.map(Result.success)
             .catch { Just(.failure($0)) }
+            .eraseToAnyPublisher() // NOTE: For `@unchecked Sendable`
             .toEffect(id: id, queue: queue)
     }
 }

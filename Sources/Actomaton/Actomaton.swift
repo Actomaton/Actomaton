@@ -219,7 +219,9 @@ extension Actomaton
             do {
                 var feedbackTasks: [Task<(), Error>] = []
 
-                for try await nextAction in sequence.sequence {
+                let seq = try await sequence.sequence()
+
+                for try await nextAction in seq {
                     if Task.isCancelled { break }
 
                     // Feed back `nextAction`.

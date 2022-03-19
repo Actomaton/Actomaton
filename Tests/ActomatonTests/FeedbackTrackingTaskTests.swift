@@ -44,22 +44,24 @@ final class FeedbackTrackingTaskTests: XCTestCase
                     guard state == ._3 else { return .empty }
 
                     state = ._4(count: 0)
-                    return Effect(sequence: AsyncStream<Action> { continuation in
-                        let task = Task<(), Error> {
-                            for _ in 1 ... 2 {
-                                try await tick(1) {
-                                    continuation.yield(._increment)
-                                } ifCancelled: {
-                                    Debug.print("_3To4 cancelled")
+                    return Effect(sequence: {
+                        AsyncStream<Action> { continuation in
+                            let task = Task<(), Error> {
+                                for _ in 1 ... 2 {
+                                    try await tick(1) {
+                                        continuation.yield(._increment)
+                                    } ifCancelled: {
+                                        Debug.print("_3To4 cancelled")
+                                    }
                                 }
-                            }
 
-                            try await tick(1)
-                            continuation.yield(._4To5)
-                            continuation.finish()
-                        }
-                        continuation.onTermination = { @Sendable _ in
-                            task.cancel()
+                                try await tick(1)
+                                continuation.yield(._4To5)
+                                continuation.finish()
+                            }
+                            continuation.onTermination = { @Sendable _ in
+                                task.cancel()
+                            }
                         }
                     })
 

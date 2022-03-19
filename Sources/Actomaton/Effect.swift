@@ -45,35 +45,71 @@ extension Effect
 
     /// `AsyncSequence` side-effect.
     /// - Parameter id: Cancellation identifier.
-    public init<S>(sequence: S)
-        where S: AsyncSequence, S: Sendable, S.Element == Action
+    public init<S>(sequence: @Sendable @escaping () async throws -> S)
+        where S: AsyncSequence, S.Element == Action
     {
-        self.init(kinds: [.sequence(_Sequence(id: nil, queue: nil, sequence: sequence.typeErased))])
+        self.init(
+            kinds: [.sequence(
+                _Sequence(
+                    id: nil,
+                    queue: nil,
+                    sequence: { try await sequence().typeErased }
+                )
+            )]
+        )
     }
 
     /// `AsyncSequence` side-effect.
     /// - Parameter id: Cancellation identifier.
-    public init<ID, S>(id: ID? = nil, sequence: S)
-        where ID: EffectIDProtocol, S: AsyncSequence, S: Sendable, S.Element == Action
+    public init<ID, S>(id: ID? = nil, sequence: @Sendable @escaping () async throws -> S)
+        where ID: EffectIDProtocol, S: AsyncSequence, S.Element == Action
     {
-        self.init(kinds: [.sequence(_Sequence(id: id.map(EffectID.init), queue: nil, sequence: sequence.typeErased))])
+        self.init(
+            kinds: [.sequence(
+                _Sequence(
+                    id: id.map(EffectID.init),
+                    queue: nil,
+                    sequence: { try await sequence().typeErased }
+                )
+            )]
+        )
     }
 
     /// `AsyncSequence` side-effect.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<S, Queue>(queue: Queue? = nil, sequence: S)
-        where S: AsyncSequence, S: Sendable, S.Element == Action, Queue: EffectQueueProtocol
+    public init<S, Queue>(queue: Queue? = nil, sequence: @Sendable @escaping () async throws -> S)
+        where S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
     {
-        self.init(kinds: [.sequence(_Sequence(id: nil, queue: queue.map(AnyEffectQueue.init), sequence: sequence.typeErased))])
+        self.init(
+            kinds: [.sequence(
+                _Sequence(
+                    id: nil,
+                    queue: queue.map(AnyEffectQueue.init),
+                    sequence: { try await sequence().typeErased }
+                )
+            )]
+        )
     }
 
     /// `AsyncSequence` side-effect.
     /// - Parameter id: Cancellation identifier.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<ID, S, Queue>(id: ID? = nil, queue: Queue? = nil, sequence: S)
-        where ID: EffectIDProtocol, S: AsyncSequence, S: Sendable, S.Element == Action, Queue: EffectQueueProtocol
+    public init<ID, S, Queue>(
+        id: ID? = nil,
+        queue: Queue? = nil,
+        sequence: @Sendable @escaping () async throws -> S
+    )
+        where ID: EffectIDProtocol, S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
     {
-        self.init(kinds: [.sequence(_Sequence(id: id.map(EffectID.init), queue: queue.map(AnyEffectQueue.init), sequence: sequence.typeErased))])
+        self.init(
+            kinds: [.sequence(
+                _Sequence(
+                    id: id.map(EffectID.init),
+                    queue: queue.map(AnyEffectQueue.init),
+                    sequence: { try await sequence().typeErased }
+                )
+            )]
+        )
     }
 
     // MARK: - fireAndForget
@@ -349,18 +385,22 @@ extension Effect
     {
         internal let id: EffectID?
         internal let queue: AnyEffectQueue?
-        internal let sequence: AnyAsyncSequence<Action>
+        internal let sequence: @Sendable () async throws -> AnyAsyncSequence<Action>
 
-        internal init(id: EffectID? = nil, queue: AnyEffectQueue? = nil, sequence: AnyAsyncSequence<Action>)
+        internal init(
+            id: EffectID? = nil,
+            queue: AnyEffectQueue? = nil,
+            sequence: @Sendable @escaping () async throws -> AnyAsyncSequence<Action>
+        )
         {
             self.id = id
             self.queue = queue
             self.sequence = sequence
         }
 
-        internal func map<Action2>(action f: @escaping (Action) -> Action2) -> Effect<Action2>._Sequence
+        internal func map<Action2>(action f: @Sendable @escaping (Action) -> Action2) -> Effect<Action2>._Sequence
         {
-            .init(id: id, queue: queue, sequence: sequence.map(f).typeErased)
+            .init(id: id, queue: queue, sequence: { try await sequence().map(f).typeErased })
         }
 
         internal func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect._Sequence
