@@ -4,13 +4,13 @@ import Combine
 /// Subclass of `Store` that also outputs `routes`, mainly used for UIKit's navigation handling
 /// without using `State` as a single source of truth.
 @MainActor
-open class RouteStore<Action, State, Route>: Store<Action, State>
-    where Action: Sendable, State: Sendable
+open class RouteStore<Action, State, Environment, Route>: Store<Action, State, SendRouteEnvironment<Environment, Route>>
+    where Action: Sendable, State: Sendable, Environment: Sendable
 {
     private let _routes: PassthroughSubject<Route, Never>
     private var cancellables: [AnyCancellable] = []
 
-    public init<Environment>(
+    public init(
         state: State,
         reducer: Reducer<Action, State, SendRouteEnvironment<Environment, Route>>,
         environment: Environment,

@@ -3,33 +3,39 @@ import SwiftUI
 
 /// Store of `Actomaton` optimized for SwiftUI's 2-way binding.
 @MainActor
-open class Store<Action, State>: ObservableObject
-    where Action: Sendable, State: Sendable
+open class Store<Action, State, Environment>: ObservableObject
+    where Action: Sendable, State: Sendable, Environment: Sendable
 {
     private let actomaton: Actomaton<BindableAction, State>
 
     @Published
     public private(set) var state: State
 
+    /// Public `Environment` that can be passed to `SwiftUI.View`.
+    ///
+    /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
+    public let environment: Environment
+
     private var task: Task<Void, Never>?
 
     /// Initializer without `environment`.
     public convenience init(
         state initialState: State,
-        reducer: Reducer<Action, State, ()>
-    )
+        reducer: Reducer<Action, State, Void>
+    ) where Environment == Void
     {
         self.init(state: initialState, reducer: reducer, environment: ())
     }
 
     /// Initializer with `environment`.
-    public init<Environment>(
+    public init(
         state initialState: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment
-    ) where Environment: Sendable
+    )
     {
         self.state = initialState
+        self.environment = environment
 
         self.actomaton = Actomaton(
             state: initialState,
@@ -82,14 +88,14 @@ open class Store<Action, State>: ObservableObject
     /// - Note: This is a common sub-store type for SwiftUI-based app.
     public var proxy: Proxy
     {
-        Proxy(state: self.stateBinding, send: self.send)
+        Proxy(state: self.stateBinding, environment: self.environment, send: self.send)
     }
 
     /// Lightweight `Store` proxy that is state-observable and action-sendable.
     /// - Note: This is a common sub-store type for UIKit-Navigation-based app.
     public var observableProxy: ObservableProxy
     {
-        ObservableProxy(state: self.$state, send: self.send)
+        ObservableProxy(state: self.$state, environment: environment, send: self.send)
     }
 }
 
@@ -128,13 +134,13 @@ extension Store {
 /// Lifts from `Reducer`'s `Action` to `Store.BindableAction`.
 private func lift<Action, State, Environment>(
     reducer: Reducer<Action, State, Environment>
-) -> Reducer<Store<Action, State>.BindableAction, State, Environment>
+) -> Reducer<Store<Action, State, Environment>.BindableAction, State, Environment>
 {
     .init { action, state, environment in
         switch action {
         case let .action(innerAction):
             let effect = reducer.run(innerAction, &state, environment)
-            return effect.map { Store<Action, State>.BindableAction.action($0) }
+            return effect.map { Store<Action, State, Environment>.BindableAction.action($0) }
 
         case let .state(newState):
             state = newState

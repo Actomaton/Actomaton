@@ -4,7 +4,7 @@ import SwiftUI
 extension Store
 {
     /// Lightweight `Store` proxy that is state-observable and action-sendable.
-    /// 
+    ///
     /// - Note: This is a common sub-store type for UIKit-Navigation-based app.
     /// - Note: This type doesn't need to protect any raw states, so no need to be `@MainActor`.
     public final class ObservableProxy: ObservableObject
@@ -12,6 +12,11 @@ extension Store
         /// Underlying hot state publisher.
         /// - Note: Not guranteed to emit first value immediately on `subscribe`, as it may be some filtered sub-state.
         public let state: AnyPublisher<State, Never>
+
+        /// Public `Environment` that can be passed to `SwiftUI.View`.
+        ///
+        /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
+        public let environment: Environment
 
         private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
@@ -23,19 +28,25 @@ extension Store
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
         public init<P>(
             state: P,
+            environment: Environment,
             send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
         )
             where P: Publisher, P.Output == State, P.Failure == Never
         {
             self.state = state.eraseToAnyPublisher()
+            self.environment = environment
             self._send = send
         }
 
         /// Initializer with simple `send`, mainly for mocking purpose.
-        public convenience init<P>(state: P, send: @escaping (Action) -> Void)
+        public convenience init<P>(
+            state: P,
+            environment: Environment,
+            send: @escaping (Action) -> Void
+        )
             where P: Publisher, P.Output == State, P.Failure == Never
         {
-            self.init(state: state, send: { action, _, _ in
+            self.init(state: state, environment: environment, send: { action, _, _ in
                 send(action)
                 return Task {}
             })
@@ -72,24 +83,36 @@ extension Store.ObservableProxy
     /// Transforms `<Action, State>` to `<Action, SubState>` using `Publisher.map`.
     public func map<SubState>(
         state f: @escaping (State) -> SubState
-    ) -> Store<Action, SubState>.ObservableProxy
+    ) -> Store<Action, SubState, Environment>.ObservableProxy
     {
-        .init(state: self.state.map(f), send: self.send)
+        .init(state: self.state.map(f), environment: environment, send: self.send)
     }
 
     /// Transforms `<Action, State>` to `<Action, SubState>` using `Publisher.compactMap`.
     public func compactMap<SubState>(
         state f: @escaping (State) -> SubState?
-    ) -> Store<Action, SubState>.ObservableProxy
+    ) -> Store<Action, SubState, Environment>.ObservableProxy
     {
-        .init(state: self.state.compactMap(f), send: self.send)
+        .init(state: self.state.compactMap(f), environment: environment, send: self.send)
     }
 
     /// Transforms `Action` to `Action2`.
     public func contramap<Action2>(action f: @escaping (Action2) -> Action)
-        -> Store<Action2, State>.ObservableProxy
+        -> Store<Action2, State, Environment>.ObservableProxy
     {
-        .init(state: self.state, send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) })
+        .init(
+            state: self.state,
+            environment: environment,
+            send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) }
+        )
+    }
+
+    /// Transforms `Environment` to `SubEnvironment`.
+    public func map<SubEnvironment>(
+        environment f: @escaping (Environment) -> SubEnvironment
+    ) -> Store<Action, State, SubEnvironment>.ObservableProxy
+    {
+        .init(state: self.state, environment: f(self.environment), send: self.send)
     }
 }
 
@@ -99,9 +122,9 @@ extension Store.ObservableProxy
 {
     /// Optional-state `Proxy` that unsafely ignores setter-state-binding.
     @MainActor
-    var unsafeProxy: Store<Action, State?>.Proxy
+    var unsafeProxy: Store<Action, State?, Environment>.Proxy
     {
-        Store<Action, State?>.Proxy(state: unsafeStateBinding, send: self._send)
+        .init(state: unsafeStateBinding, environment: environment, send: self._send)
     }
 
     /// Unsafe state binding that ignores setter handling.
