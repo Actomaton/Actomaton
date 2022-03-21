@@ -11,22 +11,33 @@ extension Store
         @Binding
         public private(set) var state: State
 
+        /// Public `Environment` that can be passed to `SwiftUI.View`.
+        ///
+        /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
+        public let environment: Environment
+
         private let _send: @MainActor (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
         public init(
             state: Binding<State>,
+            environment: Environment,
             send: @MainActor @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
         )
         {
             self._state = state
+            self.environment = environment
             self._send = send
         }
 
         /// Initializer with simple `send`, mainly for mocking purpose.
-        public init(state: Binding<State>, send: @MainActor @escaping (Action) -> Void)
+        public init(
+            state: Binding<State>,
+            environment: Environment,
+            send: @MainActor @escaping (Action) -> Void
+        )
         {
-            self.init(state: state, send: { action, _, _ in
+            self.init(state: state, environment: environment, send: { action, _, _ in
                 send(action)
                 return Task {}
             })
@@ -63,24 +74,36 @@ extension Store.Proxy
     /// Transforms `<Action, State>` to `<Action, SubState>` using keyPath `@dynamicMemberLookup`.
     public subscript<SubState>(
         dynamicMember keyPath: WritableKeyPath<State, SubState>
-    ) -> Store<Action, SubState>.Proxy
+    ) -> Store<Action, SubState, Environment>.Proxy
     {
-        .init(state: self.$state[dynamicMember: keyPath], send: self.send)
+        .init(state: self.$state[dynamicMember: keyPath], environment: environment, send: self.send)
     }
 
-    /// Transforms `<Action, State>` to `<Action, SubState?>` using casePath.
+    /// Transforms `<Action, State>` to `<Action, SubState?>` using `casePath`.
     public subscript<SubState>(
         casePath casePath: CasePath<State, SubState>
-    ) -> Store<Action, SubState?>.Proxy
+    ) -> Store<Action, SubState?, Environment>.Proxy
     {
-        .init(state: self.$state[casePath: casePath], send: self.send)
+        .init(state: self.$state[casePath: casePath], environment: environment, send: self.send)
     }
 
     /// Transforms `Action` to `Action2`.
     public func contramap<Action2>(action f: @escaping (Action2) -> Action)
-        -> Store<Action2, State>.Proxy
+        -> Store<Action2, State, Environment>.Proxy
     {
-        .init(state: self.$state, send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) })
+        .init(
+            state: self.$state,
+            environment: environment,
+            send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) }
+        )
+    }
+
+    /// Transforms `Environment` to `SubEnvironment` using `keyPath`.
+    public func map<SubEnvironment>(
+        environment f: (Environment) -> SubEnvironment
+    ) -> Store<Action, State, SubEnvironment>.Proxy
+    {
+        .init(state: self.$state, environment: f(environment), send: self.send)
     }
 }
 
@@ -93,13 +116,13 @@ extension Store.Proxy
     /// - Note:
     ///   Use `traverse(\.self)` as the conversion from `Store.Proxy<A, State?>` to `Store.Proxy<A, State>?`.
     public func traverse<SubState>(_ keyPath: WritableKeyPath<State, SubState?>)
-        -> Store<Action, SubState>.Proxy?
+        -> Store<Action, SubState, Environment>.Proxy?
     {
         guard let state = self.$state[dynamicMember: keyPath].traverse(\.self) else {
             return nil
         }
 
-        return .init(state: state, send: self.send)
+        return .init(state: state, environment: environment, send: self.send)
     }
 }
 

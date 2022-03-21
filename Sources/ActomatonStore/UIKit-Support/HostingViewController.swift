@@ -4,23 +4,47 @@ import UIKit
 import Combine
 import SwiftUI
 
-/// SwiftUI `View` & `Store` wrapper view controller that holds `UIHostingController`.
+/// SwiftUI `View` & ``Store`` wrapper view controller that holds `UIHostingController`.
 @MainActor
-open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewController
-    where Action: Sendable, State: Sendable
+open class HostingViewController<Action, State, Environment, V: SwiftUI.View>: UIViewController
+    where Action: Sendable, State: Sendable, Environment: Sendable
 {
     private let rootView: AnyView
 
+    /// Initializer for ``Store`` as argument.
     public init(
-        store: Store<Action, State>,
-        makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
+        store: Store<Action, State, Environment>,
+        makeView: @escaping @MainActor (Store<Action, State, Environment>.Proxy) -> V
     )
     {
         self.rootView = AnyView(StoreView(store: store, makeView: makeView))
         super.init(nibName: nil, bundle: nil)
     }
 
-    /// Initializer for `Store.ObservableProxy`.
+    /// Initializer for ``RouteStore`` as argument, with forgetting ``SendRouteEnvironment/sendRoute`` capability when `makeView`.
+    public init<Route>(
+        routeStore: RouteStore<Action, State, Environment, Route>,
+        makeView: @escaping @MainActor (Store<Action, State, Environment>.Proxy) -> V
+    )
+    {
+        self.rootView = AnyView(StoreView(store: routeStore, makeView: { store in
+            makeView(store.map(environment: \.environment))
+        }))
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    /// Helper initializer for ``Store`` (or ``RouteStore``) as argument, with fogetting `Environment` as `Void` when `makeView`.
+    public static func make(
+        store: Store<Action, State, Environment>,
+        makeView: @escaping @MainActor (Store<Action, State, Void>.Proxy) -> V
+    ) -> HostingViewController<Action, State, Environment, V>
+    {
+        HostingViewController(store: store, makeView: { store in
+            makeView(store.map(environment: { _ in () }))
+        })
+    }
+
+    /// Initializer for `Store.ObservableProxy` as argument.
     ///
     /// - Important:
     ///   Calling this initializer should be the same time as `ObservableProxy.state` (publisher) emits value.
@@ -30,12 +54,23 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
     ///   `Store.Proxy` passed to `makeView` as argument ignores setter-state-binding which doesn't support direct-state changes,
     ///   so developer must use `storeProxy.stateBinding` to convert them into new actions.
     public init(
-        store: Store<Action, State>.ObservableProxy,
-        makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
+        store: Store<Action, State, Environment>.ObservableProxy,
+        makeView: @escaping @MainActor (Store<Action, State, Environment>.Proxy) -> V
     )
     {
         self.rootView = AnyView(ObservableProxyView(store: store, makeView: makeView))
         super.init(nibName: nil, bundle: nil)
+    }
+
+    /// Helper initializer for ``Store/ObservableProxy`` as argument, with fogetting `Environment` as `Void` when `makeView`.
+    public static func make(
+        store: Store<Action, State, Environment>.ObservableProxy,
+        makeView: @escaping @MainActor (Store<Action, State, Void>.Proxy) -> V
+    ) -> HostingViewController<Action, State, Environment, V>
+    {
+        HostingViewController(store: store, makeView: { store in
+            makeView(store.map(environment: { _ in () }))
+        })
     }
 
     public required init?(coder: NSCoder)
@@ -66,17 +101,17 @@ open class HostingViewController<Action, State, V: SwiftUI.View>: UIViewControll
 // MARK: - Private
 
 /// View to hold `Store` as `@ObservedObject`.
-private struct StoreView<Action, State, V: View>: View
-    where Action: Sendable, State: Sendable
+private struct StoreView<Action, State, Environment, V: View>: View
+    where Action: Sendable, State: Sendable, Environment: Sendable
 {
     @ObservedObject
-    var store: Store<Action, State>
+    var store: Store<Action, State, Environment>
 
-    private let makeView: @MainActor (Store<Action, State>.Proxy) -> V
+    private let makeView: @MainActor (Store<Action, State, Environment>.Proxy) -> V
 
     init(
-        store: Store<Action, State>,
-        makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
+        store: Store<Action, State, Environment>,
+        makeView: @escaping @MainActor (Store<Action, State, Environment>.Proxy) -> V
     )
     {
         self.store = store
@@ -90,17 +125,17 @@ private struct StoreView<Action, State, V: View>: View
 }
 
 /// View to hold `Store.ObservableProxy` as `@ObservedObject`.
-private struct ObservableProxyView<Action, State, V: View>: View
-    where Action: Sendable, State: Sendable
+private struct ObservableProxyView<Action, State, Environment, V: View>: View
+    where Action: Sendable, State: Sendable, Environment: Sendable
 {
     @ObservedObject
-    var store: Store<Action, State>.ObservableProxy
+    var store: Store<Action, State, Environment>.ObservableProxy
 
-    let makeView: @MainActor (Store<Action, State>.Proxy) -> V
+    let makeView: @MainActor (Store<Action, State, Environment>.Proxy) -> V
 
     init(
-        store: Store<Action, State>.ObservableProxy,
-        makeView: @escaping @MainActor (Store<Action, State>.Proxy) -> V
+        store: Store<Action, State, Environment>.ObservableProxy,
+        makeView: @escaping @MainActor (Store<Action, State, Environment>.Proxy) -> V
     )
     {
         self.store = store

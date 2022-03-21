@@ -5,10 +5,10 @@ extension ForEach where Content: View
     /// `ForEach` for `Store` where its state is a collection of child states identified by `id` keyPath.
     /// - SeeAlso: Why `zip` is used: https://stackoverflow.com/a/63145650/666371
     @MainActor
-    public init<C, Action>(
-        store: Store<Action, C>.Proxy,
+    public init<C, Action, Environment>(
+        store: Store<Action, C, Environment>.Proxy,
         id: KeyPath<C.Element, ID>,
-        @ViewBuilder content: @escaping (Store<Action, C.Element>.Proxy) -> Content
+        @ViewBuilder content: @escaping (Store<Action, C.Element, Environment>.Proxy) -> Content
     ) where
         Data == [Zip2Sequence<C.Indices, C>.Element],
         C: MutableCollection & RandomAccessCollection,
@@ -27,9 +27,9 @@ extension ForEach where Content: View
     /// `ForEach` for `Store` where its state is a collection of child states identified by `Identifiable` protocol.
     /// - SeeAlso: Why `zip` is used: https://stackoverflow.com/a/63145650/666371
     @MainActor
-    public init<C, Action>(
-        store: Store<Action, C>.Proxy,
-        @ViewBuilder content: @escaping (Store<Action, C.Element>.Proxy) -> Content
+    public init<C, Action, Environment>(
+        store: Store<Action, C, Environment>.Proxy,
+        @ViewBuilder content: @escaping (Store<Action, C.Element, Environment>.Proxy) -> Content
     ) where
         Data == [Zip2Sequence<C.Indices, C>.Element],
         C: MutableCollection & RandomAccessCollection,
