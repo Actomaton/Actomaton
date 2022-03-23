@@ -80,7 +80,7 @@ import ActomatonStore
 struct CounterView: View {
     // Store を作成
     @StateObject
-    private var store: RouteStore<Action, State, Route> = .init(
+    private var store: RouteStore<Action, State, Environment, Route> = .init(
         state: State(),
         reducer: reducer
     )
@@ -122,7 +122,7 @@ import Combine
 
 final class ViewController: UIViewController {
     // Store を作成
-    private let store: RouteStore<Action, State, Route> = .init(
+    private let store: RouteStore<Action, State, Environment, Route> = .init(
         state: State(),
         reducer: reducer
     ) 

@@ -21,18 +21,20 @@ struct Environment: Sendable {
 
 let environment = Environment(
     timerEffect: { userId in
-        Effect(id: TimerID(), sequence: AsyncStream<()> { continuation in
-            let task = Task {
-                while true {
-                    try await Task.sleep(/* 1 sec */)
-                    continuation.yield(())
+        Effect(id: TimerID(), sequence: {
+            AsyncStream<()> { continuation in
+                let task = Task {
+                    while true {
+                        try await Task.sleep(/* 1 sec */)
+                        continuation.yield(())
+                    }
+                }
+
+                continuation.onTermination = { @Sendable _ in
+                    task.cancel()
                 }
             }
-
-            continuation.onTermination = { @Sendable _ in
-                task.cancel()
-            }
-        }
+        })
     }
 )
 

@@ -264,18 +264,20 @@ struct Environment {
 
 let environment = Environment(
     timerEffect: { userId in
-        Effect(id: TimerID(), sequence: AsyncStream<()> { continuation in
-            let task = Task {
-                while true {
-                    try await Task.sleep(/* 1 sec */)
-                    continuation.yield(())
+        Effect(id: TimerID(), sequence: {
+            AsyncStream<()> { continuation in
+                let task = Task {
+                    while true {
+                        try await Task.sleep(/* 1 sec */)
+                        continuation.yield(())
+                    }
+                }
+
+                continuation.onTermination = { @Sendable _ in
+                    task.cancel()
                 }
             }
-
-            continuation.onTermination = { @Sendable _ in
-                task.cancel()
-            }
-        }
+        })
     }
 )
 
@@ -419,7 +421,7 @@ For example, from [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Galler
 ```swift
 struct AppView: View {
     @StateObject
-    private var store: Store<Root.Action, Root.State> = .init(
+    private var store: Store<Root.Action, Root.State, Roote.Environment> = .init(
         state: Root.State(...),
         reducer: Root.reducer,
         environment: Root.Environment(...)
@@ -435,9 +437,9 @@ struct AppView: View {
 
 struct RootView: View {
     // IMPORTANT: `Store.Proxy`, not `Store` itself.
-    private let store: Store<Root.Action, Root.State>.Proxy
+    private let store: Store<Root.Action, Root.State, Root.Environment>.Proxy
 
-    init(store: Store<Root.Action, Root.State>.Proxy) {
+    init(store: Store<Root.Action, Root.State, Root.Environment>.Proxy) {
         self.store = store
     }
 

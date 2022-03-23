@@ -13,7 +13,7 @@ SwiftUI の `UIHostingController` を使った場合でも同様の方法で作�
 
 ``HostingViewController`` はイニシャライザとして ``HostingViewController/init(store:makeView:)-6i0iw`` を持ち、<doc:03-RouteStore> の UIKit の例と同じく `store` を第 1 引数に受け取ることができます。
 
-ここで、第 2 引数は `makeView: (Store<Action, State>.Proxy) -> some View` という型を持っています。これは、
+ここで、第 2 引数は `makeView: (Store<Action, State, Environment>.Proxy) -> some View` という型を持っています。これは、
 
 - （RouteStore 内部で）第 1 引数の ``Store`` を ``Store/Proxy-swift.struct`` に変えてクロージャーの引数に提供するので、開発者はそれを使って SwiftUI View を組み立てて下さい
 
@@ -29,9 +29,9 @@ import ActomatonStore
 @MainActor
 struct ContentView: View {
     // Store.Proxy を保持 (NOTE: @ObservedObject 等は不要)
-    private let store: Store<Action, State>.Proxy
+    private let store: Store<Action, State, Environment>.Proxy
 
-    init(store: Store<Action, State>.Proxy) {
+    init(store: Store<Action, State, Environment>.Proxy) {
         self.store = store
     }
 
@@ -145,6 +145,8 @@ struct State {
     var text: String
 }
 
+typealias Environment = Void
+
 let reducer = Reducer { action, state, environment in
     switch action {
     case let .updateText(text):
@@ -156,16 +158,16 @@ let reducer = Reducer { action, state, environment in
 }
 
 // NOTE: HostingViewController を使うと Store.Proxy 化する
-let store: RouteStore<Action, State, Route> = .init(
+let store: RouteStore<Action, State, Environment, Route> = .init(
     state: State(),
     reducer: reducer
 )
 
 @MainActor
 struct SearchView: View {
-    private let store: Store<Action, State>.Proxy
+    private let store: Store<Action, State, Environment>.Proxy
 
-    init(store: Store<Action, State>.Proxy) {
+    init(store: Store<Action, State, Environment>.Proxy) {
         self.store = store
     }
 
@@ -192,9 +194,9 @@ SwiftUI View の中で `store.stateBinding` が使われているだけでなく
 ```swift
 @MainActor
 struct SearchView: View {
-    private let store: Store<Action, State>.Proxy
+    private let store: Store<Action, State, Environment>.Proxy
 
-    init(store: Store<Action, State>.Proxy) {
+    init(store: Store<Action, State, Environment>.Proxy) {
         self.store = store
     }
 
