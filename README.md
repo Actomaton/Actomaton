@@ -35,7 +35,7 @@ This framework is a successor of the following projects:
 ### Example 1-1. Simple Counter
 
 ```swift
-enum State {
+struct State {
     var count: Int = 0
 }
 
