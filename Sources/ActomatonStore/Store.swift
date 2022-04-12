@@ -7,6 +7,7 @@ open class Store<Action, State, Environment>: ObservableObject
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
     private let actomaton: Actomaton<BindableAction, State>
+    private let reducer: Reducer<Action, State, Environment>
 
     @Published
     public private(set) var state: State
@@ -35,6 +36,7 @@ open class Store<Action, State, Environment>: ObservableObject
     )
     {
         self.state = initialState
+        self.reducer = reducer
         self.environment = environment
 
         self.actomaton = Actomaton(
@@ -72,13 +74,19 @@ open class Store<Action, State, Environment>: ObservableObject
     /// - Returns:
     ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
     @discardableResult
-    public nonisolated func send(
+    public func send(
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
     ) -> Task<(), Error>
     {
-        Task(priority: priority) {
+        // Run `reducer` on `@MainActor` to update `state` immediately, discarding returned effects.
+        // NOTE: Immediate UI update is often needed in SwiftUI, e.g. `withAnimation`.
+        _ = self.reducer.run(action, &state, environment)
+
+        // Send `action` to `actomaton` asynchronously,
+        // which also calls `reducer` inside its actor to update state and also runs effects.
+        return Task(priority: priority) {
             let task = await self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
             try await task?.value
         }
@@ -95,7 +103,7 @@ open class Store<Action, State, Environment>: ObservableObject
     /// - Note: This is a common sub-store type for UIKit-Navigation-based app.
     public var observableProxy: ObservableProxy
     {
-        ObservableProxy(state: self.$state, environment: environment, send: self.send)
+        ObservableProxy(state: self.$state, environment: environment, send: { self.send($0) })
     }
 }
 
@@ -113,7 +121,15 @@ extension Store
             get: {
                 self.state
             },
-            set: { newValue in
+            set: { newValue, transaction in
+                // Update `state` immediately on `@MainActor` before sending action to `actomaton`.
+                // NOTE: Immediate UI update is often needed in SwiftUI, e.g. `Toggle` animation.
+                withTransaction(transaction) {
+                    self.state = newValue
+                }
+
+                // Send `BindableAction.state` to `actomaton` asynchronously,
+                // which calls `lift`-ed reducer to update whole state (`newValue`) directly.
                 Task {
                     await self.actomaton.send(.state(newValue))
                 }

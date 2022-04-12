@@ -13,7 +13,7 @@ extension Binding
     {
         Binding<SubValue>(
             get: { get(self.wrappedValue) },
-            set: { self.wrappedValue = set(self.wrappedValue, $0) }
+            set: { self.transaction($1).wrappedValue = set(self.wrappedValue, $0) }
         )
     }
 
@@ -27,7 +27,7 @@ extension Binding
     {
         Binding<SubValue>(
             get: { self.wrappedValue[keyPath: keyPath] },
-            set: { self.wrappedValue[keyPath: keyPath] = $0 }
+            set: { self.transaction($1).wrappedValue[keyPath: keyPath] = $0 }
         )
     }
 
@@ -40,9 +40,9 @@ extension Binding
             get: {
                 casePath.extract(from: self.wrappedValue)
             },
-            set: { value in
+            set: { value, transaction in
                 if let value = value {
-                    self.wrappedValue = casePath.embed(value)
+                    self.transaction(transaction).wrappedValue = casePath.embed(value)
                 }
             }
         )
@@ -67,7 +67,7 @@ extension Binding
 
         return Binding<SubValue>(
             get: { subValue },
-            set: { self.wrappedValue[keyPath: keyPath] = $0 }
+            set: { self.transaction($1).wrappedValue[keyPath: keyPath] = $0 }
         )
     }
 }

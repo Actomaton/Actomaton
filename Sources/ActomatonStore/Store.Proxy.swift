@@ -148,9 +148,11 @@ extension Store.Proxy
             get: {
                 get(self.state)
             },
-            set: {
-                if let action = onChange($0) {
-                    self.send(action)
+            set: { value, transaction in
+                if let action = onChange(value) {
+                    _ = withTransaction(transaction) {
+                        self.send(action)
+                    }
                 }
             }
         )
