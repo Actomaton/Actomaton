@@ -18,6 +18,8 @@ extension Store
         /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
         public let environment: Environment
 
+        private let configuration: StoreConfiguration
+
         private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
         public var objectWillChange: AnyPublisher<State, Never>
@@ -29,12 +31,14 @@ extension Store
         public init<P>(
             state: P,
             environment: Environment,
+            configuration: StoreConfiguration,
             send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
         )
             where P: Publisher, P.Output == State, P.Failure == Never
         {
             self.state = state.eraseToAnyPublisher()
             self.environment = environment
+            self.configuration = configuration
             self._send = send
         }
 
@@ -42,14 +46,20 @@ extension Store
         public convenience init<P>(
             state: P,
             environment: Environment,
+            configuration: StoreConfiguration,
             send: @escaping (Action) -> Void
         )
             where P: Publisher, P.Output == State, P.Failure == Never
         {
-            self.init(state: state, environment: environment, send: { action, _, _ in
-                send(action)
-                return Task {}
-            })
+            self.init(
+                state: state,
+                environment: environment,
+                configuration: configuration,
+                send: { action, _, _ in
+                    send(action)
+                    return Task {}
+                }
+            )
         }
 
         /// Sends `action` to `Store.ObservableProxy`.
@@ -85,7 +95,12 @@ extension Store.ObservableProxy
         state f: @escaping (State) -> SubState
     ) -> Store<Action, SubState, Environment>.ObservableProxy
     {
-        .init(state: self.state.map(f), environment: environment, send: self.send)
+        .init(
+            state: self.state.map(f),
+            environment: self.environment,
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 
     /// Transforms `<Action, State>` to `<Action, SubState>` using `Publisher.compactMap`.
@@ -93,7 +108,12 @@ extension Store.ObservableProxy
         state f: @escaping (State) -> SubState?
     ) -> Store<Action, SubState, Environment>.ObservableProxy
     {
-        .init(state: self.state.compactMap(f), environment: environment, send: self.send)
+        .init(
+            state: self.state.compactMap(f),
+            environment: self.environment,
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 
     /// Transforms `Action` to `Action2`.
@@ -102,7 +122,8 @@ extension Store.ObservableProxy
     {
         .init(
             state: self.state,
-            environment: environment,
+            environment: self.environment,
+            configuration: self.configuration,
             send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) }
         )
     }
@@ -112,7 +133,12 @@ extension Store.ObservableProxy
         environment f: @escaping (Environment) -> SubEnvironment
     ) -> Store<Action, State, SubEnvironment>.ObservableProxy
     {
-        .init(state: self.state, environment: f(self.environment), send: self.send)
+        .init(
+            state: self.state,
+            environment: f(self.environment),
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 }
 
@@ -127,7 +153,7 @@ extension Store.ObservableProxy
         .init(
             state: self.unsafeStateBinding,
             environment: self.environment,
-            configuration: StoreConfiguration(),
+            configuration: self.configuration,
             send: self._send
         )
     }

@@ -122,7 +122,8 @@ open class Store<Action, State, Environment>: ObservableObject
     {
         ObservableProxy(
             state: self.$state,
-            environment: environment,
+            environment: self.environment,
+            configuration: self.configuration,
             send: { self.send($0) }
         )
     }
