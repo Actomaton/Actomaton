@@ -124,7 +124,12 @@ extension Store.ObservableProxy
     @MainActor
     var unsafeProxy: Store<Action, State?, Environment>.Proxy
     {
-        .init(state: unsafeStateBinding, environment: environment, send: self._send)
+        .init(
+            state: self.unsafeStateBinding,
+            environment: self.environment,
+            configuration: StoreConfiguration(),
+            send: self._send
+        )
     }
 
     /// Unsafe state binding that ignores setter handling.
