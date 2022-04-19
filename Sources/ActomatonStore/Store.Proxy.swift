@@ -8,6 +8,12 @@ extension Store
     @MainActor
     public struct Proxy
     {
+        /// **Direct** state binding which skips sending `Action` and running `Reducer` by directly modifying state,
+        /// just as plain SwiftUI does 2-way state binding.
+        ///
+        /// If you prefer more "strict" Elm-like architecture to always run `Action` & `Reducer`,
+        /// do not use `$state` as `Binding`, and use ``stateBinding(get:onChange:)``
+        /// that converts state-setter to `Action` for indirection instead.
         @Binding
         public private(set) var state: State
 
@@ -191,17 +197,6 @@ extension Store.Proxy
                 }
             }
         )
-    }
-
-    /// **Direct** state binding which skips sending `Action` and running `Reducer` by directly modifying state,
-    /// just as plain SwiftUI does 2-way state binding.
-    ///
-    /// - Note:
-    ///   If you prefer more "strict" Elm-like architecture to always run `Action` & `Reducer`,
-    ///   do not use this method, and use `stateBinding` that converts state-setter to `Action` for indirection instead.
-    public var directStateBinding: Binding<State>
-    {
-        self._state
     }
 
     /// Creates indirect `Binding<Bool>` as SwiftUI presentation binding from optional `State`, and sends `Action` on dismissal.

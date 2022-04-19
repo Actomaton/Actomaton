@@ -189,7 +189,7 @@ SwiftUI View の中で `store.stateBinding` が使われているだけでなく
 これらの冗長化を許容しないまま、追加の副作用を記述することは容易なことではありません。
 
 とはいえ、もし完璧な状態管理・副作用管理を求めていない場合は、上記のような余計なコードを省きたいケースもあるでしょう。
-その場合は、 ``Store/Proxy-swift.struct/directStateBinding`` を使って、冗長化を避けることが可能です。
+その場合は、 `Store.Proxy.$state` (直接 `Binding`) を使って、冗長化を避けることが可能です。
 
 ```swift
 @MainActor
@@ -201,13 +201,13 @@ struct SearchView: View {
     }
 
     var body: some View {
-        // NOTE: store.directStateBinding (生の state) を使って直接更新
-        TextField("Search", text: store.directStateBinding.text
+        // NOTE: store.$state (生の state) を使って直接更新
+        TextField("Search", text: store.$state.text
     }
 }
 ```
 
-``Store/Proxy-swift.struct/stateBinding(get:onChange:)`` と ``Store/Proxy-swift.struct/directStateBinding`` を適材適所で使い分けながら、理想の状態・副作用管理を目指しましょう！
+``Store/Proxy-swift.struct/stateBinding(get:onChange:)`` と `Store.Proxy.$state` (直接 `Binding`) を適材適所で使い分けながら、理想の状態・副作用管理を目指しましょう！
 
 ## Next Step
 
