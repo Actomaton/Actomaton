@@ -124,7 +124,7 @@ open class Store<Action, State, Environment>: ObservableObject
             state: self.$state,
             environment: self.environment,
             configuration: self.configuration,
-            send: { self.send($0) }
+            send: { action, _, _ in self.send(action) }
         )
     }
 }
