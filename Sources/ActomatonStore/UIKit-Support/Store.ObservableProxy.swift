@@ -28,7 +28,8 @@ extension Store
         }
 
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
-        public init<P>(
+        /// - Note: This initializer is `internal`, and should only be instantiated via ``Store/observableProxy-swift.property``.
+        internal init<P>(
             state: P,
             environment: Environment,
             configuration: StoreConfiguration,
@@ -42,23 +43,18 @@ extension Store
             self._send = send
         }
 
-        /// Initializer with simple `send`, mainly for mocking purpose.
-        public convenience init<P>(
+        /// Initializer for mocking purpose, e.g. SwiftUI Preview.
+        public static func mock<P>(
             state: P,
-            environment: Environment,
-            configuration: StoreConfiguration,
-            send: @escaping (Action) -> Void
-        )
+            environment: Environment
+        ) -> ObservableProxy
             where P: Publisher, P.Output == State, P.Failure == Never
         {
-            self.init(
+            return .init(
                 state: state,
                 environment: environment,
-                configuration: configuration,
-                send: { action, _, _ in
-                    send(action)
-                    return Task {}
-                }
+                configuration: .init(),
+                send: { _, _, _ in Task {} }
             )
         }
 

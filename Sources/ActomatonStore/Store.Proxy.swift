@@ -21,7 +21,8 @@ extension Store
         private let _send: @MainActor (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
-        public init(
+        /// - Note: This initializer is `internal`, and should only be instantiated via ``Store/proxy-swift.property``.
+        internal init(
             state: Binding<State>,
             environment: Environment,
             configuration: StoreConfiguration = .init(),
@@ -34,22 +35,17 @@ extension Store
             self._send = send
         }
 
-        /// Initializer with simple `send`, mainly for mocking purpose.
-        public init(
+        /// Initializer for mocking purpose, e.g. SwiftUI Preview.
+        public static func mock(
             state: Binding<State>,
-            environment: Environment,
-            configuration: StoreConfiguration = .init(),
-            send: @MainActor @escaping (Action) -> Void
-        )
+            environment: Environment
+        ) -> Store.Proxy
         {
-            self.init(
+            return .init(
                 state: state,
                 environment: environment,
-                configuration: configuration,
-                send: { action, _, _ in
-                    send(action)
-                    return Task {}
-                }
+                configuration: .init(),
+                send: { _, _, _ in Task {} }
             )
         }
 
