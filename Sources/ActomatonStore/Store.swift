@@ -17,27 +17,37 @@ open class Store<Action, State, Environment>: ObservableObject
     /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
     public let environment: Environment
 
+    private let configuration: StoreConfiguration
+
     private var task: Task<Void, Never>?
 
     /// Initializer without `environment`.
     public convenience init(
         state initialState: State,
-        reducer: Reducer<Action, State, Void>
+        reducer: Reducer<Action, State, Void>,
+        configuration: StoreConfiguration = .init()
     ) where Environment == Void
     {
-        self.init(state: initialState, reducer: reducer, environment: ())
+        self.init(
+            state: initialState,
+            reducer: reducer,
+            environment: (),
+            configuration: configuration
+        )
     }
 
     /// Initializer with `environment`.
     public init(
         state initialState: State,
         reducer: Reducer<Action, State, Environment>,
-        environment: Environment
+        environment: Environment,
+        configuration: StoreConfiguration = .init()
     )
     {
         self.state = initialState
         self.reducer = reducer
         self.environment = environment
+        self.configuration = configuration
 
         self.actomaton = Actomaton(
             state: initialState,
@@ -82,7 +92,9 @@ open class Store<Action, State, Environment>: ObservableObject
     {
         // Run `reducer` on `@MainActor` to update `state` immediately, discarding returned effects.
         // NOTE: Immediate UI update is often needed in SwiftUI, e.g. `withAnimation`.
-        _ = self.reducer.run(action, &state, environment)
+        if self.configuration.updatesStateImmediately {
+            _ = self.reducer.run(action, &state, environment)
+        }
 
         // Send `action` to `actomaton` asynchronously,
         // which also calls `reducer` inside its actor to update state and also runs effects.
@@ -96,14 +108,24 @@ open class Store<Action, State, Environment>: ObservableObject
     /// - Note: This is a common sub-store type for SwiftUI-based app.
     public var proxy: Proxy
     {
-        Proxy(state: self.stateBinding, environment: self.environment, send: self.send)
+        Proxy(
+            state: self.stateBinding,
+            environment: self.environment,
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 
     /// Lightweight `Store` proxy that is state-observable and action-sendable.
     /// - Note: This is a common sub-store type for UIKit-Navigation-based app.
     public var observableProxy: ObservableProxy
     {
-        ObservableProxy(state: self.$state, environment: environment, send: { self.send($0) })
+        ObservableProxy(
+            state: self.$state,
+            environment: self.environment,
+            configuration: self.configuration,
+            send: { self.send($0) }
+        )
     }
 }
 

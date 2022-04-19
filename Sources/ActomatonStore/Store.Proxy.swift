@@ -16,17 +16,21 @@ extension Store
         /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
         public let environment: Environment
 
+        private let configuration: StoreConfiguration
+
         private let _send: @MainActor (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
         /// Designated initializer with receiving `send` from single-source-of-truth `Store`.
         public init(
             state: Binding<State>,
             environment: Environment,
+            configuration: StoreConfiguration = .init(),
             send: @MainActor @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
         )
         {
             self._state = state
             self.environment = environment
+            self.configuration = configuration
             self._send = send
         }
 
@@ -34,13 +38,19 @@ extension Store
         public init(
             state: Binding<State>,
             environment: Environment,
+            configuration: StoreConfiguration = .init(),
             send: @MainActor @escaping (Action) -> Void
         )
         {
-            self.init(state: state, environment: environment, send: { action, _, _ in
-                send(action)
-                return Task {}
-            })
+            self.init(
+                state: state,
+                environment: environment,
+                configuration: configuration,
+                send: { action, _, _ in
+                    send(action)
+                    return Task {}
+                }
+            )
         }
 
         /// Sends `action` to `Store.Proxy`.
@@ -76,7 +86,12 @@ extension Store.Proxy
         dynamicMember keyPath: WritableKeyPath<State, SubState>
     ) -> Store<Action, SubState, Environment>.Proxy
     {
-        .init(state: self.$state[dynamicMember: keyPath], environment: environment, send: self.send)
+        .init(
+            state: self.$state[dynamicMember: keyPath],
+            environment: self.environment,
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 
     /// Transforms `<Action, State>` to `<Action, SubState?>` using `casePath`.
@@ -84,7 +99,12 @@ extension Store.Proxy
         casePath casePath: CasePath<State, SubState>
     ) -> Store<Action, SubState?, Environment>.Proxy
     {
-        .init(state: self.$state[casePath: casePath], environment: environment, send: self.send)
+        .init(
+            state: self.$state[casePath: casePath],
+            environment: self.environment,
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 
     /// Transforms `Action` to `Action2`.
@@ -93,7 +113,8 @@ extension Store.Proxy
     {
         .init(
             state: self.$state,
-            environment: environment,
+            environment: self.environment,
+            configuration: self.configuration,
             send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) }
         )
     }
@@ -103,7 +124,12 @@ extension Store.Proxy
         environment f: (Environment) -> SubEnvironment
     ) -> Store<Action, State, SubEnvironment>.Proxy
     {
-        .init(state: self.$state, environment: f(environment), send: self.send)
+        .init(
+            state: self.$state,
+            environment: f(environment),
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 }
 
@@ -122,7 +148,12 @@ extension Store.Proxy
             return nil
         }
 
-        return .init(state: state, environment: environment, send: self.send)
+        return .init(
+            state: state,
+            environment: environment,
+            configuration: self.configuration,
+            send: self.send
+        )
     }
 }
 
@@ -150,7 +181,15 @@ extension Store.Proxy
             },
             set: { value, transaction in
                 if let action = onChange(value) {
-                    _ = withTransaction(transaction) {
+                    if self.configuration.updatesStateImmediately {
+                        // If `configuration.updatesStateImmediately` is `true`,
+                        // then state-update will run immediately on `@MainActor`
+                        // thus `withTransaction` will work correctly.
+                        _ = withTransaction(transaction) {
+                            self.send(action)
+                        }
+                    }
+                    else {
                         self.send(action)
                     }
                 }
