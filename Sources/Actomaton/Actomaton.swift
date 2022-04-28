@@ -217,9 +217,9 @@ extension Actomaton
     {
         let task = Task<(), Error>(priority: priority) { [weak self] in
             do {
-                var feedbackTasks: [Task<(), Error>] = []
+                guard let seq = try await sequence.sequence() else { return }
 
-                let seq = try await sequence.sequence()
+                var feedbackTasks: [Task<(), Error>] = []
 
                 for try await nextAction in seq {
                     // Feed back `nextAction`.
