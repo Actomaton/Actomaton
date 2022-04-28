@@ -199,7 +199,7 @@ extension Actomaton
             let nextAction = try await single.run()
 
             // Feed back `nextAction`.
-            if let nextAction = nextAction, !Task.isCancelled {
+            if let nextAction = nextAction {
                 let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
                 if tracksFeedbacks {
                     try await feedbackTask?.value
@@ -222,8 +222,6 @@ extension Actomaton
                 let seq = try await sequence.sequence()
 
                 for try await nextAction in seq {
-                    if Task.isCancelled { break }
-
                     // Feed back `nextAction`.
                     let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
