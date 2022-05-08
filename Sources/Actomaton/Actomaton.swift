@@ -53,15 +53,7 @@ public actor Actomaton<Action, State>
     {
         Debug.print("[deinit] \(String(format: "%p", ObjectIdentifier(self).hashValue))")
 
-        // NOTE:
-        // All effects are now identified using `EffectID`,
-        // so should be able to cancel all remaining tasks here
-        // and no need to for-loop over `self.queues`.
-        for runningTask in self.runningTasks {
-            for task in runningTask.value {
-                task.cancel()
-            }
-        }
+        self.cancelRunningOrPendingEffects(predicate: { _ in true })
     }
 
     /// Sends `action` to `Actomaton`.
@@ -135,14 +127,7 @@ extension Actomaton
             return makeTask(sequence: sequence, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
         case let .cancel(predicate):
-            for id in runningTasks.keys {
-                if predicate(id), let previousTasks = runningTasks.removeValue(forKey: id) {
-                    for previousTask in previousTasks {
-                        previousTask.cancel()
-                    }
-                }
-            }
-
+            self.cancelRunningOrPendingEffects(predicate: predicate)
             return nil
         }
     }
@@ -323,5 +308,42 @@ extension Actomaton
         // NOTE: `isEmpty` check and `removeFirst` must be atomic.
         guard self.pendingEffectKinds[queue.queue]?.isEmpty == false else { return nil }
         return self.pendingEffectKinds[queue.queue]?.removeFirst()
+    }
+
+    /// Cancels currently running effects as well as pending effects.
+    private func cancelRunningOrPendingEffects(predicate: (EffectID) -> Bool)
+    {
+        // Cancel running effects.
+        for id in runningTasks.keys {
+            if predicate(id), let previousTasks = runningTasks.removeValue(forKey: id) {
+                for previousTask in previousTasks {
+                    previousTask.cancel()
+                }
+            }
+        }
+
+        // Cancel pending effects.
+        for (effectQueue, effectKinds) in pendingEffectKinds {
+            for (i, effectKind) in effectKinds.enumerated().reversed() {
+                if let effectID = effectKind.id, predicate(effectID) {
+                    let effectKind = pendingEffectKinds[effectQueue]?.remove(at: i)
+
+                    // NOTE:
+                    // This task runs `single` or `sequence` and immediately get cancelled
+                    // so that cancellation can still be delivered to `Effect`'s async scope.
+                    let cancellingTask = Task<Void, Error> {
+                        switch effectKind {
+                        case let .single(single):
+                            _ = try await single.run()
+                        case let .sequence(sequence):
+                            _ = try await sequence.sequence()
+                        case .cancel, nil:
+                            break
+                        }
+                    }
+                    cancellingTask.cancel() // Cancel immediately.
+                }
+            }
+        }
     }
 }
