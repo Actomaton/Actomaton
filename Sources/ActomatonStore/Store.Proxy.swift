@@ -222,3 +222,14 @@ extension Store.Proxy
         )
     }
 }
+
+// MARK: - noEnvironment
+
+extension Store.Proxy
+{
+    /// Converts `Environment` to `Void` so that `SwiftUI.View` doesn't need to know about `Environment`.
+    public var noEnvironment: Store<Action, State, Void>.Proxy
+    {
+        self.map(environment: { _ in () })
+    }
+}
