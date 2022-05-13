@@ -209,7 +209,7 @@ extension Actomaton
     }
 
     /// Makes `Task` from `AsyncSequence`.
-    func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>
+    private func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>
     {
         let task = Task<(), Error>(priority: priority) { [weak self] in
             do {
