@@ -212,34 +212,29 @@ extension Actomaton
     private func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>
     {
         let task = Task<(), Error>(priority: priority) { [weak self] in
-            do {
-                guard let seq = try await sequence.sequence() else { return }
+            guard let seq = try await sequence.sequence() else { return }
 
-                var feedbackTasks: [Task<(), Error>] = []
+            var feedbackTasks: [Task<(), Error>] = []
 
-                for try await nextAction in seq {
-                    // Feed back `nextAction`.
-                    let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            for try await nextAction in seq {
+                // Feed back `nextAction`.
+                let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
-                    if let feedbackTask = feedbackTask {
-                        feedbackTasks.append(feedbackTask)
-                    }
+                if let feedbackTask = feedbackTask {
+                    feedbackTasks.append(feedbackTask)
                 }
+            }
 
-                if tracksFeedbacks {
-                    try await withThrowingTaskGroup(of: Void.self) { group in
-                        for feedbackTask in feedbackTasks {
-                            group.addTask(priority: priority) {
-                                try await feedbackTask.value
-                            }
+            if tracksFeedbacks {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    for feedbackTask in feedbackTasks {
+                        group.addTask(priority: priority) {
+                            try await feedbackTask.value
                         }
-
-                        try await group.waitForAll()
                     }
-                }
 
-            } catch {
-                Debug.print("Warning: AsyncSequence error is ignored: \(error)")
+                    try await group.waitForAll()
+                }
             }
         }
 
