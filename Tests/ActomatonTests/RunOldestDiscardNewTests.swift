@@ -80,8 +80,8 @@ final class RunOldestDiscardNewTests: XCTestCase
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2))
 
         let results = await resultsCollector.results.sorted()
-        XCTAssertEqual(results, [],
-                       "Should be empty, because 2nd increment's effect is discarded without start nor cancellation.")
+        XCTAssertEqual(results, [2],
+                       "2nd increment's effect should be cancelled by discard.")
     }
 
     func test_maxCount2() async throws
@@ -116,8 +116,8 @@ final class RunOldestDiscardNewTests: XCTestCase
         assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 3))
 
         let results = await resultsCollector.results.sorted()
-        XCTAssertEqual(results, [],
-                       "Should be empty, because 3nd increment's effect is discarded without start nor cancellation.")
+        XCTAssertEqual(results, [3],
+                       "3rd increment's effect should be cancelled by discard.")
     }
 }
 

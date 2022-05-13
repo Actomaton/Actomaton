@@ -163,8 +163,8 @@ extension Actomaton
         case let .runOldest(maxCount, overflowPolicy):
             let overflowCount = (self.queuedRunningTasks[queue.queue]?.count ?? 0) - maxCount
             if overflowCount >= 0 {
-                if overflowPolicy == .suspendNew {
-                    let queue = queue
+                switch overflowPolicy {
+                case .suspendNew:
                     let maxCount = maxCount
                     let currentTaskCount = self.queuedRunningTasks[queue.queue]?.count ?? 0
 
@@ -173,6 +173,9 @@ extension Actomaton
                         Debug.print("[checkQueuePolicy] [runOldest-suspendNew] Enqueue to pending buffer")
                         self.pendingEffectKinds[queue.queue, default: []].append(effectKind)
                     }
+
+                case .discardNew:
+                    self.cancelEffectKind(effectKind)
                 }
 
                 // Overflown, so `Task` should NOT be created.
@@ -333,24 +336,31 @@ extension Actomaton
         for (effectQueue, effectKinds) in pendingEffectKinds {
             for (i, effectKind) in effectKinds.enumerated().reversed() {
                 if let effectID = effectKind.id, predicate(effectID) {
-                    let effectKind = pendingEffectKinds[effectQueue]?.remove(at: i)
-
-                    // NOTE:
-                    // This task runs `single` or `sequence` and immediately get cancelled
-                    // so that cancellation can still be delivered to `Effect`'s async scope.
-                    let cancellingTask = Task<Void, Error> {
-                        switch effectKind {
-                        case let .single(single):
-                            _ = try await single.run()
-                        case let .sequence(sequence):
-                            _ = try await sequence.sequence()
-                        case .cancel, nil:
-                            break
-                        }
+                    if let effectKind = pendingEffectKinds[effectQueue]?.remove(at: i) {
+                        self.cancelEffectKind(effectKind)
                     }
-                    cancellingTask.cancel() // Cancel immediately.
                 }
             }
+        }
+    }
+
+    /// Cancels `effectKind`'s `single` or `sequence` immediately
+    /// so that cancellation can still be delivered to `Effect`'s async scope.
+    private func cancelEffectKind(_ effectKind: Effect<Action>.Kind)
+    {
+        switch effectKind {
+        case let .single(single):
+            Task<Void, Error> {
+                _ = try await single.run()
+            }
+            .cancel() // Cancel immediately.
+        case let .sequence(sequence):
+            Task<Void, Error> {
+                _ = try await sequence.sequence()
+            }
+            .cancel() // Cancel immediately.
+        case .cancel:
+            return
         }
     }
 }
