@@ -18,7 +18,19 @@ public struct EffectQueue: Hashable, Sendable
 /// A protocol that every effect queue should conform to, for automatic cancellation of existing tasks or suspending of new effects.
 public protocol EffectQueueProtocol: Hashable, Sendable
 {
+    /// Effect buffering policy.
     var effectQueuePolicy: EffectQueuePolicy { get }
+
+    /// Effect delaying strategy.
+    var effectQueueDelay: EffectQueueDelay { get }
+}
+
+extension EffectQueueProtocol
+{
+    public var effectQueueDelay: EffectQueueDelay
+    {
+        .constant(0) // Default is "no delay".
+    }
 }
 
 // MARK: - Newest1EffectQueueProtocol
@@ -66,11 +78,13 @@ struct AnyEffectQueue: EffectQueueProtocol, Sendable
 {
     let queue: EffectQueue
     let effectQueuePolicy: EffectQueuePolicy
+    let effectQueueDelay: EffectQueueDelay
 
     init<Queue>(_ queue: Queue)
         where Queue: EffectQueueProtocol
     {
         self.queue = EffectQueue(queue)
         self.effectQueuePolicy = queue.effectQueuePolicy
+        self.effectQueueDelay = queue.effectQueueDelay
     }
 }
