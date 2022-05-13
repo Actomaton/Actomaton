@@ -145,8 +145,15 @@ extension Actomaton
             if droppingCount > 0 {
                 for _ in 0 ..< droppingCount {
                     let droppingTask = self.queuedRunningTasks[queue.queue]?.removeFirst()
-                    Debug.print("[checkQueuePolicy] [runNewest] Cancel old task")
-                    droppingTask?.cancel()
+
+                    if let droppingTask = droppingTask {
+#if DEBUG
+                        let droppingEffectID = self.runningTasks
+                            .first(where: { $0.value.contains(droppingTask) })?.key
+                        Debug.print("[checkQueuePolicy] [runNewest] droppingEffectID = \(String(describing: droppingEffectID))")
+#endif
+                        droppingTask.cancel()
+                    }
                 }
             }
 
