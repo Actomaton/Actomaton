@@ -3,7 +3,7 @@ public struct Reducer<Action, State, Environment>: Sendable
 {
     public let run: @Sendable (Action, inout State, Environment) -> Effect<Action>
 
-    public init(_ run: @Sendable @escaping (Action, inout State, Environment) -> Effect<Action>)
+    public init(_ run: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action>)
     {
         self.run = run
     }
@@ -86,7 +86,7 @@ public struct Reducer<Action, State, Environment>: Sendable
 
     /// Transforms `Environment`.
     public func contramap<GlobalEnvironment>(
-        environment toLocalEnvironment: @Sendable @escaping (GlobalEnvironment) -> Environment
+        environment toLocalEnvironment: @escaping @Sendable (GlobalEnvironment) -> Environment
     ) -> Reducer<Action, State, GlobalEnvironment>
     {
         .init { action, state, environment in

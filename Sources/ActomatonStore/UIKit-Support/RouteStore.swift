@@ -55,7 +55,7 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
     public var environment: Environment
     public var sendRoute: @Sendable (Route) -> Void
 
-    public init(environment: Environment, sendRoute: @Sendable @escaping (Route) -> Void)
+    public init(environment: Environment, sendRoute: @escaping @Sendable (Route) -> Void)
     {
         self.environment = environment
         self.sendRoute = sendRoute
