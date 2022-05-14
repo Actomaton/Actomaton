@@ -8,7 +8,7 @@ func tick(_ n: Double) async throws
     try await Task.sleep(nanoseconds: UInt64(Double(tickTimeInterval) * n))
 }
 
-private let tickTimeInterval: UInt64 = 50_000_000 // 50 ms
+let tickTimeInterval: UInt64 = 50_000_000 // 50 ms
 
 func tick<T>(
     _ n: Double,

@@ -27,6 +27,9 @@ public actor Actomaton<Action, State>
     /// Suspended effects.
     private var pendingEffectKinds: [EffectQueue: [Effect<Action>.Kind]] = [:]
 
+    /// Tracked latest effect start date for delayed effects calculation.
+    private var latestEffectDate: [EffectQueue: Date] = [:]
+
     /// Initializer without `environment`.
     public init(
         state: State,
@@ -119,12 +122,14 @@ extension Actomaton
         case let .single(single):
             guard self.checkQueuePolicy(effectKind: effectKind) else { return nil }
 
-            return makeTask(single: single, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            let delay = calculateEffectDelay(queue: effectKind.queue)
+            return makeTask(single: single, delay: delay, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
         case let .sequence(sequence):
             guard self.checkQueuePolicy(effectKind: effectKind) else { return nil }
 
-            return makeTask(sequence: sequence, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            let delay = calculateEffectDelay(queue: effectKind.queue)
+            return makeTask(sequence: sequence, delay: delay, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
         case let .cancel(predicate):
             self.cancelRunningOrPendingEffects(predicate: predicate)
@@ -188,10 +193,39 @@ extension Actomaton
         }
     }
 
+    /// Calculates effect delay based on `latestTaskRunningDate`  for necessary sleep in `makeTask`.
+    private func calculateEffectDelay(queue: AnyEffectQueue?) -> TimeInterval
+    {
+        // No queue means, immediate task run.
+        guard let queue = queue else { return 0 }
+
+        let delayAfterLatestEffect = queue.effectQueueDelay.timeInterval
+        let latestEffectDate = self.latestEffectDate[queue.queue, default: Date(timeIntervalSince1970: 0)]
+
+        let targetDelaySinceNow = max(latestEffectDate.timeIntervalSinceNow + delayAfterLatestEffect, 0)
+        self.latestEffectDate[queue.queue] = Date(timeIntervalSinceNow: targetDelaySinceNow)
+
+        Debug.print("[calculateEffectDelay] delayAfterLatestExec = \(delayAfterLatestEffect), latestEffectDate = \(latestEffectDate), targetDelaySinceNow = \(targetDelaySinceNow)")
+
+        return targetDelaySinceNow
+    }
+
     /// Makes `Task` from `async`.
-    private func makeTask(single: Effect<Action>.Single, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>
+    private func makeTask(
+        single: Effect<Action>.Single,
+        delay: TimeInterval,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool
+    ) -> Task<(), Error>
     {
         let task = Task(priority: priority) { [weak self] in
+            if delay > 0 {
+                // NOTE:
+                // In case of cancellation, this `sleep` should not early-exit here
+                // and let actual effect handle it, so use `try?`.
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+
             let nextAction = try await single.run()
 
             // Feed back `nextAction`.
@@ -209,9 +243,21 @@ extension Actomaton
     }
 
     /// Makes `Task` from `AsyncSequence`.
-    private func makeTask(sequence: Effect<Action>._Sequence, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>
+    private func makeTask(
+        sequence: Effect<Action>._Sequence,
+        delay: TimeInterval,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool
+    ) -> Task<(), Error>
     {
         let task = Task<(), Error>(priority: priority) { [weak self] in
+            if delay > 0 {
+                // NOTE:
+                // In case of cancellation, this `sleep` should not early-exit here
+                // and let actual effect handle it, so use `try?`.
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+
             guard let seq = try await sequence.sequence() else { return }
 
             var feedbackTasks: [Task<(), Error>] = []
