@@ -14,7 +14,7 @@ build-watchOS:
 
 .PHONY: build-tvOS
 build-tvOS:
-	$(MAKE) build DESTINATION='platform=tvOS Simulator,name=Apple TV 4K'
+	$(MAKE) build DESTINATION='platform=tvOS Simulator,name=Apple TV 4K (at 1080p) (2nd generation)'
 
 .PHONY: build
 build:
