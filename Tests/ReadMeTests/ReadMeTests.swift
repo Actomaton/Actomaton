@@ -1,11 +1,6 @@
 import XCTest
-@testable import Actomaton
-
-#if swift(>=5.6)
 @preconcurrency import Foundation
-#else
-import Foundation
-#endif
+@testable import Actomaton
 
 import Combine
 
