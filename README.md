@@ -486,12 +486,6 @@ extension Root {
                 .contramap(action: /Action.github)
                 .contramap(state: /State.Current.github)
                 .contramap(state: \State.current)
-                .contramap(environment: { $0.github }),
-
-            GitHub.reducer
-                .contramap(action: /Action.github)
-                .contramap(state: /State.Current.github)
-                .contramap(state: \State.current)
                 .contramap(environment: { $0.github })
         )
     }
