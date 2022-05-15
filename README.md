@@ -1,6 +1,6 @@
 # 🎭 Actomaton
 
-[![Swift 5.5](https://img.shields.io/badge/swift-5.5-orange.svg?style=flat)](https://swift.org/download/)
+[![Swift 5.6](https://img.shields.io/badge/swift-5.6-orange.svg?style=flat)](https://swift.org/download/)
 ![](https://github.com/inamiy/Actomaton/actions/workflows/main.yml/badge.svg)
 
 🧑‍🎤 Actor + 🤖 Automaton = 🎭 Actomaton
@@ -8,10 +8,11 @@
 **Actomaton** is Swift `async`/`await` & `Actor`-powered effectful state-management framework
 inspired by [Elm](http://elm-lang.org/) and [swift-composable-architecture](https://github.com/pointfreeco/swift-composable-architecture).
 
-This repository consists of 2 frameworks:
+This repository consists of 3 frameworks:
 
 1. `Actomaton`: Actor-based effect-handling state-machine at its core. Linux ready.
 2. `ActomatonStore`: SwiftUI & Combine support
+3. `ActomatonDebugging`: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
 
 These frameworks depend on [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) as Functional Prism library, which is a powerful tool to construct an App-level Mega-Reducer from each screen's Reducers.
 
@@ -35,11 +36,11 @@ This framework is a successor of the following projects:
 ### Example 1-1. Simple Counter
 
 ```swift
-struct State {
+struct State: Sendable {
     var count: Int = 0
 }
 
-enum Action {
+enum Action: Sendable {
     case increment
     case decrement
 }
@@ -122,11 +123,11 @@ NOTE: There are 5 ways of creating `Effect` in Actomaton:
 ![login-diagram](https://user-images.githubusercontent.com/138476/132146518-686deb5f-ff01-489a-abf2-e2ef2a2adb03.png)
 
 ```swift
-enum State {
+enum State: Sendable {
     case loggedOut, loggingIn, loggedIn, loggingOut
 }
 
-enum Action {
+enum Action: Sendable {
     case login, loginOK, logout, logoutOK
     case forceLogout
 }
@@ -138,7 +139,7 @@ enum Action {
 // Note that `EffectID` is also useful for manual cancellation via `Effect.cancel`.
 struct LoginFlowEffectID: EffectIDProtocol {}
 
-struct Environment {
+struct Environment: Sendable {
     let loginEffect: (userId: String) -> Effect<Action>
     let logoutEffect: Effect<Action>
 }
@@ -247,12 +248,12 @@ Here we see the notions of `EffectID`, `Environment`, and `let task: Task<(), Er
 - `Environment` is useful for injecting effects to be called inside `Reducer` so that they become replaceable. **`Environment` is known as Dependency Injection** (using Reader monad).
 - (Optional) `Task<(), Error>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await task.value` to wait for all of them to be completed, or `task.cancel()` to cancel all. Note that `Actomaton` already manages such `task`s for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
 
-### Example 1-3. Timer (using `AsyncSequence`)
+### Example 1-3. Timer (using `AsyncSequence`) and `EffectID` cancellation
 
 ```swift
 typealias State = Int
 
-enum Action {
+enum Action: Sendable {
     case start, tick, stop
 }
 
@@ -328,7 +329,98 @@ enum Main {
 
 In this example, `Effect(id:sequence:)` is used for timer effect, which yields `Action.tick` multiple times.
 
-### Example 1-4. Reducer composition
+### Example 1-4. `EffectQueue`
+
+```swift
+enum Action: Sendable {
+    case fetch(id: String)
+    case _didFetch(Data)
+}
+
+struct State: Sendable {} // no state
+
+struct Environment: Sendable {
+    let fetch: @Sendable (_ id: String) async throws -> Data
+}
+
+struct DelayedEffectQueue: EffectQueueProtocol {
+    // First 3 effects will run concurrently, and other sent effects will be suspended.
+    var effectQueuePolicy: EffectQueuePolicy {
+        .runOldest(maxCount: 3, .suspendNew)
+    }
+
+    // Adds delay between effect start. (This is useful for throttling / deboucing)
+    var effectQueueDelay: EffectQueueDelay {
+        .random(0.1 ... 0.3)
+    }
+}
+
+let reducer = Reducer<Action, State, Environment> { action, state, environment in
+    switch action {
+    case let .fetch(id):
+        return Effect(queue: DelayedEffectQueue()) {
+            let data = try await environment.fetch(id)
+            return ._didFetch(data)
+        }
+    case let ._didFetch(data):
+        // Do something with `data`.
+        return .empty
+    }
+}
+
+let actomaton = Actomaton<Action, State>(
+    state: State(),
+    reducer: reducer,
+        environment: Environment(fetch: { /* ... */ })
+)
+
+await actomaton.send(.fetch(id: "item1"))
+await actomaton.send(.fetch(id: "item2")) // min delay of 0.1
+await actomaton.send(.fetch(id: "item3")) // min delay of 0.1 (after item2 actually starts)
+await actomaton.send(.fetch(id: "item4")) // starts when item1 or 2 or 3 finishes
+```
+
+Above code uses a custom `DelayedEffectQueue` that conforms to `EffectQueueProtocol` with suspendable `EffectQueuePolicy` and delays between each effect by `EffectQueueDelay`.
+
+See [EffectQueuePolicy](https://github.com/inamiy/Actomaton/blob/main/Sources/Actomaton/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
+
+```swift
+/// `EffectQueueProtocol`'s buffering policy.
+public enum EffectQueuePolicy: Hashable, Sendable
+{
+    /// Runs `maxCount` newest effects, cancelling old running effects.
+    case runNewest(maxCount: Int)
+
+    /// Runs `maxCount` old effects with either suspending or discarding new effects.
+    case runOldest(maxCount: Int, OverflowPolicy)
+
+    public enum OverflowPolicy: Sendable
+    {
+        /// Suspends new effects when `.runOldest` `maxCount` of old effects is reached until one of them is completed.
+        case suspendNew
+
+        /// Discards new effects when `.runOldest` `maxCount` of old effects is reached until one of them is completed.
+        case discardNew
+    }
+}
+```
+
+For convenient `EffectQueueProtocol` protocol conformance, there are built-in sub-protocols:
+
+```swift
+/// A helper protocol where `effectQueuePolicy` is set to `.runNewest(maxCount: 1)`.
+public protocol Newest1EffectQueueProtocol: EffectQueueProtocol {}
+
+/// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .discardNew)`.
+public protocol Oldest1DiscardNewEffectQueueProtocol: EffectQueueProtocol {}
+
+/// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .suspendNew)`.
+public protocol Oldest1SuspendNewEffectQueueProtocol: EffectQueueProtocol {}
+```
+
+so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueueProtocol {}`
+
+### Example 1-5. Reducer composition
 
 [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery) provides a good example of how `Reducer`s can be combined together into one big Reducer using `Reducer.combine`.
 
@@ -340,7 +432,7 @@ In this example, [swift-case-paths](https://github.com/pointfreeco/swift-case-pa
 enum Root {} // just a namespace
 
 extension Root {
-    enum Action {
+    enum Action: Sendable {
         case changeCurrent(State.Current?)
 
         case counter(Counter.Action)
@@ -350,7 +442,7 @@ extension Root {
         case github(GitHub.Action)
     }
 
-    struct State: Equatable {
+    struct State: Equatable, Sendable {
         var current: Current?
 
         // Current screen (NOTE: enum, so only 1 screen will appear)
