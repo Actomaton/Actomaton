@@ -11,8 +11,11 @@ inspired by [Elm](http://elm-lang.org/) and [swift-composable-architecture](http
 This repository consists of 3 frameworks:
 
 1. `Actomaton`: Actor-based effect-handling state-machine at its core. Linux ready.
+    - [Documentation](https://inamiy.github.io/Actomaton/documentation/actomaton/)
 2. `ActomatonStore`: SwiftUI & Combine support
+    - [Documentation (Currently in Japanese only)](https://inamiy.github.io/Actomaton/documentation/actomatonstore/)
 3. `ActomatonDebugging`: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
+    - [Documentation](https://inamiy.github.io/Actomaton/documentation/actomatondebugging/)
 
 These frameworks depend on [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) as Functional Prism library, which is a powerful tool to construct an App-level Mega-Reducer from each screen's Reducers.
 
@@ -25,11 +28,6 @@ This framework is a successor of the following projects:
 ## Demo App
 
 - [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery)
-
-## Documentation
-
-- Actomaton: https://actomaton.web.app/documentation/actomaton
-- ActomatonStore: https://actomaton.web.app/documentation/actomatonstore (Currently in Japanese only)
 
 ## 1. Actomaton (Core)
 

@@ -1,4 +1,4 @@
-# Example 4: Making a large app (Reducer Composition)
+# Example 5: Making a large app (Reducer Composition)
 
 Reducer composition example.
 
