@@ -85,4 +85,4 @@ enum Main {
 
 ## Next Step
 
-<doc:04-ReducerComposition>
+<doc:04-EffectQueue>
