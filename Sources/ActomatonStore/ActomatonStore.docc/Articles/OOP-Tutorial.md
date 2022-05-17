@@ -22,4 +22,4 @@
 
 ## RouteStore を使ったアプリの例
 
-- [Actomaton-Favorite-Sync](https://github.com/inamiy/Actomaton-Gallery/tree/main/Examples/Favorite-Sync/Actomaton-Favorite-Sync)
+- [Actomaton-Favorite-Sync](https://github.com/Actomaton/Actomaton-Gallery/tree/main/Examples/Favorite-Sync/Actomaton-Favorite-Sync)

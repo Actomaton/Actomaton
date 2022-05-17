@@ -63,7 +63,7 @@ await actomaton.send(.fetch(id: "item4")) // starts when item1 or 2 or 3 finishe
 
 Above code uses a custom `DelayedEffectQueue` that conforms to ``EffectQueueProtocol`` with suspendable ``EffectQueuePolicy`` and delays between each effect by ``EffectQueueDelay``.
 
-See [EffectQueuePolicy](https://github.com/inamiy/Actomaton/blob/main/Sources/Actomaton/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
+See [EffectQueuePolicy](https://github.com/Actomaton/Actomaton/blob/main/Sources/Actomaton/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
 
 ```swift
 /// `EffectQueueProtocol`'s buffering policy.

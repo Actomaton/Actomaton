@@ -178,7 +178,7 @@ final class ViewController: UIViewController {
 
 ## サンプルコード
 
-- [Actomaton-Basic](https://github.com/inamiy/Actomaton-Gallery/tree/main/Examples/Actomaton-Basic.swiftpm)
+- [Actomaton-Basic](https://github.com/Actomaton/Actomaton-Gallery/tree/main/Examples/Actomaton-Basic.swiftpm)
 
 ## Next Step
 

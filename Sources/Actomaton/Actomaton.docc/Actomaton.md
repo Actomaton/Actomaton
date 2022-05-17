@@ -7,7 +7,7 @@ Linux ready.
 
 **Actomaton** is `Actor`-based **state-machine framework** inspired by [Elm](http://elm-lang.org/) and [swift-composable-architecture](https://github.com/pointfreeco/swift-composable-architecture).
 
-- Repository: [https://github.com/inamiy/Actomaton](https://github.com/inamiy/Actomaton)
+- Repository: [https://github.com/Actomaton/Actomaton](https://github.com/Actomaton/Actomaton)
 
 This module is the heart of all the other modules, which is not only for building UI architecture 
 but for building "any" stateful and effectful computations in any platforms (including Linux).
@@ -46,7 +46,7 @@ To quickly jump into the example code, see Example Code page.
 
 To play with real-world app using Actomaton, see SwiftUI / UIKit Gallery app below.
 
-- [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery)
+- [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery)
 
 
 ## Topics

@@ -270,7 +270,7 @@ enum Main {
 
 ## サンプルコード
 
-[Actomaton-Gallery/StateDiagram.swift](https://github.com/inamiy/Actomaton-Gallery/blob/main/Sources/StateDiagram/StateDiagram.swift)
+[Actomaton-Gallery/StateDiagram.swift](https://github.com/Actomaton/Actomaton-Gallery/blob/main/Sources/StateDiagram/StateDiagram.swift)
 
 ## Next Step
 

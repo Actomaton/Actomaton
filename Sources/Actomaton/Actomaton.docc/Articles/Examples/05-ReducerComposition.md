@@ -4,7 +4,7 @@ Reducer composition example.
 
 ## Overview
 
- [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery) provides a good example of how `Reducer`s can be combined together into one big Reducer using `Reducer.combine`.
+ [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery) provides a good example of how `Reducer`s can be combined together into one big Reducer using `Reducer.combine`.
 
 In this example, [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) is used as a counterpart of `WritableKeyPath`, so if we use both, we can easily construct Mega-Reducer without a hussle.
 

@@ -7,7 +7,7 @@ Swift Concurrency (async/await、Structured Concurrency、Actor) を使った、
 **Actomaton** は Swift Concurrency を使った **状態と副作用の管理のためのフレームワーク** です。
 [Elm](http://elm-lang.org/) や [Redux](https://redux.js.org/)、[swift-composable-architecture](https://github.com/pointfreeco/swift-composable-architecture) などを参考に、Swift Concurrency を用いた高度な副作用管理システムを備えています。
 
-- Repository: [https://github.com/inamiy/Actomaton](https://github.com/inamiy/Actomaton)
+- Repository: [https://github.com/Actomaton/Actomaton](https://github.com/Actomaton/Actomaton)
 
 ### Actomaton (親モジュール)
 
@@ -67,7 +67,7 @@ Swift Concurrency (async/await、Structured Concurrency、Actor) を使った、
 
 2, 3, 4 を使った実際のサンプルアプリについては、次の SwiftUI / UIKit Gallery アプリをご参照下さい。
 
-- [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery)
+- [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery)
 
 
 ## Topics

@@ -1,7 +1,7 @@
 # 🎭 Actomaton
 
 [![Swift 5.6](https://img.shields.io/badge/swift-5.6-orange.svg?style=flat)](https://swift.org/download/)
-![](https://github.com/inamiy/Actomaton/actions/workflows/main.yml/badge.svg)
+![](https://github.com/Actomaton/Actomaton/actions/workflows/main.yml/badge.svg)
 
 🧑‍🎤 Actor + 🤖 Automaton = 🎭 Actomaton
 
@@ -11,11 +11,11 @@ inspired by [Elm](http://elm-lang.org/) and [swift-composable-architecture](http
 This repository consists of 3 frameworks:
 
 1. `Actomaton`: Actor-based effect-handling state-machine at its core. Linux ready.
-    - [Documentation](https://inamiy.github.io/Actomaton/documentation/actomaton/)
+    - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomaton/)
 2. `ActomatonStore`: SwiftUI & Combine support
-    - [Documentation (Currently in Japanese only)](https://inamiy.github.io/Actomaton/documentation/actomatonstore/)
+    - [Documentation (Currently in Japanese only)](https://actomaton.github.io/Actomaton/documentation/actomatonstore/)
 3. `ActomatonDebugging`: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
-    - [Documentation](https://inamiy.github.io/Actomaton/documentation/actomatondebugging/)
+    - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatondebugging/)
 
 These frameworks depend on [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) as Functional Prism library, which is a powerful tool to construct an App-level Mega-Reducer from each screen's Reducers.
 
@@ -27,7 +27,7 @@ This framework is a successor of the following projects:
 
 ## Demo App
 
-- [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery)
+- [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery)
 
 ## 1. Actomaton (Core)
 
@@ -380,7 +380,7 @@ await actomaton.send(.fetch(id: "item4")) // starts when item1 or 2 or 3 finishe
 
 Above code uses a custom `DelayedEffectQueue` that conforms to `EffectQueueProtocol` with suspendable `EffectQueuePolicy` and delays between each effect by `EffectQueueDelay`.
 
-See [EffectQueuePolicy](https://github.com/inamiy/Actomaton/blob/main/Sources/Actomaton/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
+See [EffectQueuePolicy](https://github.com/Actomaton/Actomaton/blob/main/Sources/Actomaton/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
 
 ```swift
 /// `EffectQueueProtocol`'s buffering policy.
@@ -420,7 +420,7 @@ so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueueProt
 
 ### Example 1-5. Reducer composition
 
-[Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery) provides a good example of how `Reducer`s can be combined together into one big Reducer using `Reducer.combine`.
+[Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery) provides a good example of how `Reducer`s can be combined together into one big Reducer using `Reducer.combine`.
 
 In this example, [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) is used as a counterpart of `WritableKeyPath`, so if we use both, we can easily construct Mega-Reducer without a hussle.
 
@@ -500,7 +500,7 @@ To learn more about `CasePath`, visit the official site and tutorials:
 `Store` (from `ActomatonStore.framework`) provides a thin wrapper of `Actomaton` to work seamlessly in SwiftUI world.
 It will be stored as a `@StateObject` of the App's view.
 
-For example, from [Actomaton-Gallery](https://github.com/inamiy/Actomaton-Gallery):
+For example, from [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery):
 
 ```swift
 struct AppView: View {
