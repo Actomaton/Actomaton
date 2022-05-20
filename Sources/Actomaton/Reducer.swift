@@ -97,4 +97,28 @@ public struct Reducer<Action, State, Environment>: Sendable
             )
         }
     }
+
+    // MARK: - Functor
+
+    /// Changes `EffectID`.
+    public func map<ID>(id f: @escaping @Sendable (EffectID?) -> ID?) -> Reducer
+        where ID: EffectIDProtocol
+    {
+        .init { action, state, environment in
+            let effect = self.run(action, &state, environment)
+                .map(id: f)
+            return effect
+        }
+    }
+
+    /// Changes `EffectQueue`.
+    public func map<Queue>(queue f: @escaping @Sendable (EffectQueue?) -> Queue?) -> Reducer
+        where Queue: EffectQueueProtocol
+    {
+        .init { action, state, environment in
+            let effect = self.run(action, &state, environment)
+                .map(queue: f)
+            return effect
+        }
+    }
 }
