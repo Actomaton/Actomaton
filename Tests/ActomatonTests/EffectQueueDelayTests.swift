@@ -24,6 +24,20 @@ final class EffectQueueDelayTests: XCTestCase
 
                         print("Start: \(id), Task.isCancelled = \(Task.isCancelled)")
 
+                        // Swift 5.7 requirement:
+                        // Add short delay before checking `Task.isCancelled` since Swift 5.7's cancellation propagation
+                        // seems to become slower than Swift 5.6 and needs to wait for actual `Task.isCancelled` check.
+                        // Note that this tweak is only needed for testing purpose,
+                        // and won't be necessary for production code.
+                        do {
+                            try await Task.sleep(nanoseconds: 1_000_000)
+                        }
+                        catch {
+                            // Ignore cancellation handling during `Task.sleep`.
+                        }
+
+                        print("Start (recheck): \(id), Task.isCancelled = \(Task.isCancelled)")
+
                         // NOTE:
                         // Because of delayed effect cancellation may occur by `EffectQueue`,
                         // `Task.isCancelled` may already be `true` at here.
