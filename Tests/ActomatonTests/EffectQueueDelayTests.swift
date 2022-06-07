@@ -114,6 +114,7 @@ final class EffectQueueDelayTests: XCTestCase
 
         assertEqual(await actomaton.state.finishedIDs, [])
 
+        // NOTE: `delay * 2` for waiting from "1" to "3", then `effectTime + 0.5` for waiting "3" to be completed.
         try await tick(delay * 2 + effectTime + 0.5)
         assertEqual(await actomaton.state.finishedIDs, ["3"])
 
