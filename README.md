@@ -25,6 +25,22 @@ This framework is a successor of the following projects:
 - [ReactiveAutomaton](https://github.com/inamiy/ReactiveAutomaton) (using [ReactiveSwift](https://github.com/ReactiveCocoa/ReactiveSwift))
 - [RxAutomaton](https://github.com/inamiy/RxAutomaton) (using [RxSwift](https://github.com/ReactiveX/RxSwift))
 
+## Installation
+
+In `Package.swift`:
+
+```swift
+let package = Package(
+    ...
+    dependencies: [
+        .package(url: "https://github.com/Actomaton/Actomaton", .branch("main"))
+    ]
+)
+```
+
+Note: Specifying by "git version tag" is not currently supported due to usage of unsafe flags.
+See also: [#56](https://github.com/Actomaton/Actomaton/issues/56)
+
 ## Demo App
 
 - [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery)
