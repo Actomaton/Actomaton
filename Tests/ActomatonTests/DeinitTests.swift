@@ -6,55 +6,59 @@ import Combine
 /// Tests for `Actomaton.deinit` to run successfully with cancelling running tasks.
 final class DeinitTests: XCTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
-
-    fileprivate var resultsCollector: ResultsCollector<Int> = .init()
-
-    override func setUp() async throws
-    {
-        self.resultsCollector = ResultsCollector<Int>()
-
-        let actomaton = Actomaton<Action, State>(
-            state: State(),
-            reducer: Reducer { [resultsCollector] action, state, _ in
-                Debug.print("===> \(action)")
-                state.count += 1
-
-                return Effect { [state, resultsCollector] in
-                    try await tick(1) {
-                        return .next
-                    } ifCancelled: {
-                        Debug.print("Effect cancelled")
-                        await resultsCollector.append(state.count)
-                        return nil
-                    }
-                }
-            }
-        )
-        self.actomaton = actomaton
-    }
-
     func test_deinit() async throws
     {
-        weak var weakActomaton = self.actomaton
+        let resultsCollector = ResultsCollector<String>()
 
-        let task = await actomaton.send(.next)
-        try await tick(2.5)
+        var actomaton: Actomaton? = Actomaton<Action, State>(
+            state: State(),
+            reducer: Reducer { [resultsCollector] action, state, _ in
+                switch action {
+                case .run:
+                    return Effect { [resultsCollector] in
+                        return try await tick(5) {
+                            await resultsCollector.append("Effect succeeded")
+                            return nil
+                        } ifCancelled: {
+                            Debug.print("Effect cancelled")
+                            await resultsCollector.append("Effect cancelled")
+                            return nil
+                        }
+                    }
+                }
+            },
+            environment: Environment(resultsCollector: resultsCollector)
+        )
 
-        self.actomaton = nil
+        weak var weakActomaton = actomaton
+
+        let task = await actomaton?.send(.run)
+        try await tick(1)
+
+        // Deinit `actomaton`.
+        actomaton = nil
         XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
 
-        try await task?.value
+        // Check results.
+        do {
+            let results = await resultsCollector.results
+            XCTAssertEqual(
+                results, [],
+                "Effect cancellation needs next run-loop to run, so there is no `results` yet."
+            )
+        }
 
-        let results = await resultsCollector.results
-        XCTAssertEqual(
-            results, [],
-            """
-            Will be empty because task cancellation won't normally take place.
-            Instead, next task won't even get started because of `send` not working
-            due to missing Actomaton.
-            """
-        )
+        // Wait until deinit fully completes.
+        try? await task?.value
+
+        // Check results.
+        do {
+            let results = await resultsCollector.results
+            XCTAssertEqual(
+                results, ["Effect cancelled", "DeinitChecker deinit"],
+                "Running effect should be cancelled, and `DeinitChecker` should deinit"
+            )
+        }
     }
 }
 
@@ -62,12 +66,37 @@ final class DeinitTests: XCTestCase
 
 private enum Action
 {
-    case next
+    case run
 }
 
 private struct State
 {
-    var count: Int = 0
-
     init() {}
+}
+
+private struct Environment: Sendable
+{
+    let deinitChecker: DeinitChecker
+
+    init(resultsCollector: ResultsCollector<String>)
+    {
+        self.deinitChecker = DeinitChecker(resultsCollector: resultsCollector)
+    }
+}
+
+private actor DeinitChecker
+{
+    let resultsCollector: ResultsCollector<String>
+
+    init(resultsCollector: ResultsCollector<String>)
+    {
+        self.resultsCollector = resultsCollector
+    }
+
+    deinit
+    {
+        Task { [resultsCollector] in
+            await resultsCollector.append("DeinitChecker deinit")
+        }
+    }
 }
