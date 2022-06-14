@@ -47,9 +47,20 @@ let package = Package(
                 "Actomaton",
                 .product(name: "CustomDump", package: "swift-custom-dump")
             ]),
+        .target(
+            name: "TestFixtures",
+            dependencies: ["Actomaton"],
+            path: "./Tests/TestFixtures",
+            swiftSettings: [
+                .unsafeFlags([
+                    "-Xfrontend", "-warn-concurrency",
+                    "-Xfrontend", "-enable-actor-data-race-checks",
+                ])
+            ]
+        ),
         .testTarget(
             name: "ActomatonTests",
-            dependencies: ["Actomaton"],
+            dependencies: ["Actomaton", "TestFixtures"],
             swiftSettings: [
                 .unsafeFlags([
                     "-Xfrontend", "-warn-concurrency",

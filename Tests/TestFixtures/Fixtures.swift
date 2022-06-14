@@ -3,14 +3,14 @@ import XCTest
 // MARK: - Tick
 
 /// - Note: For safe async testing, leeway should have at least 50 millisec (30 millsec isn't enough for MacBook Pro (15-inch, 2018)).
-func tick(_ n: Double) async throws
+public func tick(_ n: Double) async throws
 {
     try await Task.sleep(nanoseconds: UInt64(Double(tickTimeInterval) * n))
 }
 
-let tickTimeInterval: UInt64 = 50_000_000 // 50 ms
+public let tickTimeInterval: UInt64 = 50_000_000 // 50 ms
 
-func tick<T>(
+public func tick<T>(
     _ n: Double,
     ifSucceeded: () async throws -> T,
     ifCancelled: () async throws -> T
@@ -27,7 +27,7 @@ func tick<T>(
 
 // MARK: - Assert
 
-func assertEqual<T>(
+public func assertEqual<T>(
     _ expression1: T,
     _ expression2: T,
     _ message: @autoclosure () -> String = "",
@@ -40,11 +40,13 @@ func assertEqual<T>(
 
 // MARK: - ResultsCollector
 
-actor ResultsCollector<T>
+public actor ResultsCollector<T>
 {
-    var results: [T] = []
+    public private(set) var results: [T] = []
 
-    func append(_ value: T)
+    public init() {}
+
+    public func append(_ value: T)
     {
         results.append(value)
     }
