@@ -1,16 +1,16 @@
 import XCTest
 @testable import Actomaton
-
-import Combine
+@testable import ActomatonStore
 
 /// Tests for `Actomaton.deinit` to run successfully with cancelling running tasks.
+@MainActor
 final class DeinitTests: XCTestCase
 {
     func test_deinit() async throws
     {
         let resultsCollector = ResultsCollector<String>()
 
-        var actomaton: Actomaton? = Actomaton<Action, State>(
+        var actomaton: Store? = Store<Action, State, Environment>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, state, _ in
                 switch action {
@@ -32,7 +32,7 @@ final class DeinitTests: XCTestCase
 
         weak var weakActomaton = actomaton
 
-        let task = await actomaton?.send(.run)
+        let task = actomaton?.send(.run)
         try await tick(1)
 
         // Deinit `actomaton`.
