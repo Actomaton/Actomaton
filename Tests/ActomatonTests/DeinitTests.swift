@@ -39,26 +39,19 @@ final class DeinitTests: XCTestCase
         actomaton = nil
         XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
 
-        // Check results.
-        do {
-            let results = await resultsCollector.results
-            XCTAssertEqual(
-                results, [],
-                "Effect cancellation needs next run-loop to run, so there is no `results` yet."
-            )
-        }
-
         // Wait until deinit fully completes.
         try? await task?.value
 
         // Check results.
-        do {
-            let results = await resultsCollector.results
-            XCTAssertEqual(
-                results, ["Effect cancelled", "DeinitChecker deinit"],
-                "Running effect should be cancelled, and `DeinitChecker` should deinit"
-            )
-        }
+        //
+        // NOTE:
+        // Arrival timing of 2 results are almost simultaneous thus isn't guaranteed in order,
+        // so will use `Set` here.
+        let results = await resultsCollector.results
+        XCTAssertEqual(
+            Set(results), ["Effect cancelled", "DeinitChecker deinit"],
+            "Running effect should be cancelled, and `DeinitChecker` should deinit."
+        )
     }
 }
 
