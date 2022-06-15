@@ -98,8 +98,8 @@ open class Store<Action, State, Environment>: ObservableObject
 
         // Send `action` to `actomaton` asynchronously,
         // which also calls `reducer` inside its actor to update state and also runs effects.
-        return Task(priority: priority) {
-            let task = await self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
+        return Task(priority: priority) { [weak self] in
+            let task = await self?.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
             try await task?.value
         }
     }
