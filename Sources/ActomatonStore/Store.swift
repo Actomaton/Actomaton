@@ -4,7 +4,7 @@ import SwiftUI
 /// Store of `Actomaton` optimized for SwiftUI's 2-way binding.
 @MainActor
 open class Store<Action, State, Environment>: ObservableObject
-    where Action: Sendable, State: Sendable, Environment: Sendable
+    where Action: Sendable, State: Sendable & Equatable, Environment: Sendable
 {
     private let actomaton: Actomaton<BindableAction, State>
     private let reducer: Reducer<Action, State, Environment>
@@ -60,8 +60,10 @@ open class Store<Action, State, Environment>: ObservableObject
         self.task = Task { [weak self] in
             guard let stream = await self?.actomaton.$state.toAsyncStream() else { return }
 
-            for await state in stream {
-                self?.state = state
+            for await newState in stream {
+                if newState != self?.state {
+                    self?.state = newState
+                }
             }
         }
     }
@@ -147,7 +149,9 @@ extension Store
                 // Update `state` immediately on `@MainActor` before sending action to `actomaton`.
                 // NOTE: Immediate UI update is often needed in SwiftUI, e.g. `Toggle` animation.
                 withTransaction(transaction) {
-                    self.state = newValue
+                    if newValue != self.state {
+                        self.state = newValue
+                    }
                 }
 
                 // Send `BindableAction.state` to `actomaton` asynchronously,

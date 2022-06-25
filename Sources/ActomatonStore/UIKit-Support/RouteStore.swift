@@ -5,7 +5,7 @@ import Combine
 /// without using `State` as a single source of truth.
 @MainActor
 open class RouteStore<Action, State, Environment, Route>: Store<Action, State, SendRouteEnvironment<Environment, Route>>
-    where Action: Sendable, State: Sendable, Environment: Sendable
+    where Action: Sendable, State: Sendable & Equatable, Environment: Sendable
 {
     private let _routes: PassthroughSubject<Route, Never>
     private var cancellables: [AnyCancellable] = []
