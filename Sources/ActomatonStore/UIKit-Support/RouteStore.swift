@@ -14,8 +14,7 @@ open class RouteStore<Action, State, Environment, Route>: Store<Action, State, S
         state: State,
         reducer: Reducer<Action, State, SendRouteEnvironment<Environment, Route>>,
         environment: Environment,
-        routeType: Route.Type = Route.self, // for quick type-inference
-        configuration: StoreConfiguration = .init()
+        routeType: Route.Type = Route.self // for quick type-inference
     )
     {
         let routes = PassthroughSubject<Route, Never>()
@@ -24,8 +23,7 @@ open class RouteStore<Action, State, Environment, Route>: Store<Action, State, S
         super.init(
             state: state,
             reducer: reducer,
-            environment: .init(environment: environment, sendRoute: { routes.send($0) }),
-            configuration: configuration
+            environment: .init(environment: environment, sendRoute: { routes.send($0) })
         )
     }
 

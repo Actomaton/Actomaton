@@ -18,8 +18,6 @@ extension Store
         /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
         public let environment: Environment
 
-        private let configuration: StoreConfiguration
-
         private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
 
         public var objectWillChange: AnyPublisher<State, Never>
@@ -32,14 +30,12 @@ extension Store
         internal init<P>(
             state: P,
             environment: Environment,
-            configuration: StoreConfiguration,
             send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
         )
             where P: Publisher, P.Output == State, P.Failure == Never
         {
             self.state = state.eraseToAnyPublisher()
             self.environment = environment
-            self.configuration = configuration
             self._send = send
         }
 
