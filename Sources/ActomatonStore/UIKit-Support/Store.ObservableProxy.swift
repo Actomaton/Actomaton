@@ -18,9 +18,7 @@ extension Store
         /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
         public let environment: Environment
 
-        private let configuration: StoreConfiguration
-
-        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
+        private let _send: (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
 
         public var objectWillChange: AnyPublisher<State, Never>
         {
@@ -32,14 +30,12 @@ extension Store
         internal init<P>(
             state: P,
             environment: Environment,
-            configuration: StoreConfiguration,
-            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>
+            send: @escaping (Action, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
         )
             where P: Publisher, P.Output == State, P.Failure == Never
         {
             self.state = state.eraseToAnyPublisher()
             self.environment = environment
-            self.configuration = configuration
             self._send = send
         }
 
@@ -53,7 +49,6 @@ extension Store
             return .init(
                 state: state,
                 environment: environment,
-                configuration: .init(),
                 send: { _, _, _ in Task {} }
             )
         }
@@ -75,7 +70,7 @@ extension Store
             _ action: Action,
             priority: TaskPriority? = nil,
             tracksFeedbacks: Bool = false
-        ) -> Task<(), Error>
+        ) -> Task<(), Error>?
         {
             self._send(action, priority, tracksFeedbacks)
         }
@@ -94,7 +89,6 @@ extension Store.ObservableProxy
         .init(
             state: self.state.map(f),
             environment: self.environment,
-            configuration: self.configuration,
             send: self.send
         )
     }
@@ -107,7 +101,6 @@ extension Store.ObservableProxy
         .init(
             state: self.state.compactMap(f),
             environment: self.environment,
-            configuration: self.configuration,
             send: self.send
         )
     }
@@ -119,7 +112,6 @@ extension Store.ObservableProxy
         .init(
             state: self.state,
             environment: self.environment,
-            configuration: self.configuration,
             send: { self.send(f($0), priority: $1, tracksFeedbacks: $2) }
         )
     }
@@ -132,7 +124,6 @@ extension Store.ObservableProxy
         .init(
             state: self.state,
             environment: f(self.environment),
-            configuration: self.configuration,
             send: self.send
         )
     }
@@ -149,7 +140,6 @@ extension Store.ObservableProxy
         .init(
             state: self.unsafeStateBinding,
             environment: self.environment,
-            configuration: self.configuration,
             send: self._send
         )
     }
