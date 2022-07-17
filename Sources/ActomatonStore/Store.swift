@@ -85,7 +85,7 @@ open class Store<Action, State, Environment>: ObservableObject
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Error>
+    ) -> Task<(), Error>?
     {
         // Send `action` to `actomaton`,
         // which also calls `reducer` inside its actor to update state and also runs effects.
