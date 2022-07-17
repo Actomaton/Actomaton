@@ -10,6 +10,9 @@ let package = Package(
             name: "Actomaton",
             targets: ["Actomaton", "ActomatonDebugging"]),
         .library(
+            name: "ActomatonUI",
+            targets: ["ActomatonUI", "ActomatonDebugging"]),
+        .library(
             name: "ActomatonStore",
             targets: ["ActomatonStore", "ActomatonDebugging"])
     ],
@@ -31,8 +34,19 @@ let package = Package(
         .target(
             name: "ActomatonStore",
             dependencies: [
-                "Actomaton",
-                .product(name: "CasePaths", package: "swift-case-paths")
+                "Actomaton"
+            ],
+            swiftSettings: [
+                .unsafeFlags([
+                    "-Xfrontend", "-warn-concurrency",
+                    "-Xfrontend", "-enable-actor-data-race-checks",
+                ])
+            ]
+        ),
+        .target(
+            name: "ActomatonUI",
+            dependencies: [
+                "Actomaton"
             ],
             swiftSettings: [
                 .unsafeFlags([
