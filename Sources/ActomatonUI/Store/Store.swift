@@ -185,6 +185,24 @@ extension Store
         )
     }
 
+    /// Transforms `<Action, State?>` to `<Action, SubState?>`.
+    public func map<State_, SubState>(
+        optionalState keyPath: WritableKeyPath<State_, SubState>
+    ) -> Store<Action, SubState?, Environment>
+        where State == State_?, State_: Sendable, SubState: Sendable
+    {
+        self.map(
+            state: (
+                get: { $0.map { $0[keyPath: keyPath] } },
+                set: { state, substate in
+                    if let substate = substate {
+                        state?[keyPath: keyPath] = substate
+                    }
+                }
+            )
+        )
+    }
+
     /// Transforms `<Action, [State]>` to `<Action, [SubState]>`.
     public func map<State_, SubState>(
         states keyPath: WritableKeyPath<State_, SubState>
