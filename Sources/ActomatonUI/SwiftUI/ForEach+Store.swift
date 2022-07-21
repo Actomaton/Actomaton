@@ -58,21 +58,3 @@ extension ForEach
         self.init(store: store, id: \.id, content: content)
     }
 }
-
-// MARK: - Private
-
-extension MutableCollection
-{
-    fileprivate subscript (safe index: Index) -> Iterator.Element?
-    {
-        get {
-            self.startIndex <= index && index < self.endIndex
-                ? self[index]
-                : nil
-        }
-        set {
-            guard let newValue = newValue, self.startIndex <= index && index < self.endIndex else { return }
-            self[index] = newValue
-        }
-    }
-}
