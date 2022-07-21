@@ -282,7 +282,7 @@ extension Store
     /// This is a weaker form of ``Store/map(state:)`` (which receives `WritableKeyPath`).
     ///
     /// - Warning: Returned store can NOT create direct state binding, i.e. ``ViewStore/directBinding``,
-    ///   and always require ``ViewStore/stateBinding(get:onChange:)`` (indirect binding) instead.
+    ///   and always require ``ViewStore/binding(get:onChange:)`` (indirect binding) instead.
     public func indirectMap<SubState>(
         state get: @escaping (State) -> SubState
     ) -> Store<Action, SubState, Environment>
@@ -298,7 +298,7 @@ extension Store
 
                 case .state:
                     // `SubState` is immutable, so should not reach here.
-                    assertionFailure("indirectMap error: `SubState` is immutable, so should not reach here.")
+                    assertionFailure("Detected the calls of `ViewStore.directBinding` after `Store.indirectMap` which is illegal. Always use `ViewStore.binding(get:onChange:)` whenever using `indirectMap`. Otherwise, direct-binding will be discarded in Release build.")
                     return nil
                 }
             }
