@@ -6,7 +6,7 @@ import SwiftUI
 
 /// SwiftUI `View` & ``Store`` wrapper view controller that holds `UIHostingController`.
 @MainActor
-open class HostingViewController<Action, State, Environment, V: SwiftUI.View>: UIViewController
+open class HostingViewController<Action, State, Environment, Content: SwiftUI.View>: UIViewController
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
     private let store: Any // `Store` or `RouteStore`.
@@ -15,24 +15,24 @@ open class HostingViewController<Action, State, Environment, V: SwiftUI.View>: U
     /// Initializer for ``Store`` as argument.
     public init(
         store: Store<Action, State, Environment>,
-        makeView: @escaping @MainActor (Store<Action, State, Environment>) -> V
+        @ViewBuilder content: @escaping @MainActor (Store<Action, State, Environment>) -> Content
     )
     {
         self.store = store
-        self.rootView = AnyView(makeView(store))
+        self.rootView = AnyView(content(store))
         super.init(nibName: nil, bundle: nil)
     }
 
-    /// Initializer for ``RouteStore`` as argument, with forgetting ``SendRouteEnvironment/sendRoute`` capability when `makeView`.
+    /// Initializer for ``RouteStore`` as argument, with forgetting ``SendRouteEnvironment/sendRoute`` capability when making `content`.
     public init<Route>(
         store routeStore: RouteStore<Action, State, Environment, Route>,
-        makeView: @escaping @MainActor (Store<Action, State, Environment>) -> V
+        @ViewBuilder content: @escaping @MainActor (Store<Action, State, Environment>) -> Content
     )
     {
         self.store = routeStore
 
         let substore = routeStore.noSendRoute
-        self.rootView = AnyView(makeView(substore))
+        self.rootView = AnyView(content(substore))
 
         super.init(nibName: nil, bundle: nil)
     }
