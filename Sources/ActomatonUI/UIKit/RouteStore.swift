@@ -270,7 +270,7 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
 
     /// Sends `Route` with `AsyncThrowingStream<Value, Error>.Continuation` that can consume multiple `Value`s.
     ///
-    /// See ``sendRouteAsyncStream(_:)-8alh0`` doc-comment for more information.
+    /// See ``sendRouteAsyncStream(_:)-7ezhz`` doc-comment for more information.
     ///
     /// - Parameter makeRoute:
     ///   `Route` builder that takes `Value`-consumer (continuation as observer) as argument
