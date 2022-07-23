@@ -11,7 +11,7 @@ let package = Package(
             targets: ["Actomaton", "ActomatonDebugging"]),
         .library(
             name: "ActomatonUI",
-            targets: ["ActomatonUI", "ActomatonDebugging"]),
+            targets: ["ActomatonUI"]),
         .library(
             name: "ActomatonStore",
             targets: ["ActomatonStore", "ActomatonDebugging"])
@@ -46,7 +46,7 @@ let package = Package(
         .target(
             name: "ActomatonUI",
             dependencies: [
-                "Actomaton"
+                "Actomaton", "ActomatonDebugging"
             ],
             swiftSettings: [
                 .unsafeFlags([
