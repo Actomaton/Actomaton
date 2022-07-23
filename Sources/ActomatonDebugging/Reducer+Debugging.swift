@@ -1,8 +1,5 @@
 import Actomaton
-
-#if DEBUG
 import CustomDump
-#endif
 
 // MARK: - debug (logging on `#if DEBUG`)
 
