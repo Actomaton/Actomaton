@@ -11,7 +11,7 @@ SwiftUI の `UIHostingController` を使った場合でも同様の方法で作�
 
 ## HostingViewController (for SwiftUI)
 
-``HostingViewController`` はイニシャライザとして ``HostingViewController/init(store:makeView:)-6i0iw`` を持ち、<doc:03-RouteStore> の UIKit の例と同じく `store` を第 1 引数に受け取ることができます。
+``HostingViewController`` はイニシャライザとして ``HostingViewController/init(store:makeView:)-2krem`` を持ち、<doc:03-RouteStore> の UIKit の例と同じく `store` を第 1 引数に受け取ることができます。
 
 ここで、第 2 引数は `makeView: (Store<Action, State, Environment>.Proxy) -> some View` という型を持っています。これは、
 

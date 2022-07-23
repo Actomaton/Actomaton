@@ -62,7 +62,7 @@ open class HostingViewController<Action, State, Environment, V: SwiftUI.View>: U
         super.init(nibName: nil, bundle: nil)
     }
 
-    /// Helper initializer for ``Store/ObservableProxy`` as argument, with fogetting `Environment` as `Void` when `makeView`.
+    /// Helper initializer for ``Store/ObservableProxy-swift.class`` as argument, with fogetting `Environment` as `Void` when `makeView`.
     public static func make(
         store: Store<Action, State, Environment>.ObservableProxy,
         makeView: @escaping @MainActor (Store<Action, State, Void>.Proxy) -> V

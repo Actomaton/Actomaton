@@ -34,7 +34,7 @@ build:
 .PHONY: docs
 docs:
 	xcodebuild docbuild \
-		-scheme ActomatonStore \
+		-scheme ActomatonUI \
 		-destination 'platform=iOS Simulator,name=iPhone 13 Pro' \
 		-derivedDataPath $(DOCBUILD_BUILD_DIR) \
 		OTHER_DOCC_FLAGS="--transform-for-static-hosting --hosting-base-path $(DOC_HOSTING_BASE_PATH)"
@@ -42,19 +42,19 @@ docs:
 	#--------------------------------------------------
 	# (Immaturely) gathering multiple doccarchives
 	#--------------------------------------------------
-	# Gather `./data/documentation` from other packages into ActomatonStore.
-	cp -rf $(DOCBUILD_PRODUCT_DIR)/Actomaton.doccarchive/data/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonStore.doccarchive/data/documentation/
-	cp -rf $(DOCBUILD_PRODUCT_DIR)/ActomatonDebugging.doccarchive/data/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonStore.doccarchive/data/documentation/
+	# Gather `./data/documentation` from other packages into ActomatonUI.
+	cp -rf $(DOCBUILD_PRODUCT_DIR)/Actomaton.doccarchive/data/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonUI.doccarchive/data/documentation/
+	cp -rf $(DOCBUILD_PRODUCT_DIR)/ActomatonDebugging.doccarchive/data/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonUI.doccarchive/data/documentation/
 
-	# Gather `./documentation` from other packages into ActomatonStore.
-	cp -rf $(DOCBUILD_PRODUCT_DIR)/Actomaton.doccarchive/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonStore.doccarchive/documentation/
-	cp -rf $(DOCBUILD_PRODUCT_DIR)/ActomatonDebugging.doccarchive/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonStore.doccarchive/documentation/
+	# Gather `./documentation` from other packages into ActomatonUI.
+	cp -rf $(DOCBUILD_PRODUCT_DIR)/Actomaton.doccarchive/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonUI.doccarchive/documentation/
+	cp -rf $(DOCBUILD_PRODUCT_DIR)/ActomatonDebugging.doccarchive/documentation/* $(DOCBUILD_PRODUCT_DIR)/ActomatonUI.doccarchive/documentation/
 
 	# Delete unnecessary DB files.
-	rm -rf $(DOCBUILD_PRODUCT_DIR)/ActomatonStore.doccarchive/index/
+	rm -rf $(DOCBUILD_PRODUCT_DIR)/ActomatonUI.doccarchive/index/
 
-	# Move `ActomatonStore.doccarchive` to `$(DOCBUILD_OUTPUT_DIR)`.
-	mv -f $(DOCBUILD_PRODUCT_DIR)/ActomatonStore.doccarchive $(DOCBUILD_OUTPUT_DIR)
+	# Move `ActomatonUI.doccarchive` to `$(DOCBUILD_OUTPUT_DIR)`.
+	mv -f $(DOCBUILD_PRODUCT_DIR)/ActomatonUI.doccarchive $(DOCBUILD_OUTPUT_DIR)
 
 	# Clean up `$(DOCBUILD_BUILD_DIR)`.
 	rm -rf $(DOCBUILD_BUILD_DIR)

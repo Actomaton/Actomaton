@@ -1,9 +1,9 @@
-/// `MainActomaton`-erased wrapper which can ``map(state:)-1wcms`` into sub-store.
+/// `MainActomaton`-erased wrapper which can ``map(state:)`` into sub-store.
 ///
 /// - Important: ``Store`` is NOT `ObservableObject` thus its state can't be observed by SwiftUI views.
 ///
 /// To make it observable in SwiftUI, use ``WithViewStore`` (SwiftUI View) to create ``ViewStore`` which is `ObservableObject`.
-/// Note that ``Store/map(state:)-1wcms`` can narrow down ``Store``'s scope before passing to ``WithViewStore``
+/// Note that ``Store/map(state:)`` can narrow down ``Store``'s scope before passing to ``WithViewStore``
 /// so that only the subset of state changes can be observed by SwiftUI, allowing optimized rendering.
 ///
 /// ```swift
