@@ -4,41 +4,85 @@ import Actomaton
 import CustomDump
 #endif
 
+// MARK: - debug (logging on `#if DEBUG`)
+
 extension Reducer
 {
-    /// Debug-logging `Action` and `State` during `self`'s reducer's run.
-    /// - Warning: Only for debugging purpose, so should not use in production.
+    /// Debug-logging `Action` and `State` during `self`'s reducer's run, only in DEBUG configuration.
     public func debug(
-        name: String? = nil,
-        action actionLogFormat: ActionDebugLogFormat? = .all(maxDepth: .max),
-        state stateLogFormat: StateDebugLogFormat? = .diff
-    ) -> Reducer
-        where Action: Sendable, State: Sendable
-    {
-        Self.debug(name: name, action: actionLogFormat, state: stateLogFormat, self.run)
-    }
-
-    /// Convenient constructor for debug-logging `Action` and `State` during target reducer's run,
-    /// by replacing `targetReducer = Reducer.init { ... }` with `Reducer.debug { ... }`.
-    ///
-    /// - Warning: Only for debugging purpose, so should not use in production.
-    public static func debug(
-        name: String? = nil,
-        action actionLogFormat: ActionDebugLogFormat? = .all(maxDepth: .max),
-        state stateLogFormat: StateDebugLogFormat? = .diff,
-        _ nextRun: @escaping (Action, inout State, Environment) -> Effect<Action> = Reducer.empty.run
+        _ name: String? = nil,
+        action actionLogFormat: ActionLogFormat? = .all(maxDepth: .max),
+        state stateLogFormat: StateLogFormat? = .diff
     ) -> Reducer
         where Action: Sendable, State: Sendable
     {
 #if DEBUG
-        .init { action, state, environment in
+        self.log(format: LogFormat(name: name, action: actionLogFormat, state: stateLogFormat))
+#else
+        self
+#endif
+    }
+
+    /// Convenient constructor for debug-logging `Action` and `State` during target reducer's run,
+    /// by replacing `targetReducer = Reducer.init { ... }` with `Reducer.debug { ... }`,
+    /// only in DEBUG configuration.
+    public static func debug(
+        _ name: String? = nil,
+        action actionLogFormat: ActionLogFormat? = .all(maxDepth: .max),
+        state stateLogFormat: StateLogFormat? = .diff,
+        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Reducer.empty.run
+    ) -> Reducer
+        where Action: Sendable, State: Sendable
+    {
+#if DEBUG
+        self.log(
+            format: LogFormat(name: name, action: actionLogFormat, state: stateLogFormat),
+            nextRun
+        )
+#else
+        Reducer(nextRun)
+#endif
+    }
+}
+
+// MARK: - log
+
+extension Reducer
+{
+    /// Debug-logging `Action` and `State` during `self`'s reducer's run, using ``LogFormat``.
+    ///
+    /// - Parameters:
+    ///   - format: ``LogFormat`` that formats console-logging. No logging if `format = nil`.
+    public func log(format: LogFormat?) -> Reducer
+        where Action: Sendable, State: Sendable
+    {
+        Self.log(format: format, self.run)
+    }
+
+    /// Convenient constructor for debug-logging `Action` and `State` during target reducer's run using ``LogFormat``
+    /// by replacing `targetReducer = Reducer.init { ... }` with `Reducer.debug { ... }`.
+    ///
+    /// - Parameters:
+    ///   - format: ``LogFormat`` that formats console-logging. No logging if `format = nil`.
+    public static func log(
+        format: LogFormat?,
+        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Reducer.empty.run
+    ) -> Reducer
+        where Action: Sendable, State: Sendable
+    {
+        // Return normal reducer without logging.
+        guard let format = format else {
+            return Reducer(nextRun)
+        }
+
+        return Reducer { action, state, environment in
             let currentState = state // Needs copy to not carry `inout`.
 
             /// Effect for  Action & State `.simple` or `.all` printing.
             let preEffect = Effect<Action>.fireAndForget {
-                let name = name.map { "\($0) " } ?? ""
+                let name = format.name.map { "\($0) " } ?? ""
 
-                if let actionLogFormat = actionLogFormat {
+                if let actionLogFormat = format.actionLogFormat {
                     switch actionLogFormat.format {
                     case .simple:
                         print("\(name)action = \(debugCaseOutput(action))")
@@ -49,7 +93,7 @@ extension Reducer
                     }
                 }
 
-                if let stateLogFormat = stateLogFormat {
+                if let stateLogFormat = format.stateLogFormat {
                     switch stateLogFormat.format {
                     case .simple:
                         print("\(name)state = ", terminator: "") // NOTE: No linebreak before `customDump`.
@@ -75,17 +119,20 @@ extension Reducer
 
             /// Effect for State's `.diff` printing.
             let postEffect = Effect<Action>.fireAndForget {
-                if let stateLogFormat = stateLogFormat {
+                if let stateLogFormat = format.stateLogFormat {
                     switch stateLogFormat.format {
                     case .simple, .all:
                         break
 
                     case .diff:
-                        let name = name.map { "\($0) " } ?? ""
+                        let name = format.name.map { "\($0) " } ?? ""
 
                         if let diffString = diff(currentState, nextState) {
                             print("\(name)state diff = ") // NOTE: Adds linebreak because `diffString` contains +- symbols.
                             print(diffString)
+                        }
+                        else {
+                            print("\(name)state diff = (no diff)")
                         }
                     }
                 }
@@ -93,9 +140,6 @@ extension Reducer
 
             return preEffect + effect + postEffect
         }
-#else
-        .init(nextRun)
-#endif
     }
 }
 
