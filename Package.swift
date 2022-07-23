@@ -93,6 +93,16 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "ActomatonUITests",
+            dependencies: ["ActomatonUI", "TestFixtures"],
+            swiftSettings: [
+                .unsafeFlags([
+                    "-Xfrontend", "-warn-concurrency",
+                    "-Xfrontend", "-enable-actor-data-race-checks",
+                ])
+            ]
+        ),
+        .testTarget(
             name: "ReadMeTests",
             dependencies: ["ActomatonStore", "ActomatonDebugging"],
             swiftSettings: [
