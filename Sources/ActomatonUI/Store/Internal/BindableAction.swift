@@ -23,6 +23,9 @@ internal enum BindableAction<Action, State>: Sendable, CustomDumpRepresentable
         case let .action(action):
             return action
         case .state:
+            // NOTE:
+            // Don't print verbose whole `state` here,
+            // since "state diff" printing is usually sufficient.
             return "BindableAction.state"
         }
     }
