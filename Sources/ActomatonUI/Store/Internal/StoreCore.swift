@@ -7,7 +7,6 @@ internal final class StoreCore<Action, State, Environment>
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
     private let actomaton: MainActomaton<BindableAction<Action, State>, State>
-    private let reducer: Reducer<Action, State, Environment>
 
     private let _state: CurrentValueSubject<State, Never>
 
@@ -19,18 +18,17 @@ internal final class StoreCore<Action, State, Environment>
     internal init(
         state initialState: State,
         reducer: Reducer<Action, State, Environment>,
-        environment: Environment
+        environment: Environment,
+        configuration: StoreConfiguration
     )
     {
         self._state = CurrentValueSubject(initialState)
-        self.reducer = reducer
         self.environment = environment
 
         self.actomaton = MainActomaton(
             state: initialState,
-            reducer: lift(reducer: Reducer { action, state, environment in
-                reducer.run(action, &state, environment)
-            }),
+            reducer: lift(reducer: reducer)
+                .log(format: configuration.logFormat),
             environment: environment
         )
 

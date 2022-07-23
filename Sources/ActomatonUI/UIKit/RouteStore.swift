@@ -15,6 +15,7 @@ public final class RouteStore<Action, State, Environment, Route>
         state: State,
         reducer: Reducer<Action, State, SendRouteEnvironment<Environment, Route>>,
         environment: Environment,
+        configuration: StoreConfiguration = .init(),
         routeType: Route.Type = Route.self // for quick type-inference
     )
     {
@@ -29,7 +30,8 @@ public final class RouteStore<Action, State, Environment, Route>
         let core = StoreCore<Action, State, SendRouteEnvironment<Environment, Route>>(
             state: state,
             reducer: reducer,
-            environment: sendRouteEnvironment
+            environment: sendRouteEnvironment,
+            configuration: configuration
         )
         self.core = core
 

@@ -61,13 +61,15 @@ public class Store<Action, State, Environment>
     public convenience init(
         state initialState: State,
         reducer: Reducer<Action, State, Environment>,
-        environment: Environment
+        environment: Environment,
+        configuration: StoreConfiguration = .init()
     )
     {
         let core = StoreCore<Action, State, Environment>(
             state: initialState,
             reducer: reducer,
-            environment: environment
+            environment: environment,
+            configuration: configuration
         )
 
         self.init(
@@ -80,13 +82,15 @@ public class Store<Action, State, Environment>
     /// Initializer without `environment`.
     public convenience init(
         state initialState: State,
-        reducer: Reducer<Action, State, Void>
+        reducer: Reducer<Action, State, Void>,
+        configuration: StoreConfiguration = .init()
     ) where Environment == Void
     {
         self.init(
             state: initialState,
             reducer: reducer,
-            environment: ()
+            environment: (),
+            configuration: configuration
         )
     }
 
