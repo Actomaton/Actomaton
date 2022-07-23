@@ -12,10 +12,12 @@ This repository consists of 3 frameworks:
 
 1. `Actomaton`: Actor-based effect-handling state-machine at its core. Linux ready.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomaton/)
-2. `ActomatonStore`: SwiftUI & Combine support
-    - [Documentation (Currently in Japanese only)](https://actomaton.github.io/Actomaton/documentation/actomatonstore/)
+2. `ActomatonUI`: SwiftUI & UIKit & Combine support
+    - [Documentation (Currently in Japanese only)](https://actomaton.github.io/Actomaton/documentation/actomatonui/)
 3. `ActomatonDebugging`: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatondebugging/)
+
+(NOTE: `ActomatonStore` is deprecated in ver 0.7.0)
 
 These frameworks depend on [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) as Functional Prism library, which is a powerful tool to construct an App-level Mega-Reducer from each screen's Reducers.
 
@@ -511,97 +513,15 @@ To learn more about `CasePath`, visit the official site and tutorials:
 - [swift-case-paths](https://github.com/pointfreeco/swift-case-paths)
 - [Episode #87: The Case for Case Paths: Introduction](https://www.pointfree.co/episodes/ep87-the-case-for-case-paths-introduction)
 
-## 2. ActomatonStore (SwiftUI)
+## 2. ActomatonUI (SwiftUI & UIKit)
 
-`Store` (from `ActomatonStore.framework`) provides a thin wrapper of `Actomaton` to work seamlessly in SwiftUI world.
-It will be stored as a `@StateObject` of the App's view.
+`Store` (from `ActomatonUI.framework`) provides a thin wrapper of `Actomaton` to work seamlessly in SwiftUI and UIKit world.
 
-For example, from [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery):
+To find out more, check following resources:
 
-```swift
-struct AppView: View {
-    @StateObject
-    private var store: Store<Root.Action, Root.State, Roote.Environment> = .init(
-        state: Root.State(...),
-        reducer: Root.reducer,
-        environment: Root.Environment(...)
-    )
-
-    init() {}
-
-    var body: some View {
-        // IMPORTANT: Pass `Store.Proxy` to children.
-        RootView(store: self.store.proxy)
-    }
-}
-
-struct RootView: View {
-    // IMPORTANT: `Store.Proxy`, not `Store` itself.
-    private let store: Store<Root.Action, Root.State, Root.Environment>.Proxy
-
-    init(store: Store<Root.Action, Root.State, Root.Environment>.Proxy) {
-        self.store = store
-    }
-
-    var body: some View {
-        return VStack {
-            NavigationView {
-                List {
-                    navigationLink(example: allExamples[0])
-                    navigationLink(example: allExamples[1])
-                    navigationLink(example: allExamples[2])
-                    navigationLink(example: allExamples[3])
-                    navigationLink(example: allExamples[4])
-                }
-                .navigationBarTitle(Text("🎭 Actomaton Gallery 🖼️"), displayMode: .large)
-            }
-        }
-    }
-
-    private func navigationLink(example: Example) -> some View {
-        NavigationLink(
-            destination: example.exampleView(store: self.store)
-                .navigationBarTitle(
-                    "\(example.exampleTitle)",
-                    displayMode: .inline
-                ),
-            isActive: self.store.current
-                .stateBinding(onChange: Root.Action.changeCurrent)
-                .transform(
-                    get: { $0?.example.exampleTitle == example.exampleTitle },
-                    set: { _, isPresenting in
-                        isPresenting ? example.exampleInitialState : nil
-                    }
-                )
-        ) {
-            HStack(alignment: .firstTextBaseline) {
-                example.exampleIcon
-                    .frame(width: 44)
-                Text(example.exampleTitle)
-            }
-            .font(.body)
-            .padding(5)
-        }
-    }
-}
-```
-
-Here, the most important part is that the **topmost container view of the app will hold `Store` as a single source of truth**, and for the child views, **`Store.Proxy` will be passed** instead, so that we don't duplicate multiple `Store`s but `Binding` and `Store.proxy.send` (sending message to topmost `Store`) functionalities are still available.
-
-![](https://user-images.githubusercontent.com/138476/132122727-b709322d-199f-4407-8ce3-a235ed6dd1cf.png)
-![](https://user-images.githubusercontent.com/138476/132122732-4b726853-05d6-47ad-9166-a44a0f02f672.png)
-
-This (and overall) architecture is inherited from [Harvest](https://github.com/inamiy/Harvest) which has a different `Store` structure compared to [swift-composable-architecture](https://github.com/pointfreeco/swift-composable-architecture).
-
-See following information for more details:
-
-- [Functional iOS Architecture for SwiftUI - Speaker Deck (p.39)](https://speakerdeck.com/inamiy/functional-ios-architecture-for-swiftui?slide=39)
-- [Composable Architecture｜Functional iOS Architecture for SwiftUI (English)](https://zenn.dev/inamiy/books/3dd014a50f321040a047/viewer/cca752a1fe8700f9d0c0)
-
-### `Store.Proxy.stateBinding`
-
-To interact with SwiftUI's State-binding-based event handling, `ActomatonStore` provides `Store.Proxy.stateBinding` hook methods so that **direct state changes can be converted into action dispatches (indirection)**
-This indirection allows us to build more sophisticated UI architecture including better testing.
+- [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery) (example apps)
+- [ActomatonUI | Documentation](https://actomaton.github.io/Actomaton/documentation/actomatonui/)
+    - [RouteStore チュートリアル | Documentation](https://actomaton.github.io/Actomaton/documentation/actomatonui/oop-tutorial) (in Japanese)
 
 ## References
 
