@@ -95,7 +95,7 @@ public actor Actomaton<Action, State>
         let tasks_ = tasks
 
         // Unifies `tasks`.
-        return Task {
+        return Task.detached {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 for task in tasks_ {
                     group.addTask {
@@ -218,7 +218,7 @@ extension Actomaton
         tracksFeedbacks: Bool
     ) -> Task<(), Error>
     {
-        let task = Task(priority: priority) { [weak self] in
+        let task = Task.detached(priority: priority) { [weak self] in
             if delay > 0 {
                 // NOTE:
                 // In case of cancellation, this `sleep` should not early-exit here
@@ -250,7 +250,7 @@ extension Actomaton
         tracksFeedbacks: Bool
     ) -> Task<(), Error>
     {
-        let task = Task<(), Error>(priority: priority) { [weak self] in
+        let task = Task<(), Error>.detached(priority: priority) { [weak self] in
             if delay > 0 {
                 // NOTE:
                 // In case of cancellation, this `sleep` should not early-exit here
@@ -310,7 +310,7 @@ extension Actomaton
         }
 
         // Clean up after `task` is completed.
-        Task<(), Error>(priority: priority) { [weak self] in
+        Task<(), Error>.detached(priority: priority) { [weak self] in
             // Wait for `task` to complete.
             try await task.value
 
@@ -391,12 +391,12 @@ extension Actomaton
     {
         switch effectKind {
         case let .single(single):
-            Task<Void, Error> {
+            Task<Void, Error>.detached {
                 _ = try await single.run()
             }
             .cancel() // Cancel immediately.
         case let .sequence(sequence):
-            Task<Void, Error> {
+            Task<Void, Error>.detached {
                 _ = try await sequence.sequence()
             }
             .cancel() // Cancel immediately.
