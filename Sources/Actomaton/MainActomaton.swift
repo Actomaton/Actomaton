@@ -149,7 +149,7 @@ public final class MainActomaton<Action, State>
         let tasks_ = tasks
 
         // Unifies `tasks`.
-        return Task {
+        return Task.detached {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 for task in tasks_ {
                     group.addTask {
@@ -272,7 +272,7 @@ extension MainActomaton
         tracksFeedbacks: Bool
     ) -> Task<(), Error>
     {
-        let task = Task(priority: priority) { [weak self] in
+        let task = Task.detached(priority: priority) { [weak self] in
             if delay > 0 {
                 // NOTE:
                 // In case of cancellation, this `sleep` should not early-exit here
@@ -284,7 +284,7 @@ extension MainActomaton
 
             // Feed back `nextAction`.
             if let nextAction = nextAction {
-                let feedbackTask = self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+                let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
                 if tracksFeedbacks {
                     try await feedbackTask?.value
                 }
@@ -304,7 +304,7 @@ extension MainActomaton
         tracksFeedbacks: Bool
     ) -> Task<(), Error>
     {
-        let task = Task<(), Error>(priority: priority) { [weak self] in
+        let task = Task<(), Error>.detached(priority: priority) { [weak self] in
             if delay > 0 {
                 // NOTE:
                 // In case of cancellation, this `sleep` should not early-exit here
@@ -318,7 +318,7 @@ extension MainActomaton
 
             for try await nextAction in seq {
                 // Feed back `nextAction`.
-                let feedbackTask = self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
+                let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
                 if let feedbackTask = feedbackTask {
                     feedbackTasks.append(feedbackTask)
@@ -364,22 +364,22 @@ extension MainActomaton
         }
 
         // Clean up after `task` is completed.
-        Task<(), Error>(priority: priority) { [weak self] in
+        Task<(), Error>.detached(priority: priority) { [weak self] in
             // Wait for `task` to complete.
             try await task.value
 
             Debug.print("[enqueueTask] Task completed, removing id-task: \(effectID)")
-            self?.removeTask(id: effectID, task: task)
+            await self?.removeTask(id: effectID, task: task)
 
             if let queue = queue {
-                self?.removeTaskIfNeeded(task: task, in: queue)
+                await self?.removeTaskIfNeeded(task: task, in: queue)
 
                 switch queue.effectQueuePolicy {
                 case .runOldest(_, .suspendNew):
-                    if let pendingEffectKind = self?.dequeuePendingEffectKindIfPossible(queue: queue) {
+                    if let pendingEffectKind = await self?.dequeuePendingEffectKindIfPossible(queue: queue) {
                         Debug.print("[enqueueTask] Extracted pending effect")
 
-                        if let _ = self?.performEffectKind(pendingEffectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+                        if let _ = await self?.performEffectKind(pendingEffectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
                             Debug.print("[enqueueTask] Pending effect started running")
                         }
                         else {
@@ -445,12 +445,12 @@ extension MainActomaton
     {
         switch effectKind {
         case let .single(single):
-            Task<Void, Error> {
+            Task<Void, Error>.detached {
                 _ = try await single.run()
             }
             .cancel() // Cancel immediately.
         case let .sequence(sequence):
-            Task<Void, Error> {
+            Task<Void, Error>.detached {
                 _ = try await sequence.sequence()
             }
             .cancel() // Cancel immediately.
