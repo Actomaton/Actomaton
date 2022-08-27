@@ -44,7 +44,6 @@ extension Effect
     // MARK: - AsyncSequence
 
     /// `AsyncSequence` side-effect.
-    /// - Parameter id: Cancellation identifier.
     public init<S>(sequence: @escaping @Sendable () async throws -> S?)
         where S: AsyncSequence, S.Element == Action
     {
