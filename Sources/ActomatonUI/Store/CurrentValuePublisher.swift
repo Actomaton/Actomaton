@@ -1,4 +1,8 @@
+#if os(WASI)
+import OpenCombineShim
+#else
 import Combine
+#endif
 
 /// Read-only `CurrentValueSubject` with sharing original value on `map`.
 @propertyWrapper

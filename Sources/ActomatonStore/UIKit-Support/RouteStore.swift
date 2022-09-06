@@ -1,3 +1,5 @@
+#if canImport(Combine) && canImport(Dispatch)
+
 import Dispatch
 import Combine
 
@@ -252,3 +254,5 @@ extension Reducer
         }
     }
 }
+
+#endif

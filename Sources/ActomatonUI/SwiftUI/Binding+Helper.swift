@@ -1,4 +1,8 @@
+#if canImport(TokamakShim)
+import TokamakShim
+#elseif canImport(SwiftUI)
 import SwiftUI
+#endif
 import CasePaths
 
 // MARK: - Functor

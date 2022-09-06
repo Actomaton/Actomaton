@@ -1,3 +1,5 @@
+#if canImport(SwiftUI)
+
 import SwiftUI
 
 extension ForEach where Content: View
@@ -40,3 +42,5 @@ extension ForEach where Content: View
         self.init(store: store, id: \.id, content: content)
     }
 }
+
+#endif

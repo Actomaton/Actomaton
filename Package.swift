@@ -4,11 +4,11 @@ import PackageDescription
 
 let package = Package(
     name: "Actomaton",
-    platforms: [.macOS(.v10_15), .iOS(.v13), .watchOS(.v6), .tvOS(.v13)],
+    platforms: [.macOS(.v11), .iOS(.v13), .watchOS(.v6), .tvOS(.v13)],
     products: [
         .library(
             name: "Actomaton",
-            targets: ["Actomaton", "ActomatonDebugging"]),
+            targets: ["Actomaton"]),
         .library(
             name: "ActomatonUI",
             targets: ["ActomatonUI"]),
@@ -18,12 +18,17 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
-        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "0.3.0")
+        .package(url: "https://github.com/OpenCombine/OpenCombine", from: "0.12.0"),
+//        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "0.3.0"),
+        .package(url: "https://github.com/inamiy/swift-custom-dump", branch: "SwiftWasm-inamiy"),
     ],
     targets: [
         .target(
             name: "Actomaton",
-            dependencies: [.product(name: "CasePaths", package: "swift-case-paths")],
+            dependencies: [
+                .product(name: "CasePaths", package: "swift-case-paths"),
+                .product(name: "OpenCombineShim", package: "OpenCombine", condition: .when(platforms: [.wasi])),
+            ],
             swiftSettings: [
                 .unsafeFlags([
                     "-Xfrontend", "-warn-concurrency",
@@ -114,3 +119,30 @@ let package = Package(
         )
     ]
 )
+
+// MARK: - Tokamak integration
+
+import Foundation
+
+// WARNING: Depending on Tokamak will cause Xcode build error
+// (only `swift build --triple wasm32-unknown-wasi` will succeed with SwiftWasm Toolchain)
+//
+// Can't build in Xcode (Redefinition of module 'FFI' error) · Issue #514 · TokamakUI/Tokamak
+// https://github.com/TokamakUI/Tokamak/issues/514
+
+//if ProcessInfo.processInfo.environment["CARTON"] != nil {
+    package.dependencies.append(
+        .package(url: "https://github.com/TokamakUI/Tokamak", from: "0.10.0")
+    )
+
+    let index = package.targets.firstIndex(where: { $0.name == "ActomatonUI" })
+    if let index = index {
+        package.targets[index].dependencies.append(
+            .product(
+                name: "TokamakShim",
+                package: "Tokamak",
+                condition: .when(platforms: [.wasi])
+            )
+        )
+    }
+//}

@@ -1,5 +1,14 @@
-import Combine
+#if canImport(TokamakShim)
+import TokamakShim
+#elseif canImport(SwiftUI)
 import SwiftUI
+#endif
+
+#if os(WASI)
+import OpenCombineShim
+#else
+import Combine
+#endif
 
 /// ``Store``'s `ObservableObject` proxy type that can create direct (state-to-state) & indirect (state-to-action) `Binding`s.
 ///

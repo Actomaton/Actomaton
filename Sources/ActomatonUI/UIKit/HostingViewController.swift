@@ -1,8 +1,8 @@
 #if os(iOS) || os(tvOS)
 
 import UIKit
-import Combine
 import SwiftUI
+import Combine
 
 /// SwiftUI `View` & ``Store`` wrapper view controller that holds `UIHostingController`.
 @MainActor

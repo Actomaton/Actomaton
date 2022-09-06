@@ -1,4 +1,8 @@
+#if os(WASI)
+import OpenCombineShim
+#else
 import Combine
+#endif
 
 // TODO: Remove `@unchecked Sendable` when `Sendable` is supported by each module.
 

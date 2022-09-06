@@ -18,6 +18,9 @@
 // https://gist.github.com/inamiy/6ab294f7cc47d1f79b892740578a712a
 
 import Foundation
+#if os(WASI)
+import OpenCombineShim
+#endif
 
 /// Actor + Automaton = Actomaton.
 ///

@@ -1,3 +1,5 @@
+#if canImport(Combine)
+
 import Combine
 import Actomaton
 
@@ -135,3 +137,5 @@ extension Publisher
         }
     }
 }
+
+#endif

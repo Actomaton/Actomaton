@@ -1,4 +1,8 @@
+#if canImport(TokamakShim)
+import TokamakShim
+#elseif canImport(SwiftUI)
 import SwiftUI
+#endif
 
 /// Observable ``ViewStore`` holder view that is created from unobservable ``Store``.
 ///
@@ -15,6 +19,7 @@ import SwiftUI
 ///     }
 /// }
 /// ```
+@MainActor
 public struct WithViewStore<Action, State, Content>: View
     where Action: Sendable, State: Sendable, Content: View
 {
@@ -30,7 +35,8 @@ public struct WithViewStore<Action, State, Content>: View
         @ViewBuilder content: @escaping @MainActor (ViewStore<Action, State>) -> Content
     ) where Environment: Sendable
     {
-        self.viewStore = store.viewStore(areStatesEqual: areStatesEqual)
+        // https://github.com/TokamakUI/Tokamak/issues/392
+        self._viewStore = ObservedObject(wrappedValue: store.viewStore(areStatesEqual: areStatesEqual))
         self.content = content
     }
 

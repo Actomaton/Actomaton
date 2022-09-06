@@ -1,4 +1,8 @@
+#if os(WASI)
+import OpenCombineShim
+#else
 import Combine
+#endif
 
 extension Publisher
 {

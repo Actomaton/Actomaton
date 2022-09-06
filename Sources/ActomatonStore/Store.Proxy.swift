@@ -1,3 +1,5 @@
+#if canImport(SwiftUI)
+
 import SwiftUI
 
 extension Store
@@ -215,3 +217,5 @@ extension Store.Proxy
         self.map(environment: { _ in () })
     }
 }
+
+#endif

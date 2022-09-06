@@ -1,4 +1,8 @@
+#if os(WASI)
+import OpenCombineShim
+#else
 import Combine
+#endif
 
 /// `MainActomaton` wrapper that handles both `Action` as indirect messaging
 /// and `State` that can directly replace `actomaton.state` via SwiftUI 2-way binding.

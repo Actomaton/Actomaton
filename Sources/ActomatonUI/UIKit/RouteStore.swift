@@ -1,5 +1,9 @@
-import Dispatch
+#if os(WASI)
+import OpenCombineShim
+#else
 import Combine
+import Dispatch
+#endif
 
 /// `Store` wrapper that also outputs `routes`, mainly used for UIKit's navigation handling.
 @MainActor
@@ -60,7 +64,9 @@ public final class RouteStore<Action, State, Environment, Route>
     public var routes: AnyPublisher<Route, Never>
     {
         self._routes
+#if canImport(Dispatch)
             .receive(on: DispatchQueue.main)
+#endif
             .eraseToAnyPublisher()
     }
 

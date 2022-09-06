@@ -1,4 +1,7 @@
 import Foundation
+#if os(WASI)
+import OpenCombineShim
+#endif
 
 /// Actor + Automaton = Actomaton.
 ///

@@ -1,3 +1,5 @@
+#if canImport(SwiftUI)
+
 import Combine
 import SwiftUI
 
@@ -170,3 +172,5 @@ extension Store.ObservableProxy
         return value
     }
 }
+
+#endif

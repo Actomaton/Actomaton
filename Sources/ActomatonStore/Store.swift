@@ -1,3 +1,5 @@
+#if canImport(SwiftUI)
+
 import Foundation
 import Combine
 import SwiftUI
@@ -164,3 +166,5 @@ private func lift<Action, State, Environment>(
         }
     }
 }
+
+#endif
