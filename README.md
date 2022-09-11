@@ -527,6 +527,7 @@ To find out more, check following resources:
 
 - [Functional iOS Architecture for SwiftUI - Speaker Deck](https://speakerdeck.com/inamiy/functional-ios-architecture-for-swiftui)
 - [Functional iOS Architecture for SwiftUI (English)](https://zenn.dev/inamiy/books/3dd014a50f321040a047)
+- [Swift アクターモデルと Elm Architecture の融合](https://speakerdeck.com/inamiy/iosdc-japan-2022) (Japanese)
 
 ## License
 
