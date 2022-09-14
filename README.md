@@ -440,7 +440,7 @@ so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueueProt
 
 [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery) provides a good example of how `Reducer`s can be combined together into one big Reducer using `Reducer.combine`.
 
-In this example, [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) is used as a counterpart of `WritableKeyPath`, so if we use both, we can easily construct Mega-Reducer without a hussle.
+In this example, [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) is used as a counterpart of `WritableKeyPath`, so if we use both, we can easily construct Mega-Reducer without a hassle.
 
 (NOTE: `CasePath` is useful when dealing with enums, e.g. `enum Action` and `enum Current` in this example)
 
@@ -517,7 +517,7 @@ To learn more about `CasePath`, visit the official site and tutorials:
 
 `Store` (from `ActomatonUI.framework`) provides a thin wrapper of `Actomaton` to work seamlessly in SwiftUI and UIKit world.
 
-To find out more, check following resources:
+To find out more, check the following resources:
 
 - [Actomaton-Gallery](https://github.com/Actomaton/Actomaton-Gallery) (example apps)
 - [ActomatonUI | Documentation](https://actomaton.github.io/Actomaton/documentation/actomatonui/)
