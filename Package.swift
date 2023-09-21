@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.9
 
 import PackageDescription
 
@@ -26,8 +26,7 @@ let package = Package(
             dependencies: [.product(name: "CasePaths", package: "swift-case-paths")],
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         ),
@@ -38,8 +37,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         ),
@@ -50,8 +48,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         ),
@@ -67,8 +64,7 @@ let package = Package(
             path: "./Tests/TestFixtures",
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         ),
@@ -77,8 +73,7 @@ let package = Package(
             dependencies: ["Actomaton", "TestFixtures"],
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         ),
@@ -87,8 +82,7 @@ let package = Package(
             dependencies: ["ActomatonStore", "TestFixtures"],
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         ),
@@ -97,8 +91,7 @@ let package = Package(
             dependencies: ["ActomatonUI", "TestFixtures"],
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         ),
@@ -107,8 +100,7 @@ let package = Package(
             dependencies: ["ActomatonStore", "ActomatonDebugging"],
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "-warn-concurrency",
-                    "-Xfrontend", "-enable-actor-data-race-checks",
+                    "-Xfrontend", "-strict-concurrency=complete",
                 ])
             ]
         )

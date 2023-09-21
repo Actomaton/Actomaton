@@ -7,7 +7,7 @@ import SwiftUI
 open class Store<Action, State, Environment>: ObservableObject
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
-    private let actomaton: MainActomaton<BindableAction, State>
+    private let actomaton: any MainActomaton<BindableAction, State>
     private let reducer: Reducer<Action, State, Environment>
 
     @Published
@@ -44,7 +44,7 @@ open class Store<Action, State, Environment>: ObservableObject
         self.reducer = reducer
         self.environment = environment
 
-        self.actomaton = MainActomaton(
+        self.actomaton = MainActomaton1(
             state: initialState,
             reducer: lift(reducer: Reducer { action, state, environment in
                 reducer.run(action, &state, environment)
@@ -52,7 +52,7 @@ open class Store<Action, State, Environment>: ObservableObject
             environment: environment
         )
 
-        self.actomaton.$state
+        self.actomaton.statePublisher
             .sink(receiveValue: { [weak self] state in
                 self?.state = state
             })
@@ -132,7 +132,7 @@ extension Store
             set: { newValue, transaction in
                 // Send `BindableAction.state` to `actomaton` asynchronously,
                 // which calls `lift`-ed reducer to update whole state (`newValue`) directly.
-                self.actomaton.send(.state(newValue))
+                self.actomaton.send(.state(newValue), priority: nil, tracksFeedbacks: false)
             }
         )
     }

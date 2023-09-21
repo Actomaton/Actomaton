@@ -30,18 +30,35 @@ public actor Actomaton<Action, State>
     /// Tracked latest effect start date for delayed effects calculation.
     private var latestEffectDate: [EffectQueue: Date] = [:]
 
+    /// Underlying actor that replaces Actomaton's `unownedExecutor`.
+    private let executingActor: any Actor
+
     /// Initializer without `environment`.
     public init(
         state: State,
         reducer: Reducer<Action, State, ()>
     )
     {
+        self.init(
+            state: state,
+            reducer: reducer,
+            executingActor: DefaultExecutingActor()
+        )
+    }
+
+    internal init(
+        state: State,
+        reducer: Reducer<Action, State, ()>,
+        executingActor: any Actor
+    )
+    {
         self.state = state
         self.reducer = reducer
+        self.executingActor = executingActor
     }
 
     /// Initializer with `environment`.
-    public convenience init<Environment>(
+    public init<Environment>(
         state: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment
@@ -50,6 +67,23 @@ public actor Actomaton<Action, State>
         self.init(state: state, reducer: Reducer { action, state, _ in
             reducer.run(action, &state, environment)
         })
+    }
+
+    /// Initializer with `environment`.
+    internal init<Environment>(
+        state: State,
+        reducer: Reducer<Action, State, Environment>,
+        environment: Environment,
+        executingActor: any Actor
+    ) where Environment: Sendable
+    {
+        self.init(
+            state: state,
+            reducer: Reducer { action, state, _ in
+                reducer.run(action, &state, environment)
+            },
+            executingActor: executingActor
+        )
     }
 
     deinit
@@ -105,6 +139,14 @@ public actor Actomaton<Action, State>
                 try await group.waitForAll()
             }
         }
+    }
+}
+
+extension Actomaton 
+{
+    public nonisolated var unownedExecutor: UnownedSerialExecutor
+    {
+        executingActor.unownedExecutor
     }
 }
 
@@ -405,3 +447,6 @@ extension Actomaton
         }
     }
 }
+
+/// Underlying actor for retrieving its executor to use as Actomaton's default executor.
+private actor DefaultExecutingActor {}
