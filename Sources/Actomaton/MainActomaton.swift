@@ -1,37 +1,153 @@
-// IMPORTANT:
-// `MainActomaton.swift` is derived from `Actomaton.swift`
-// with replacing to `@MainActor`, fixing unnecessary async-awaits and adding some workarounds.
-//
-// **Code must be in sync as much as possible**.
-//
-// This code duplication is unfortunately required since Swift (as of 5.7) doesn't support custom actor executor yet.
-// https://forums.swift.org/t/support-custom-executors-in-swift-concurrency/44425
-//
-// The main goal of this code duplication is to allow `MainActomaton` to work on SwiftUI
-// and its explicit animations on main-thread (via `withAnimation`) more seamlessly
-// without hopping around between MainActor and (non-Main) `Actomaton`.
-//
-// Note that there is a funny hack to pretend (non-main) `actor` to use `MainActor`'s exectutor,
-// but this approach still doesn't solve SwiftUI's explicit animation issue,
-// since launching a new Task is still required (compiler can't distinguish its unnecessity)
-// thus causing to run on event-loop's next-tick.
-// https://gist.github.com/inamiy/6ab294f7cc47d1f79b892740578a712a
-
 import Foundation
+#if !os(Linux)
+import Combine
+#endif
 
-/// Actor + Automaton = Actomaton.
-///
-/// Deterministic finite state machine that receives "action"
-/// and with "current state" transform to "next state" & additional "effect".
+/// `@MainActor` version of ``Actomaton``.
 @MainActor
-public final class MainActomaton<Action, State>
+package protocol MainActomaton<Action, State> {
+    associatedtype Action: Sendable
+    associatedtype State: Sendable
+
+    init<Environment>(
+        state: State,
+        reducer: Reducer<Action, State, Environment>,
+        environment: Environment
+    ) where Environment: Sendable
+
+    var state: State { get }
+
+#if !os(Linux)
+    var statePublisher: AnyPublisher<State, Never> { get }
+#endif
+
+    /// Sends `action` to `Actomaton`.
+    ///
+    /// - Parameters:
+    ///   - priority:
+    ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
+    ///   - tracksFeedbacks:
+    ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
+    ///     so that their wait-for-all and cancellations are possible.
+    ///     Default is `false`.
+    ///
+    /// - Returns:
+    ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
+    @discardableResult
+    func send(
+        _ action: Action,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool
+    ) -> Task<(), Error>?
+}
+
+// MARK: - MainActomaton Ver 2
+
+/// Simplifed ``MainActomaton`` using Swift 5.9's `actomaton.assumeIsolated`.
+@available(macOS 14.0, iOS 17.0, macCatalyst 17.0, watchOS 10.0, tvOS 17.0, *)
+@MainActor
+package final class MainActomaton2<Action, State>: MainActomaton
     where Action: Sendable, State: Sendable
 {
 #if os(Linux)
-    public private(set) var state: State
+    package var state: State {
+        actomaton.state
+    }
 #else
     @Published
-    public private(set) var state: State
+    package private(set) var state: State
+
+    package var statePublisher: AnyPublisher<State, Never> {
+        self.$state.eraseToAnyPublisher()
+    }
+#endif
+
+    private let actomaton: Actomaton<Action, State>
+
+    private var stateTask: Task<Void, Never>?
+
+    /// Initializer without `environment`.
+    package init(
+        state: State,
+        reducer: Reducer<Action, State, ()>
+    )
+    {
+        self.actomaton = Actomaton(
+            state: state,
+            reducer: reducer,
+            executingActor: MainActor.shared
+        )
+#if !os(Linux)
+        self.state = state
+
+        let states = self.actomaton.assumeIsolated { actomaton in
+            actomaton.$state.values.dropFirst()
+        }
+
+        self.stateTask = Task { @MainActor [weak self] in
+            for await state in states {
+                self?.state = state
+            }
+        }
+#endif
+    }
+
+    /// Initializer with `environment`.
+    package convenience init<Environment>(
+        state: State,
+        reducer: Reducer<Action, State, Environment>,
+        environment: Environment
+    ) where Environment: Sendable
+    {
+        self.init(state: state, reducer: Reducer { action, state, _ in
+            reducer.run(action, &state, environment)
+        })
+    }
+
+    /// Sends `action` to `Actomaton`.
+    ///
+    /// - Parameters:
+    ///   - priority:
+    ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
+    ///   - tracksFeedbacks:
+    ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
+    ///     so that their wait-for-all and cancellations are possible.
+    ///     Default is `false`.
+    ///
+    /// - Returns:
+    ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
+    @discardableResult
+    package func send(
+        _ action: Action,
+        priority: TaskPriority? = nil,
+        tracksFeedbacks: Bool = false
+    ) -> Task<(), Error>?
+    {
+        self.actomaton.assumeIsolated { actomaton in
+            actomaton.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        }
+    }
+}
+
+// MARK: - MainActomaton Ver 1
+
+/// Pre-Swift 5.9 ``MainActomaton`` where the code is mostly copied from ``Actomaton``
+/// due to the workaround of uncustomizable actor executor.
+///
+/// - Important: From Swift 5.9, ``Actomaton`` now supports custom executor, so use ``MainActomaton2`` for latest OS versions.
+@MainActor
+package final class MainActomaton1<Action, State>: MainActomaton
+    where Action: Sendable, State: Sendable
+{
+#if os(Linux)
+    package private(set) var state: State
+#else
+    @Published
+    package private(set) var state: State
+
+    package var statePublisher: AnyPublisher<State, Never> {
+        self.$state.eraseToAnyPublisher()
+    }
 #endif
 
     /// State-transforming function wrapper that is triggered by Action.
@@ -51,7 +167,7 @@ public final class MainActomaton<Action, State>
     private var latestEffectDate: [EffectQueue: Date] = [:]
 
     /// Initializer without `environment`.
-    public init(
+    package init(
         state: State,
         reducer: Reducer<Action, State, ()>
     )
@@ -61,7 +177,7 @@ public final class MainActomaton<Action, State>
     }
 
     /// Initializer with `environment`.
-    public convenience init<Environment>(
+    package convenience init<Environment>(
         state: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment
@@ -126,7 +242,7 @@ public final class MainActomaton<Action, State>
     /// - Returns:
     ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
     @discardableResult
-    public func send(
+    package func send(
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
@@ -164,7 +280,7 @@ public final class MainActomaton<Action, State>
 
 // MARK: - Private
 
-extension MainActomaton
+extension MainActomaton1
 {
     private func performEffectKind(
         _ effectKind: Effect<Action>.Kind,

@@ -6,7 +6,7 @@ import Combine
 internal final class StoreCore<Action, State, Environment>
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
-    private let actomaton: MainActomaton<BindableAction<Action, State>, State>
+    private let actomaton: any MainActomaton<BindableAction<Action, State>, State>
 
     private let _state: CurrentValueSubject<State, Never>
 
@@ -25,14 +25,23 @@ internal final class StoreCore<Action, State, Environment>
         self._state = CurrentValueSubject(initialState)
         self.environment = environment
 
-        self.actomaton = MainActomaton(
-            state: initialState,
-            reducer: lift(reducer: reducer)
-                .log(format: configuration.logFormat),
-            environment: environment
-        )
+        if #available(macOS 14.0, iOS 17.0, macCatalyst 17.0, watchOS 10.0, tvOS 17.0, *) {
+            self.actomaton = MainActomaton2(
+                state: initialState,
+                reducer: lift(reducer: reducer)
+                    .log(format: configuration.logFormat),
+                environment: environment
+            )
+        } else {
+            self.actomaton = MainActomaton1(
+                state: initialState,
+                reducer: lift(reducer: reducer)
+                    .log(format: configuration.logFormat),
+                environment: environment
+            )
+        }
 
-        self.actomaton.$state
+        self.actomaton.statePublisher
             .sink(receiveValue: { [weak self] state in
                 self?.updateState(state)
             })
