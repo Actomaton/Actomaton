@@ -1,0 +1,867 @@
+{
+  "interfaceLanguages": {
+    "swift": [
+      {
+        "children": [
+          {
+            "title": "Getting Started",
+            "type": "groupMarker"
+          },
+          {
+            "path": "/documentation/actomaton/examples",
+            "title": "Example Code",
+            "type": "article"
+          },
+          {
+            "title": "Esssentials",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Initializers",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/actomaton/init(state:reducer:)",
+                "title": "convenience init(state: State, reducer: Reducer<Action, State, ()>)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/actomaton/init(state:reducer:environment:)",
+                "title": "convenience init<Environment>(state: State, reducer: Reducer<Action, State, Environment>, environment: Environment)",
+                "type": "init"
+              },
+              {
+                "title": "Instance Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/actomaton/state",
+                "title": "var state: State",
+                "type": "property"
+              },
+              {
+                "title": "Instance Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/actomaton/send(_:priority:tracksfeedbacks:)",
+                "title": "func send(Action, priority: TaskPriority?, tracksFeedbacks: Bool) -> Task<(), Error>?",
+                "type": "method"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Instance Properties",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/actomaton/unownedexecutor",
+                    "title": "var unownedExecutor: UnownedSerialExecutor",
+                    "type": "property"
+                  },
+                  {
+                    "title": "Instance Methods",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/actomaton/assertisolated(_:file:line:)",
+                    "title": "func assertIsolated(() -> String, file: StaticString, line: UInt)",
+                    "type": "method"
+                  },
+                  {
+                    "path": "/documentation/actomaton/actomaton/assumeisolated(_:file:line:)",
+                    "title": "func assumeIsolated<T>((isolated Self) throws -> T, file: StaticString, line: UInt) rethrows -> T",
+                    "type": "method"
+                  },
+                  {
+                    "path": "/documentation/actomaton/actomaton/preconditionisolated(_:file:line:)",
+                    "title": "func preconditionIsolated(() -> String, file: StaticString, line: UInt)",
+                    "type": "method"
+                  }
+                ],
+                "path": "/documentation/actomaton/actomaton/actor-implementations",
+                "title": "Actor Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomaton/actomaton",
+            "title": "Actomaton",
+            "type": "class"
+          },
+          {
+            "children": [
+              {
+                "title": "Operators",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/+(_:_:)",
+                "title": "static func + (Reducer, Reducer) -> Reducer",
+                "type": "op"
+              },
+              {
+                "title": "Initializers",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/init(_:)",
+                "title": "init((Action, inout State, Environment) -> Effect<Action>)",
+                "type": "init"
+              },
+              {
+                "title": "Instance Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/run",
+                "title": "let run: (Action, inout State, Environment) -> Effect<Action>",
+                "type": "property"
+              },
+              {
+                "title": "Instance Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/contramap(action:)",
+                "title": "func contramap<GlobalAction>(action: CasePath<GlobalAction, Action>) -> Reducer<GlobalAction, State, Environment>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/contramap(environment:)",
+                "title": "func contramap<GlobalEnvironment>(environment: (GlobalEnvironment) -> Environment) -> Reducer<Action, State, GlobalEnvironment>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/contramap(state:)-5etrg",
+                "title": "func contramap<GlobalState>(state: WritableKeyPath<GlobalState, State>) -> Reducer<Action, GlobalState, Environment>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/contramap(state:)-ac69",
+                "title": "func contramap<GlobalState>(state: CasePath<GlobalState, State>) -> Reducer<Action, GlobalState, Environment>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/map(id:)",
+                "title": "func map<ID>(id: (EffectID?) -> ID?) -> Reducer",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/map(queue:)",
+                "title": "func map<Queue>(queue: (EffectQueue?) -> Queue?) -> Reducer",
+                "type": "method"
+              },
+              {
+                "title": "Type Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/empty",
+                "title": "static var empty: Reducer",
+                "type": "property"
+              },
+              {
+                "title": "Type Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/combine(_:)-635b0",
+                "title": "static func combine(Reducer...) -> Reducer",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/reducer/combine(_:)-6exc",
+                "title": "static func combine([Reducer]) -> Reducer",
+                "type": "method"
+              }
+            ],
+            "path": "/documentation/actomaton/reducer",
+            "title": "Reducer",
+            "type": "struct"
+          },
+          {
+            "title": "Effects",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Operators",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effect/+(_:_:)",
+                "title": "static func + (Effect, Effect) -> Effect",
+                "type": "op"
+              },
+              {
+                "title": "Initializers",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(id:queue:run:)",
+                "title": "init<ID, Queue>(id: ID?, queue: Queue?, run: () async throws -> Action?)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(id:queue:sequence:)",
+                "title": "init<ID, S, Queue>(id: ID?, queue: Queue?, sequence: () async throws -> S?)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(id:run:)",
+                "title": "init<ID>(id: ID?, run: () async throws -> Action?)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(id:sequence:)",
+                "title": "init<ID, S>(id: ID?, sequence: () async throws -> S?)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(queue:run:)",
+                "title": "init<Queue>(queue: Queue?, run: () async throws -> Action?)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(queue:sequence:)",
+                "title": "init<S, Queue>(queue: Queue?, sequence: () async throws -> S?)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(run:)",
+                "title": "init(run: () async throws -> Action?)",
+                "type": "init"
+              },
+              {
+                "path": "/documentation/actomaton/effect/init(sequence:)",
+                "title": "init<S>(sequence: () async throws -> S?)",
+                "type": "init"
+              },
+              {
+                "title": "Instance Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effect/map(_:)",
+                "title": "func map<Action2>((Action) -> Action2) -> Effect<Action2>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/map(id:)",
+                "title": "func map<ID>(id: (EffectID?) -> ID?) -> Effect",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/map(queue:)",
+                "title": "func map<Queue>(queue: (EffectQueue?) -> Queue?) -> Effect",
+                "type": "method"
+              },
+              {
+                "title": "Type Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effect/empty",
+                "title": "static var empty: Effect<Action>",
+                "type": "property"
+              },
+              {
+                "title": "Type Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effect/cancel(id:)",
+                "title": "static func cancel<ID>(id: ID) -> Effect<Action>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/cancel(ids:)",
+                "title": "static func cancel(ids: (EffectID) -> Bool) -> Effect<Action>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/combine(_:)-7f3gl",
+                "title": "static func combine(Effect...) -> Effect",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/combine(_:)-lf4b",
+                "title": "static func combine([Effect]) -> Effect",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/fireandforget(id:queue:run:)",
+                "title": "static func fireAndForget<ID, Queue>(id: ID?, queue: Queue?, run: () async throws -> ()) -> Effect<Action>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/fireandforget(id:run:)",
+                "title": "static func fireAndForget<ID>(id: ID?, run: () async throws -> ()) -> Effect<Action>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/fireandforget(queue:run:)",
+                "title": "static func fireAndForget<Queue>(queue: Queue?, run: () async throws -> ()) -> Effect<Action>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/fireandforget(run:)",
+                "title": "static func fireAndForget(run: () async throws -> ()) -> Effect<Action>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/effect/nextaction(_:)",
+                "title": "static func nextAction(Action) -> Effect<Action>",
+                "type": "method"
+              }
+            ],
+            "path": "/documentation/actomaton/effect",
+            "title": "Effect",
+            "type": "struct"
+          },
+          {
+            "path": "/documentation/actomaton/effectidprotocol",
+            "title": "EffectIDProtocol",
+            "type": "protocol"
+          },
+          {
+            "children": [
+              {
+                "title": "Instance Properties",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "path": "/documentation/actomaton/effectqueueprotocol/effectqueuedelay-9vupq",
+                        "title": "var effectQueueDelay: EffectQueueDelay",
+                        "type": "property"
+                      }
+                    ],
+                    "title": "EffectQueueProtocol Implementations",
+                    "type": "groupMarker"
+                  }
+                ],
+                "path": "/documentation/actomaton/effectqueueprotocol/effectqueuedelay-19mtm",
+                "title": "var effectQueueDelay: EffectQueueDelay",
+                "type": "property"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "path": "/documentation/actomaton/effectqueueprotocol/effectqueuepolicy-2jm18",
+                        "title": "var effectQueuePolicy: EffectQueuePolicy",
+                        "type": "property"
+                      },
+                      {
+                        "path": "/documentation/actomaton/effectqueueprotocol/effectqueuepolicy-1qeeh",
+                        "title": "var effectQueuePolicy: EffectQueuePolicy",
+                        "type": "property"
+                      },
+                      {
+                        "path": "/documentation/actomaton/effectqueueprotocol/effectqueuepolicy-237xs",
+                        "title": "var effectQueuePolicy: EffectQueuePolicy",
+                        "type": "property"
+                      }
+                    ],
+                    "title": "EffectQueueProtocol Implementations",
+                    "type": "groupMarker"
+                  }
+                ],
+                "path": "/documentation/actomaton/effectqueueprotocol/effectqueuepolicy-3o8io",
+                "title": "var effectQueuePolicy: EffectQueuePolicy",
+                "type": "property"
+              }
+            ],
+            "path": "/documentation/actomaton/effectqueueprotocol",
+            "title": "EffectQueueProtocol",
+            "type": "protocol"
+          },
+          {
+            "title": "EffectQueuePolicy and built-ins",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Enumeration Cases",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effectqueuepolicy/runnewest(maxcount:)",
+                "title": "case runNewest(maxCount: Int)",
+                "type": "case"
+              },
+              {
+                "path": "/documentation/actomaton/effectqueuepolicy/runoldest(maxcount:_:)",
+                "title": "case runOldest(maxCount: Int, OverflowPolicy)",
+                "type": "case"
+              },
+              {
+                "title": "Enumerations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Enumeration Cases",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/effectqueuepolicy/overflowpolicy/discardnew",
+                    "title": "case discardNew",
+                    "type": "case"
+                  },
+                  {
+                    "path": "/documentation/actomaton/effectqueuepolicy/overflowpolicy/suspendnew",
+                    "title": "case suspendNew",
+                    "type": "case"
+                  },
+                  {
+                    "title": "Default Implementations",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "children": [
+                      {
+                        "title": "Operators",
+                        "type": "groupMarker"
+                      },
+                      {
+                        "path": "/documentation/actomaton/effectqueuepolicy/overflowpolicy/!=(_:_:)",
+                        "title": "static func != (Self, Self) -> Bool",
+                        "type": "op"
+                      }
+                    ],
+                    "path": "/documentation/actomaton/effectqueuepolicy/overflowpolicy/equatable-implementations",
+                    "title": "Equatable Implementations",
+                    "type": "symbol"
+                  }
+                ],
+                "path": "/documentation/actomaton/effectqueuepolicy/overflowpolicy",
+                "title": "EffectQueuePolicy.OverflowPolicy",
+                "type": "enum"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Operators",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/effectqueuepolicy/!=(_:_:)",
+                    "title": "static func != (Self, Self) -> Bool",
+                    "type": "op"
+                  }
+                ],
+                "path": "/documentation/actomaton/effectqueuepolicy/equatable-implementations",
+                "title": "Equatable Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomaton/effectqueuepolicy",
+            "title": "EffectQueuePolicy",
+            "type": "enum"
+          },
+          {
+            "path": "/documentation/actomaton/newest1effectqueueprotocol",
+            "title": "Newest1EffectQueueProtocol",
+            "type": "protocol"
+          },
+          {
+            "path": "/documentation/actomaton/oldest1discardneweffectqueueprotocol",
+            "title": "Oldest1DiscardNewEffectQueueProtocol",
+            "type": "protocol"
+          },
+          {
+            "path": "/documentation/actomaton/oldest1suspendneweffectqueueprotocol",
+            "title": "Oldest1SuspendNewEffectQueueProtocol",
+            "type": "protocol"
+          },
+          {
+            "title": "EffectID/Queue Wrapper",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Instance Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effectid/value",
+                "title": "var value: AnyHashable",
+                "type": "property"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Operators",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/effectid/!=(_:_:)",
+                    "title": "static func != (Self, Self) -> Bool",
+                    "type": "op"
+                  }
+                ],
+                "path": "/documentation/actomaton/effectid/equatable-implementations",
+                "title": "Equatable Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomaton/effectid",
+            "title": "EffectID",
+            "type": "struct"
+          },
+          {
+            "children": [
+              {
+                "title": "Instance Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effectqueue/value",
+                "title": "var value: AnyHashable",
+                "type": "property"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Operators",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/effectqueue/!=(_:_:)",
+                    "title": "static func != (Self, Self) -> Bool",
+                    "type": "op"
+                  }
+                ],
+                "path": "/documentation/actomaton/effectqueue/equatable-implementations",
+                "title": "Equatable Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomaton/effectqueue",
+            "title": "EffectQueue",
+            "type": "struct"
+          },
+          {
+            "title": "Articles",
+            "type": "groupMarker"
+          },
+          {
+            "path": "/documentation/actomaton/01-counter",
+            "title": "Example 1: Simple Counter",
+            "type": "article"
+          },
+          {
+            "path": "/documentation/actomaton/02-loginlogout",
+            "title": "Example 2: Auth state",
+            "type": "article"
+          },
+          {
+            "path": "/documentation/actomaton/03-timer",
+            "title": "Example 3: Timer",
+            "type": "article"
+          },
+          {
+            "path": "/documentation/actomaton/04-effectqueue",
+            "title": "Example 4: EffectQueue",
+            "type": "article"
+          },
+          {
+            "path": "/documentation/actomaton/05-reducercomposition",
+            "title": "Example 5: Making a large app (Reducer Composition)",
+            "type": "article"
+          },
+          {
+            "title": "Structures",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Operators",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/'..(_:_:)-8selm",
+                "title": "static func .. <AppendedValue>(CasePath<Root, Value>, CasePath<Value, AppendedValue>) -> CasePath<Root, AppendedValue>",
+                "type": "op"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/'..(_:_:)-9emru",
+                "title": "static func .. <AppendedValue>(CasePath<Root, Value>, (AppendedValue) -> Value) -> CasePath<Root, AppendedValue>",
+                "type": "op"
+              },
+              {
+                "title": "Initializers",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/init(embed:extract:)",
+                "title": "init(embed: (Value) -> Root, extract: (Root) -> Value?)",
+                "type": "init"
+              },
+              {
+                "title": "Instance Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/appending(path:)",
+                "title": "func appending<AppendedValue>(path: CasePath<Value, AppendedValue>) -> CasePath<Root, AppendedValue>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/embed(_:)",
+                "title": "func embed(Value) -> Root",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/extract(from:)",
+                "title": "func extract(from: Root) -> Value?",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/modify(_:_:)",
+                "title": "func modify(inout Root, (inout Value) throws -> Void) throws",
+                "type": "method"
+              },
+              {
+                "title": "Type Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/description-swift.type.property",
+                "title": "static var description: CasePath<String, Value>",
+                "type": "property"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/never",
+                "title": "static var never: CasePath<Root, Never>",
+                "type": "property"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/rawvalue",
+                "title": "static var rawValue: CasePath<Root, Value>",
+                "type": "property"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/self",
+                "title": "static var `self`: CasePath<Root, Root>",
+                "type": "property"
+              },
+              {
+                "title": "Type Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/case(_:)-3nw1d",
+                "title": "static func `case`((Value) -> Root) -> CasePath<Root, Value>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/case(_:)-5s7mr",
+                "title": "static func `case`(Root) -> CasePath<Root, Value>",
+                "type": "method"
+              },
+              {
+                "path": "/documentation/actomaton/casepath/constant(_:)",
+                "title": "static func constant(Value) -> CasePath<Root, Value>",
+                "type": "method"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Instance Properties",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/casepath/description-swift.property",
+                    "title": "var description: String",
+                    "type": "property"
+                  }
+                ],
+                "path": "/documentation/actomaton/casepath/customstringconvertible-implementations",
+                "title": "CustomStringConvertible Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomaton/casepath",
+            "title": "CasePath",
+            "type": "struct"
+          },
+          {
+            "title": "Functions",
+            "type": "groupMarker"
+          },
+          {
+            "path": "/documentation/actomaton/extract(_:)-2jy2a",
+            "title": "func extract<Root, Value>((Value) -> Root) -> (Root) -> Value?",
+            "type": "func"
+          },
+          {
+            "path": "/documentation/actomaton/extract(_:)-5ivuf",
+            "title": "func extract<Root, Value>((Value) -> Root?) -> (Root?) -> Value?",
+            "type": "func"
+          },
+          {
+            "path": "/documentation/actomaton/extract(case:from:)-82wth",
+            "title": "func extract<Root, Value>(case: (Value) -> Root?, from: Root?) -> Value?",
+            "type": "func"
+          },
+          {
+            "path": "/documentation/actomaton/extract(case:from:)-89rof",
+            "title": "func extract<Root, Value>(case: (Value) -> Root, from: Root) -> Value?",
+            "type": "func"
+          },
+          {
+            "title": "Operators",
+            "type": "groupMarker"
+          },
+          {
+            "path": "/documentation/actomaton/'..(_:_:)",
+            "title": "func .. <Root, Value, AppendedValue>((Root) -> Value?, (AppendedValue) -> Value) -> (Root) -> AppendedValue?",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-1zudw",
+            "title": "func / <Root>(Root?) -> CasePath<Root?, Void>",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-2n5ny",
+            "title": "func / <Root>(Root.Type) -> CasePath<Root, Root>",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-2r5nq",
+            "title": "func / <Root, Value>((Value) -> Root?) -> CasePath<Root?, Value>",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-4nrup",
+            "title": "func / <Root>(Root) -> CasePath<Root, Void>",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-4qhtw",
+            "title": "func / <Root>(CasePath<Root, Root>) -> CasePath<Root, Root>",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-4v1w8",
+            "title": "func / <Root>(Root) -> (Root) -> Void?",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-82yvm",
+            "title": "func / <Root, Value>((Value) -> Root) -> CasePath<Root, Value>",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-8h7yj",
+            "title": "func / <Root, Value>((Value) -> Root?) -> (Root?) -> Value?",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-9oq0w",
+            "title": "func / <Root>(Root) -> (Root?) -> Void?",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton//(_:)-9tuff",
+            "title": "func / <Root, Value>((Value) -> Root) -> (Root) -> Value?",
+            "type": "op"
+          },
+          {
+            "path": "/documentation/actomaton/~=(_:_:)",
+            "title": "func ~= <Root, Value>(CasePath<Root, Value>, Root) -> Bool",
+            "type": "op"
+          },
+          {
+            "title": "Enumerations",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Enumeration Cases",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomaton/effectqueuedelay/constant(_:)",
+                "title": "case constant(TimeInterval)",
+                "type": "case"
+              },
+              {
+                "path": "/documentation/actomaton/effectqueuedelay/random(_:)",
+                "title": "case random(ClosedRange<TimeInterval>)",
+                "type": "case"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Operators",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomaton/effectqueuedelay/!=(_:_:)",
+                    "title": "static func != (Self, Self) -> Bool",
+                    "type": "op"
+                  }
+                ],
+                "path": "/documentation/actomaton/effectqueuedelay/equatable-implementations",
+                "title": "Equatable Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomaton/effectqueuedelay",
+            "title": "EffectQueueDelay",
+            "type": "enum"
+          }
+        ],
+        "path": "/documentation/actomaton",
+        "title": "Actomaton",
+        "type": "module"
+      }
+    ]
+  },
+  "schemaVersion": {
+    "major": 0,
+    "minor": 1,
+    "patch": 1
+  }
+}

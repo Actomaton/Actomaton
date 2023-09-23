@@ -1,0 +1,203 @@
+{
+  "interfaceLanguages": {
+    "swift": [
+      {
+        "children": [
+          {
+            "title": "Structures",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Type Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomatondebugging/actionlogformat/simple",
+                "title": "static let simple: ActionLogFormat",
+                "type": "property"
+              },
+              {
+                "title": "Type Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomatondebugging/actionlogformat/all(maxdepth:)",
+                "title": "static func all(maxDepth: Int) -> ActionLogFormat",
+                "type": "method"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Operators",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomatondebugging/actionlogformat/!=(_:_:)",
+                    "title": "static func != (Self, Self) -> Bool",
+                    "type": "op"
+                  }
+                ],
+                "path": "/documentation/actomatondebugging/actionlogformat/equatable-implementations",
+                "title": "Equatable Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomatondebugging/actionlogformat",
+            "title": "ActionLogFormat",
+            "type": "struct"
+          },
+          {
+            "children": [
+              {
+                "title": "Initializers",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomatondebugging/logformat/init(name:action:state:)",
+                "title": "init(name: String?, action: ActionLogFormat?, state: StateLogFormat?)",
+                "type": "init"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Operators",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomatondebugging/logformat/!=(_:_:)",
+                    "title": "static func != (Self, Self) -> Bool",
+                    "type": "op"
+                  }
+                ],
+                "path": "/documentation/actomatondebugging/logformat/equatable-implementations",
+                "title": "Equatable Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomatondebugging/logformat",
+            "title": "LogFormat",
+            "type": "struct"
+          },
+          {
+            "children": [
+              {
+                "title": "Type Properties",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomatondebugging/statelogformat/diff",
+                "title": "static let diff: StateLogFormat",
+                "type": "property"
+              },
+              {
+                "path": "/documentation/actomatondebugging/statelogformat/simple",
+                "title": "static let simple: StateLogFormat",
+                "type": "property"
+              },
+              {
+                "title": "Type Methods",
+                "type": "groupMarker"
+              },
+              {
+                "path": "/documentation/actomatondebugging/statelogformat/all(maxdepth:)",
+                "title": "static func all(maxDepth: Int) -> StateLogFormat",
+                "type": "method"
+              },
+              {
+                "title": "Default Implementations",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Operators",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomatondebugging/statelogformat/!=(_:_:)",
+                    "title": "static func != (Self, Self) -> Bool",
+                    "type": "op"
+                  }
+                ],
+                "path": "/documentation/actomatondebugging/statelogformat/equatable-implementations",
+                "title": "Equatable Implementations",
+                "type": "symbol"
+              }
+            ],
+            "path": "/documentation/actomatondebugging/statelogformat",
+            "title": "StateLogFormat",
+            "type": "struct"
+          },
+          {
+            "title": "Extended Modules",
+            "type": "groupMarker"
+          },
+          {
+            "children": [
+              {
+                "title": "Extended Structures",
+                "type": "groupMarker"
+              },
+              {
+                "children": [
+                  {
+                    "title": "Instance Methods",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomatondebugging/actomaton/reducer/debug(_:action:state:)",
+                    "title": "func debug(String?, action: ActionLogFormat?, state: StateLogFormat?) -> Reducer",
+                    "type": "method"
+                  },
+                  {
+                    "path": "/documentation/actomatondebugging/actomaton/reducer/log(format:)",
+                    "title": "func log(format: LogFormat?) -> Reducer",
+                    "type": "method"
+                  },
+                  {
+                    "title": "Type Methods",
+                    "type": "groupMarker"
+                  },
+                  {
+                    "path": "/documentation/actomatondebugging/actomaton/reducer/debug(_:action:state:_:)",
+                    "title": "static func debug(String?, action: ActionLogFormat?, state: StateLogFormat?, (Action, inout State, Environment) -> Effect<Action>) -> Reducer",
+                    "type": "method"
+                  },
+                  {
+                    "path": "/documentation/actomatondebugging/actomaton/reducer/log(format:_:)",
+                    "title": "static func log(format: LogFormat?, (Action, inout State, Environment) -> Effect<Action>) -> Reducer",
+                    "type": "method"
+                  }
+                ],
+                "path": "/documentation/actomatondebugging/actomaton/reducer",
+                "title": "Reducer",
+                "type": "extension"
+              }
+            ],
+            "path": "/documentation/actomatondebugging/actomaton",
+            "title": "Actomaton",
+            "type": "extension"
+          }
+        ],
+        "path": "/documentation/actomatondebugging",
+        "title": "ActomatonDebugging",
+        "type": "module"
+      }
+    ]
+  },
+  "schemaVersion": {
+    "major": 0,
+    "minor": 1,
+    "patch": 1
+  }
+}
