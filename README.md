@@ -1,6 +1,6 @@
 # 🎭 Actomaton
 
-[![Swift 5.6](https://img.shields.io/badge/swift-5.6-orange.svg?style=flat)](https://swift.org/download/)
+[![Swift 5.9](https://img.shields.io/badge/swift-5.9-orange.svg?style=flat)](https://swift.org/download/)
 ![](https://github.com/Actomaton/Actomaton/actions/workflows/main.yml/badge.svg)
 
 🧑‍🎤 Actor + 🤖 Automaton = 🎭 Actomaton
