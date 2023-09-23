@@ -10,32 +10,32 @@ on:
   pull_request:
 
 env:
-  DEVELOPER_DIR: /Applications/Xcode_13.3.1.app
+  DEVELOPER_DIR: /Applications/Xcode_15.0.app
 
 jobs:
   xcodebuild-macOS:
-    runs-on: macos-12
+    runs-on: macos-13
     steps:
     - uses: actions/checkout@v2
     - name: Run tests
       run: make build-macOS
 
   xcodebuild-iOS:
-    runs-on: macos-12
+    runs-on: macos-13
     steps:
     - uses: actions/checkout@v2
     - name: Run tests
       run: make build-iOS
 
   xcodebuild-tvOS:
-    runs-on: macos-12
+    runs-on: macos-13
     steps:
     - uses: actions/checkout@v2
     - name: Run tests
       run: make build-tvOS
 
   xcodebuild-watchOS:
-    runs-on: macos-12
+    runs-on: macos-13
     steps:
     - uses: actions/checkout@v2
     - name: Run tests
