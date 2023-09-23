@@ -23,33 +23,18 @@ let package = Package(
     targets: [
         .target(
             name: "Actomaton",
-            dependencies: [.product(name: "CasePaths", package: "swift-case-paths")],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
-            ]
+            dependencies: [.product(name: "CasePaths", package: "swift-case-paths")]
         ),
         .target(
             name: "ActomatonStore",
             dependencies: [
                 "Actomaton"
-            ],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
             ]
         ),
         .target(
             name: "ActomatonUI",
             dependencies: [
                 "Actomaton", "ActomatonDebugging"
-            ],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
             ]
         ),
         .target(
@@ -61,48 +46,34 @@ let package = Package(
         .target(
             name: "TestFixtures",
             dependencies: ["Actomaton"],
-            path: "./Tests/TestFixtures",
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
-            ]
+            path: "./Tests/TestFixtures"
         ),
         .testTarget(
             name: "ActomatonTests",
-            dependencies: ["Actomaton", "TestFixtures"],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
-            ]
+            dependencies: ["Actomaton", "TestFixtures"]
         ),
         .testTarget(
             name: "ActomatonStoreTests",
-            dependencies: ["ActomatonStore", "TestFixtures"],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
-            ]
+            dependencies: ["ActomatonStore", "TestFixtures"]
         ),
         .testTarget(
             name: "ActomatonUITests",
-            dependencies: ["ActomatonUI", "TestFixtures"],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
-            ]
+            dependencies: ["ActomatonUI", "TestFixtures"]
         ),
         .testTarget(
             name: "ReadMeTests",
-            dependencies: ["ActomatonStore", "ActomatonDebugging"],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-Xfrontend", "-strict-concurrency=complete",
-                ])
-            ]
+            dependencies: ["ActomatonStore", "ActomatonDebugging"]
         )
     ]
 )
+
+// Comment-Out: Enable this `unsafeFlags` in local development.
+//
+//for target in package.targets where target.type != .system {
+//    target.swiftSettings = target.swiftSettings ?? []
+//    target.swiftSettings?.append(
+//        .unsafeFlags([
+//            "-Xfrontend", "-strict-concurrency=complete",
+//        ])
+//    )
+//}
