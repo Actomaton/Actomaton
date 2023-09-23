@@ -11,10 +11,10 @@ let package = Package(
             targets: ["Actomaton", "ActomatonDebugging"]),
         .library(
             name: "ActomatonUI",
-            targets: ["ActomatonUI"]),
+            targets: ["ActomatonUI", "ActomatonDebugging"]),
         .library(
             name: "ActomatonStore",
-            targets: ["ActomatonStore", "ActomatonDebugging"])
+            targets: ["ActomatonStore", "ActomatonDebugging"]),
     ],
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
