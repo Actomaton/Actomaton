@@ -52,7 +52,7 @@ public actor Actomaton<Action, State>
         executingActor: any Actor
     )
     {
-        self.state = state
+        self._state = Published(initialValue: state)
         self.reducer = reducer
         self.executingActor = executingActor
     }

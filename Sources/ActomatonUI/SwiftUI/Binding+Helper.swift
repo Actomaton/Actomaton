@@ -7,8 +7,8 @@ extension Binding
 {
     /// Transforms `<Value>` to `<SubValue>` using `get` and `set`.
     public func transform<SubValue>(
-        get: @escaping (Value) -> SubValue,
-        set: @escaping (Value, SubValue) -> Value
+        get: @escaping @Sendable (Value) -> SubValue,
+        set: @escaping @Sendable (Value, SubValue) -> Value
     ) -> Binding<SubValue>
     {
         Binding<SubValue>(
@@ -60,6 +60,7 @@ extension Binding
     ///   which turns `Binding<Value?>` into `Binding<Value>?`.
     public func traverse<SubValue>(_ keyPath: WritableKeyPath<Value, SubValue?>)
         -> Binding<SubValue>?
+        where SubValue: Sendable
     {
         guard let subValue = self.wrappedValue[keyPath: keyPath] else {
             return nil
@@ -77,7 +78,7 @@ extension Binding
 extension Binding
 {
     /// Adds setter hook.
-    public func onSet(_ hook: @escaping (_ old: Value, _ new: Value) -> Void) -> Binding<Value>
+    public func onSet(_ hook: @escaping @Sendable (_ old: Value, _ new: Value) -> Void) -> Binding<Value>
     {
         self.transform(
             get: { $0 },
