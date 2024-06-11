@@ -4,7 +4,6 @@ import XCTest
 import Combine
 
 /// Tests for `EffectQueueProtocol` with `EffectQueuePolicy.runOldest(maxCount: n, .discardNew)`.
-@MainActor
 final class RunOldestDiscardNewTests: XCTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
@@ -27,7 +26,7 @@ final class RunOldestDiscardNewTests: XCTestCase
 
         let actomaton = Actomaton<Action, State>(
             state: State(),
-            reducer: Reducer { action, state, _ in
+            reducer: Reducer { [resultsCollector] action, state, _ in
                 switch action {
                 case .increment:
                     state.count += 1
@@ -36,8 +35,8 @@ final class RunOldestDiscardNewTests: XCTestCase
                         try await tick(1) {
                             Debug.print("Effect success")
                             return .effectCompleted
-                        } ifCancelled: {
-                            await self.resultsCollector.append(state.count)
+                        } ifCancelled: { [resultsCollector] in
+                            await resultsCollector.append(state.count)
                             Debug.print("Effect cancelled")
                             return nil
                         }

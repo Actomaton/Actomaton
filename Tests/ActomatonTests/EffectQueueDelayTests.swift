@@ -29,8 +29,11 @@ final class EffectQueueDelayTests: XCTestCase
                         // seems to become slower than Swift 5.6 and needs to wait for actual `Task.isCancelled` check.
                         // Note that this tweak is only needed for testing purpose,
                         // and won't be necessary for production code.
+                        //
+                        // Swift 6 requirement:
+                        // Swift 5.7 worked with 1 ms delay, but Swift 6 will need 10 ms.
                         do {
-                            try await Task.sleep(nanoseconds: 1_000_000)
+                            try await Task.sleep(nanoseconds: 10_000_000)
                         }
                         catch {
                             // Ignore cancellation handling during `Task.sleep`.
@@ -128,8 +131,10 @@ final class EffectQueueDelayTests: XCTestCase
 
         assertEqual(await actomaton.state.finishedIDs, [])
 
-        // NOTE: `delay * 2` for waiting from "1" to "3", then `effectTime + 0.5` for waiting "3" to be completed.
-        try await tick(delay * 2 + effectTime + 0.5)
+        // NOTE: 
+        // `delay * 2` for waiting from "1" to "3", then `effectTime + 0.75` for waiting "3"
+        // to be safely completed but before fetching "4".
+        try await tick(delay * 2 + effectTime + 0.75)
         assertEqual(await actomaton.state.finishedIDs, ["3"])
 
         try await tick(delay)
@@ -138,7 +143,9 @@ final class EffectQueueDelayTests: XCTestCase
         // ResultCollector
         assertEqual(await startedIDs.results, ["3", "4"],
                     "Only last 2 should run effects.")
-        assertEqual(await cancelledIDs.results, ["1", "2"])
+
+        // NOTE: In Swift 6, cancellation arrival is indeterminate, so requires `sorted()`.
+        assertEqual(await cancelledIDs.results.sorted(), ["1", "2"])
     }
 
     func test_DelayedOldest2SuspendNewEffectQueue() async throws

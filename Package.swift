@@ -65,6 +65,7 @@ let package = Package(
             dependencies: ["ActomatonStore", "ActomatonDebugging"]
         )
     ]
+//    swiftLanguageVersions: [.version("6")]
 )
 
 // Comment-Out: Enable this `unsafeFlags` in local development.
