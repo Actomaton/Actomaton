@@ -62,7 +62,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ReadMeTests",
-            dependencies: ["ActomatonStore", "ActomatonDebugging"]
+            dependencies: ["Actomaton", "ActomatonDebugging"]
         )
     ]
 //    swiftLanguageVersions: [.version("6")]
