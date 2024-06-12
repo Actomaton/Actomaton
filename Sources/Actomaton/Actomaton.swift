@@ -88,9 +88,52 @@ public actor Actomaton<Action, State>
 
     deinit
     {
-        Debug.print("[deinit] \(String(format: "%p", ObjectIdentifier(self).hashValue))")
+        // IMPORTANT:
+        // Swift 6 nonisolated deinit rule is too strict that cannot even invoke isolated clean-up method.
+        // https://forums.swift.org/t/isolated-synchronous-deinit/58177/29
+        //
+        // Note that Swift 6 migration guide:
+        // https://github.com/apple/swift-migration-guide/blob/b3c83dc38353d53ff6f51219deb5d03e8849606d/Guide.docc/CommonProblems.md#non-isolated-deinitialization
+        // that explains to wrap non-`Sendable` states with inner `actor` will unfortunately introduce
+        // more async boundaries and inderminacy due to the increase of `await` calls,
+        // which becomes a pain especially when `@MainActor` (`MainActomaton`) needs to interact
+        // with this inner actor frequently.
+        //
+        // Thus, instead of creating a wrapper actor (or `@unchecked Sendable` class with locks),
+        // we will simply duplicate `cancelRunningOrPendingEffects(predicate: { _ in true })` code here.
 
-        self.cancelRunningOrPendingEffects(predicate: { _ in true })
+        // Cancel running effects.
+        for id in runningTasks.keys {
+            if let previousTasks = runningTasks.removeValue(forKey: id) {
+                for previousTask in previousTasks {
+                    previousTask.cancel()
+                }
+            }
+        }
+
+        // Cancel pending effects.
+        for (effectQueue, effectKinds) in pendingEffectKinds {
+            for (i, _) in effectKinds.enumerated().reversed() {
+                if let effectKind = pendingEffectKinds[effectQueue]?.remove(at: i) {
+                    switch effectKind {
+                    case let .single(single):
+                        Task<Void, Error>.detached {
+                            _ = try await single.run()
+                        }
+                        .cancel() // Cancel immediately.
+                    case let .sequence(sequence):
+                        Task<Void, Error>.detached {
+                            _ = try await sequence.sequence()
+                        }
+                        .cancel() // Cancel immediately.
+                    case .cancel:
+                        return
+                    }
+                }
+            }
+        }
+
+        Debug.print("[deinit] \(String(format: "%p", ObjectIdentifier(self).hashValue))")
     }
 
     /// Sends `action` to `Actomaton`.

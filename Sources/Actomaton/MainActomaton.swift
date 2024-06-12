@@ -190,12 +190,10 @@ package final class MainActomaton1<Action, State>: MainActomaton
 
     deinit
     {
-        Debug.print("[deinit] \(String(format: "%p", ObjectIdentifier(self).hashValue))")
-
-        // Comment-Out: Swift 5.6 causes error, so hard-code the same impl instead.
-        // "Call to main actor-isolated instance method 'cancelRunningOrPendingEffects(predicate:)' in a synchronous nonisolated context"
-        //
-        // self.cancelRunningOrPendingEffects(predicate: { _ in true })
+        // IMPORTANT:
+        // Below code is a duplicate of `cancelRunningOrPendingEffects`
+        // due to too strict Swift Concurrency deinit isolation rule.
+        // See `Actomaton.deinit` comment for more details.
 
         // Cancel running effects.
         for id in runningTasks.keys {
@@ -212,12 +210,12 @@ package final class MainActomaton1<Action, State>: MainActomaton
                 if let effectKind = pendingEffectKinds[effectQueue]?.remove(at: i) {
                     switch effectKind {
                     case let .single(single):
-                        Task<Void, Error> {
+                        Task<Void, Error>.detached {
                             _ = try await single.run()
                         }
                         .cancel() // Cancel immediately.
                     case let .sequence(sequence):
-                        Task<Void, Error> {
+                        Task<Void, Error>.detached {
                             _ = try await sequence.sequence()
                         }
                         .cancel() // Cancel immediately.
@@ -227,6 +225,8 @@ package final class MainActomaton1<Action, State>: MainActomaton
                 }
             }
         }
+
+        Debug.print("[deinit] \(String(format: "%p", ObjectIdentifier(self).hashValue))")
     }
 
     /// Sends `action` to `Actomaton`.
