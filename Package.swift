@@ -12,9 +12,6 @@ let package = Package(
         .library(
             name: "ActomatonUI",
             targets: ["ActomatonUI", "ActomatonDebugging"]),
-        .library(
-            name: "ActomatonStore",
-            targets: ["ActomatonStore", "ActomatonDebugging"]),
     ],
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
@@ -24,12 +21,6 @@ let package = Package(
         .target(
             name: "Actomaton",
             dependencies: [.product(name: "CasePaths", package: "swift-case-paths")]
-        ),
-        .target(
-            name: "ActomatonStore",
-            dependencies: [
-                "Actomaton"
-            ]
         ),
         .target(
             name: "ActomatonUI",
@@ -51,10 +42,6 @@ let package = Package(
         .testTarget(
             name: "ActomatonTests",
             dependencies: ["Actomaton", "TestFixtures"]
-        ),
-        .testTarget(
-            name: "ActomatonStoreTests",
-            dependencies: ["ActomatonStore", "TestFixtures"]
         ),
         .testTarget(
             name: "ActomatonUITests",
