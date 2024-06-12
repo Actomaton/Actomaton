@@ -17,8 +17,6 @@ This repository consists of 3 frameworks:
 3. `ActomatonDebugging`: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatondebugging/)
 
-(NOTE: `ActomatonStore` is deprecated in ver 0.7.0)
-
 These frameworks depend on [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) as Functional Prism library, which is a powerful tool to construct an App-level Mega-Reducer from each screen's Reducers.
 
 This framework is a successor of the following projects:
