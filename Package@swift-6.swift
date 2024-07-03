@@ -15,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
-        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "0.3.0")
+        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0")
     ],
     targets: [
         .target(
