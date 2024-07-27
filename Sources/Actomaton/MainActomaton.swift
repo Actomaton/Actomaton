@@ -104,6 +104,10 @@ package final class MainActomaton2<Action, State>: MainActomaton
         })
     }
 
+    deinit {
+        stateTask?.cancel()
+    }
+
     /// Sends `action` to `Actomaton`.
     ///
     /// - Parameters:
