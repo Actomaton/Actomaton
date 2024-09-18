@@ -6,7 +6,7 @@ import Combine
 #endif
 
 /// Tests for `Effect.cancel`.
-final class EffectCancellationTests: XCTestCase
+final class EffectCancellationTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 

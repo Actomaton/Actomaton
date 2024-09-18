@@ -2,7 +2,7 @@ import XCTest
 @testable import ActomatonUI
 
 /// Tests for `Actomaton.deinit` to run successfully with cancelling running tasks.
-final class DeinitTests: XCTestCase
+final class DeinitTests: MainTestCase
 {
     @MainActor
     func test_deinit() async throws

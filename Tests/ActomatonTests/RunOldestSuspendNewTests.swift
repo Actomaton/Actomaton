@@ -6,7 +6,7 @@ import Combine
 #endif
 
 /// Tests for `EffectQueueProtocol` with `EffectQueuePolicy.runOldest(maxCount: n, .suspendNew)`.
-final class RunOldestSuspendNewTests: XCTestCase
+final class RunOldestSuspendNewTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 

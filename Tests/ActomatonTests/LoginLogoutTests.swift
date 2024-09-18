@@ -5,7 +5,7 @@ import XCTest
 import Combine
 #endif
 
-final class LoginLogoutTests: XCTestCase
+final class LoginLogoutTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 

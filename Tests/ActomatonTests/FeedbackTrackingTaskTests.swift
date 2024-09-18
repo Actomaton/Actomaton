@@ -6,7 +6,7 @@ import Combine
 #endif
 
 /// Tests for `actomaton.send`'s returned `Task`.
-final class FeedbackTrackingTaskTests: XCTestCase
+final class FeedbackTrackingTaskTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 
