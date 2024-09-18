@@ -118,6 +118,8 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
 
     // MARK: sendRouteAsync
 
+#if swift(>=6.0)
+
     /// Sends `Route` with a callback that consumes `Value`.
     ///
     /// For example:
@@ -146,7 +148,7 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
     ///
     /// - Returns: `Value` from routed destination asynchronously.
     public func sendRouteAsync<Value>(
-        _ makeRoute: ((Value) -> Void) -> Route
+        _ makeRoute: ((sending Value) -> Void) -> Route
     ) async -> Value
     {
         await withCheckedContinuation { continuation in
@@ -187,6 +189,29 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
     ///
     /// - Returns: `Value` from routed destination asynchronously.
     public func sendRouteAsync<Value, Error>(
+        _ makeRoute: ((sending Result<Value, Error>) -> Void) -> Route
+    ) async throws -> Value
+        where Error: Swift.Error
+    {
+        try await withCheckedThrowingContinuation { continuation in
+            let route = makeRoute(continuation.resume(with:))
+            self.sendRoute(route)
+        }
+    }
+
+#else
+
+    public func sendRouteAsync<Value>(
+        _ makeRoute: ((Value) -> Void) -> Route
+    ) async -> Value
+    {
+        await withCheckedContinuation { continuation in
+            let route = makeRoute(continuation.resume(returning:))
+            self.sendRoute(route)
+        }
+    }
+
+    public func sendRouteAsync<Value, Error>(
         _ makeRoute: ((Result<Value, Error>) -> Void) -> Route
     ) async throws -> Value
         where Error: Swift.Error
@@ -196,6 +221,8 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
             self.sendRoute(route)
         }
     }
+
+#endif
 
     // MARK: sendRouteAsyncStream
 

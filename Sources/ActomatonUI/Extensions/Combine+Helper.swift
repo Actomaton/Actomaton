@@ -1,6 +1,6 @@
 import Combine
 
-extension Publisher
+extension Publisher where Output: Sendable
 {
     /// `Publisher` to `AsyncThrowingStream`.
     public func toAsyncThrowingStream() -> AsyncThrowingStream<Output, Swift.Error>

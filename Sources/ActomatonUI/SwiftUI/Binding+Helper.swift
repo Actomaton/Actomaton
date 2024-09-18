@@ -10,6 +10,7 @@ extension Binding
         get: @escaping @Sendable (Value) -> SubValue,
         set: @escaping @Sendable (Value, SubValue) -> Value
     ) -> Binding<SubValue>
+        where Value: Sendable, SubValue: Sendable
     {
         Binding<SubValue>(
             get: { get(self.wrappedValue) },
@@ -24,6 +25,7 @@ extension Binding
     ///   but this implementation can avoid internal `SwiftUI.BindingOperations.ForceUnwrapping` failure crash.
     public subscript<SubValue>(_ keyPath: WritableKeyPath<Value, SubValue>)
         -> Binding<SubValue>
+        where Value: Sendable, SubValue: Sendable
     {
         Binding<SubValue>(
             get: { self.wrappedValue[keyPath: keyPath] },
@@ -35,6 +37,7 @@ extension Binding
     /// - Note: `Value` should be enum value.
     public subscript<SubValue>(casePath casePath: CasePath<Value, SubValue>)
         -> Binding<SubValue?>
+        where Value: Sendable, SubValue: Sendable
     {
         Binding<SubValue?>(
             get: {
@@ -60,7 +63,7 @@ extension Binding
     ///   which turns `Binding<Value?>` into `Binding<Value>?`.
     public func traverse<SubValue>(_ keyPath: WritableKeyPath<Value, SubValue?>)
         -> Binding<SubValue>?
-        where SubValue: Sendable
+        where Value: Sendable, SubValue: Sendable
     {
         guard let subValue = self.wrappedValue[keyPath: keyPath] else {
             return nil
@@ -79,6 +82,7 @@ extension Binding
 {
     /// Adds setter hook.
     public func onSet(_ hook: @escaping @Sendable (_ old: Value, _ new: Value) -> Void) -> Binding<Value>
+        where Value: Sendable
     {
         self.transform(
             get: { $0 },
