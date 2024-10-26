@@ -15,7 +15,7 @@ package protocol MainActomaton<Action, State> {
         environment: Environment
     ) where Environment: Sendable
 
-    var state: State { get }
+    var state: State { get async }
 
 #if !os(Linux)
     var statePublisher: AnyPublisher<State, Never> { get }
@@ -51,7 +51,9 @@ package final class MainActomaton2<Action, State>: MainActomaton
 {
 #if os(Linux)
     package var state: State {
-        actomaton.state
+        get async {
+            await actomaton.state
+        }
     }
 #else
     @Published
