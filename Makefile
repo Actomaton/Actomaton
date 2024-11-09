@@ -1,5 +1,12 @@
 # NOTE: Async tests are currently disabled due to its indeterminacy nature of effectful computation.
 
+PLATFORM_IOS = iOS Simulator,id=$(call udid_for,iOS,iPhone \d\+ Pro [^M])
+PLATFORM_MACOS = macOS
+PLATFORM_MAC_CATALYST = macOS,variant=Mac Catalyst
+PLATFORM_TVOS = tvOS Simulator,id=$(call udid_for,tvOS,TV)
+PLATFORM_VISIONOS = visionOS Simulator,id=$(call udid_for,visionOS,Vision)
+PLATFORM_WATCHOS = watchOS Simulator,id=$(call udid_for,watchOS,Watch)
+
 # Base path after host name, required for GitHub Pages.
 # Note that `documentation/{module_name}` is automatically added to the end of this path in Swift-DocC,
 # e.g. https://actomaton.github.io/Actomaton/documentation/actomatonui/ .
@@ -11,24 +18,32 @@ DOCBUILD_OUTPUT_DIR := docbuild
 
 .PHONY: build-macOS
 build-macOS:
-	$(MAKE) build DESTINATION='platform=OS X'
+	$(MAKE) build DESTINATION='$(PLATFORM_MACOS)'
 
 .PHONY: build-iOS
 build-iOS:
-	$(MAKE) build DESTINATION='platform=iOS Simulator,name=iPhone 13 Pro'
+	$(MAKE) build DESTINATION='$(PLATFORM_IOS)'
 
 .PHONY: build-watchOS
 build-watchOS:
-	$(MAKE) build DESTINATION='platform=watchOS Simulator,name=Apple Watch Series 7 - 45mm'
+	$(MAKE) build DESTINATION='$(PLATFORM_WATCHOS)'
 
 .PHONY: build-tvOS
 build-tvOS:
-	$(MAKE) build DESTINATION='platform=tvOS Simulator,name=Apple TV 4K (at 1080p) (2nd generation)'
+	$(MAKE) build DESTINATION='$(PLATFORM_TVOS)'
+
+.PHONY: build-macCatalyst
+build-macCatalyst:
+	$(MAKE) build DESTINATION='$(PLATFORM_MAC_CATALYST)'
+
+.PHONY: build-visionOS
+build-visionOS:
+	$(MAKE) build DESTINATION='$(PLATFORM_VISIONOS)'
 
 .PHONY: build
 build:
 	set -o pipefail && \
-		xcodebuild build -scheme Actomaton-Package -destination '${DESTINATION}' | xcpretty
+		xcodebuild build -scheme Actomaton-Package -destination 'platform=${DESTINATION}' | xcpretty
 
 .PHONY: docs
 docs:
@@ -91,3 +106,7 @@ _docs:
 
 	@# Clean up.
 	rm -rf $(DOCBUILD_BUILD_DIR)
+
+define udid_for
+$(shell xcrun simctl list devices available '$(1)' | grep '$(2)' | sort -r | head -1 | awk -F '[()]' '{ print $$(NF-3) }')
+endef
