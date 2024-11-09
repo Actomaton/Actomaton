@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Tests for `Newest1EffectQueueProtocol` where previous effect will be automatically cancelled by the next effect.
 final class EffectIDAutoCancellationTests: XCTestCase
@@ -85,6 +87,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
         )
         self.actomaton = actomaton
 
+#if canImport(Combine)
         var cancellables: [AnyCancellable] = []
 
         await actomaton.$state
@@ -92,6 +95,7 @@ final class EffectIDAutoCancellationTests: XCTestCase
                 Debug.print("publisher: state = \(state)")
             })
             .store(in: &cancellables)
+#endif
     }
 
     func test_noInterrupt() async throws

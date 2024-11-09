@@ -1,3 +1,4 @@
+#if canImport(SwiftUI)
 import SwiftUI
 import CasePaths
 
@@ -93,3 +94,5 @@ extension Binding
         )
     }
 }
+
+#endif

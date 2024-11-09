@@ -1,3 +1,5 @@
+#if canImport(Combine)
+
 /// `MainActomaton`-erased wrapper which can ``map(state:)`` into sub-store.
 ///
 /// - Important: ``Store`` is NOT `ObservableObject` thus its state can't be observed by SwiftUI views.
@@ -395,3 +397,5 @@ extension Store
 // MARK: - Private
 
 private func absurd<A>(_ x: Never) -> A {}
+
+#endif

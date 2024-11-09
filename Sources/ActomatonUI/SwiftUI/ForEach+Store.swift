@@ -1,3 +1,4 @@
+#if canImport(SwiftUI)
 import SwiftUI
 
 extension ForEach
@@ -58,3 +59,5 @@ extension ForEach
         self.init(store: store, id: \.id, content: content)
     }
 }
+
+#endif

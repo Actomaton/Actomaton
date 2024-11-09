@@ -1,8 +1,6 @@
 import XCTest
 @testable import Actomaton
 
-import Combine
-
 /// Tests for `Actomaton.deinit` to run successfully with cancelling running tasks.
 final class DeinitTests: XCTestCase
 {

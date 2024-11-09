@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Tests for `Effect.cancel`.
 final class TimerTests: XCTestCase
@@ -44,6 +46,7 @@ final class TimerTests: XCTestCase
         )
         self.actomaton = actomaton
 
+#if canImport(Combine)
         var cancellables: [AnyCancellable] = []
 
         await actomaton.$state
@@ -51,6 +54,7 @@ final class TimerTests: XCTestCase
                 Debug.print("publisher: state = \(state)")
             })
             .store(in: &cancellables)
+#endif
     }
 
     func test_timer() async throws

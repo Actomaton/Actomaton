@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Tests for `Effect.cancel`.
 final class EffectCancellationTests: XCTestCase
@@ -93,6 +95,7 @@ final class EffectCancellationTests: XCTestCase
         )
         self.actomaton = actomaton
 
+#if canImport(Combine)
         var cancellables: [AnyCancellable] = []
 
         await actomaton.$state
@@ -100,6 +103,7 @@ final class EffectCancellationTests: XCTestCase
                 Debug.print("publisher: state = \(state)")
             })
             .store(in: &cancellables)
+#endif
     }
 
     func test_noInterrupt() async throws

@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Tests for `EffectQueueDelay`.
 final class EffectQueueDelayTests: XCTestCase
@@ -131,7 +133,7 @@ final class EffectQueueDelayTests: XCTestCase
 
         assertEqual(await actomaton.state.finishedIDs, [])
 
-        // NOTE: 
+        // NOTE:
         // `delay * 2` for waiting from "1" to "3", then `effectTime + 0.75` for waiting "3"
         // to be safely completed but before fetching "4".
         try await tick(delay * 2 + effectTime + 0.75)

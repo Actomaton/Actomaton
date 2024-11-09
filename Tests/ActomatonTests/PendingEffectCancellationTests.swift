@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Tests for `Effect.cancel` to cancel pending effects by `Oldest1SuspendNewEffectQueueProtocol`.
 final class PendingEffectCancellationTests: XCTestCase
@@ -90,6 +92,7 @@ final class PendingEffectCancellationTests: XCTestCase
         )
         self.actomaton = actomaton
 
+#if canImport(Combine)
         var cancellables: [AnyCancellable] = []
 
         await actomaton.$state
@@ -97,6 +100,7 @@ final class PendingEffectCancellationTests: XCTestCase
                 Debug.print("publisher: state = \(state)")
             })
             .store(in: &cancellables)
+#endif
     }
 
     func test_noCancel() async throws

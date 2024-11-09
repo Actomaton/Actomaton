@@ -1,8 +1,6 @@
 import XCTest
 @testable import Actomaton
 
-import Combine
-
 final class CounterTests: XCTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!

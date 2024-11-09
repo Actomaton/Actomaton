@@ -1,3 +1,4 @@
+#if canImport(Combine)
 import Combine
 
 /// `MainActomaton` wrapper that handles both `Action` as indirect messaging
@@ -120,3 +121,5 @@ private func lift<Action, State, Environment>(
         }
     }
 }
+
+#endif

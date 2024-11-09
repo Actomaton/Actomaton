@@ -1,3 +1,4 @@
+#if canImport(Combine)
 import Combine
 
 /// Read-only `CurrentValueSubject` with sharing original value on `map`.
@@ -54,3 +55,5 @@ extension CurrentValuePublisher: Publisher
     public typealias Output = Value
     public typealias Failure = Never
 }
+
+#endif

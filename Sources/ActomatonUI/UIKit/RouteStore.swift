@@ -1,3 +1,5 @@
+#if canImport(Combine)
+
 import Dispatch
 import Combine
 
@@ -317,3 +319,5 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
         }
     }
 }
+
+#endif
