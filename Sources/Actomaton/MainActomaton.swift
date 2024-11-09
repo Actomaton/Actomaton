@@ -50,9 +50,7 @@ package final class MainActomaton2<Action, State>: MainActomaton
     where Action: Sendable, State: Sendable
 {
 #if os(Linux)
-    package var state: State {
-        actomaton.state
-    }
+    package private(set) var state: State
 #else
     @Published
     package private(set) var state: State
@@ -77,8 +75,9 @@ package final class MainActomaton2<Action, State>: MainActomaton
             reducer: reducer,
             executingActor: MainActor.shared
         )
-#if !os(Linux)
         self.state = state
+
+#if !os(Linux)
 
         let states = self.actomaton.assumeIsolated { actomaton in
             actomaton.$state.values.dropFirst()

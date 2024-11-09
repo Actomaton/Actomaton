@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Tests for `EffectQueueProtocol` with `EffectQueuePolicy.runOldest(maxCount: n, .suspendNew)`.
 final class RunOldestSuspendNewTests: XCTestCase

@@ -1,3 +1,4 @@
+#if canImport(SwiftUI)
 import SwiftUI
 
 /// Observable ``ViewStore`` holder view that is created from unobservable ``Store``.
@@ -67,3 +68,5 @@ public struct WithViewStore<Action, State, Content>: View
         self.content(self.viewStore)
     }
 }
+
+#endif

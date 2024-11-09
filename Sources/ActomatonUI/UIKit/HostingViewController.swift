@@ -1,4 +1,4 @@
-#if os(iOS) || os(tvOS)
+#if canImport(UIKit) && canImport(SwiftUI) && !os(watchOS)
 
 import UIKit
 import Combine

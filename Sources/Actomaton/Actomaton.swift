@@ -52,7 +52,11 @@ public actor Actomaton<Action, State>
         executingActor: any Actor
     )
     {
+#if os(Linux)
+        self.state = state
+#else
         self._state = Published(initialValue: state)
+#endif
         self.reducer = reducer
         self.executingActor = executingActor
     }
@@ -185,7 +189,7 @@ public actor Actomaton<Action, State>
     }
 }
 
-extension Actomaton 
+extension Actomaton
 {
     public nonisolated var unownedExecutor: UnownedSerialExecutor
     {

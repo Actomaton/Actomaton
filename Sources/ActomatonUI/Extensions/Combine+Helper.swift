@@ -1,3 +1,4 @@
+#if canImport(Combine)
 import Combine
 
 extension Publisher where Output: Sendable
@@ -50,3 +51,4 @@ extension Publisher where Output: Sendable
         }
     }
 }
+#endif

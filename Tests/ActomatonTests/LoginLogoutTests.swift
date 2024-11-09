@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 final class LoginLogoutTests: XCTestCase
 {
@@ -73,6 +75,7 @@ final class LoginLogoutTests: XCTestCase
         )
         self.actomaton = actomaton
 
+#if canImport(Combine)
         var cancellables: [AnyCancellable] = []
 
         await actomaton.$state
@@ -80,6 +83,7 @@ final class LoginLogoutTests: XCTestCase
                 Debug.print("publisher: state = \(state)")
             })
             .store(in: &cancellables)
+#endif
     }
 
     func test_noChange_wrongAction() async throws

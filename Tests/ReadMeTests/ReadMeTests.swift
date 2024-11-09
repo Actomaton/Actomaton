@@ -2,7 +2,9 @@ import XCTest
 import Foundation
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Compile-only test for README.
 private func readMe1_4() async throws

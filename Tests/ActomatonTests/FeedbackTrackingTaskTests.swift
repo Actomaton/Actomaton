@@ -1,7 +1,9 @@
 import XCTest
 @testable import Actomaton
 
+#if canImport(Combine)
 import Combine
+#endif
 
 /// Tests for `actomaton.send`'s returned `Task`.
 final class FeedbackTrackingTaskTests: XCTestCase
@@ -102,6 +104,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
         )
         self.actomaton = actomaton
 
+#if canImport(Combine)
         var cancellables: [AnyCancellable] = []
 
         await actomaton.$state
@@ -109,6 +112,7 @@ final class FeedbackTrackingTaskTests: XCTestCase
                 Debug.print("publisher: state = \(state)")
             })
             .store(in: &cancellables)
+#endif
     }
 
     func test_no_tracksFeedbacks() async throws
