@@ -7,10 +7,10 @@ import Foundation
 public actor Actomaton<Action, State>
     where Action: Sendable, State: Sendable
 {
-#if os(Linux)
+#if canImport(Combine)
+    @Published
     public private(set) var state: State
 #else
-    @Published
     public private(set) var state: State
 #endif
 
@@ -52,10 +52,10 @@ public actor Actomaton<Action, State>
         executingActor: any Actor
     )
     {
-#if os(Linux)
-        self.state = state
-#else
+#if canImport(Combine)
         self._state = Published(initialValue: state)
+#else
+        self.state = state
 #endif
         self.reducer = reducer
         self.executingActor = executingActor
