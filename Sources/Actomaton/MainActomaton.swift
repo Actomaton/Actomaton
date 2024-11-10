@@ -1,5 +1,5 @@
 import Foundation
-#if !os(Linux)
+#if canImport(Combine)
 import Combine
 #endif
 
@@ -17,7 +17,7 @@ package protocol MainActomaton<Action, State> {
 
     var state: State { get }
 
-#if !os(Linux)
+#if canImport(Combine)
     var statePublisher: AnyPublisher<State, Never> { get }
 #endif
 
@@ -49,15 +49,15 @@ package protocol MainActomaton<Action, State> {
 package final class MainActomaton2<Action, State>: MainActomaton
     where Action: Sendable, State: Sendable
 {
-#if os(Linux)
-    package private(set) var state: State
-#else
+#if canImport(Combine)
     @Published
     package private(set) var state: State
 
     package var statePublisher: AnyPublisher<State, Never> {
         self.$state.eraseToAnyPublisher()
     }
+#else
+    package private(set) var state: State
 #endif
 
     private let actomaton: Actomaton<Action, State>
@@ -77,8 +77,7 @@ package final class MainActomaton2<Action, State>: MainActomaton
         )
         self.state = state
 
-#if !os(Linux)
-
+#if canImport(Combine)
         let states = self.actomaton.assumeIsolated { actomaton in
             actomaton.$state.values.dropFirst()
         }
@@ -142,15 +141,15 @@ package final class MainActomaton2<Action, State>: MainActomaton
 package final class MainActomaton1<Action, State>: MainActomaton
     where Action: Sendable, State: Sendable
 {
-#if os(Linux)
-    package private(set) var state: State
-#else
+#if canImport(Combine)
     @Published
     package private(set) var state: State
 
     package var statePublisher: AnyPublisher<State, Never> {
         self.$state.eraseToAnyPublisher()
     }
+#else
+    package private(set) var state: State
 #endif
 
     /// State-transforming function wrapper that is triggered by Action.
