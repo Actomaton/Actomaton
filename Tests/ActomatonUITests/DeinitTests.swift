@@ -1,3 +1,5 @@
+#if canImport(Combine)
+
 import XCTest
 @testable import ActomatonUI
 
@@ -92,3 +94,5 @@ private actor DeinitChecker
         }
     }
 }
+
+#endif
