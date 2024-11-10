@@ -40,6 +40,9 @@ final class DeinitTests: MainTestCase
         // Wait until deinit fully completes.
         try? await task?.value
 
+        // Wait another 10ms for reliable deinit completion.
+        try await Task.sleep(nanoseconds: 10_000_000)
+
         // Check results.
         //
         // NOTE:
