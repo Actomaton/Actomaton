@@ -6,7 +6,7 @@ import Combine
 #endif
 
 /// Tests for `Effect.cancel` to cancel pending effects by `Oldest1SuspendNewEffectQueueProtocol`.
-final class PendingEffectCancellationTests: XCTestCase
+final class PendingEffectCancellationTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 

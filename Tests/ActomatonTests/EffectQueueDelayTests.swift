@@ -6,7 +6,7 @@ import Combine
 #endif
 
 /// Tests for `EffectQueueDelay`.
-final class EffectQueueDelayTests: XCTestCase
+final class EffectQueueDelayTests: MainTestCase
 {
     private func makeActomaton<Queue: EffectQueueProtocol>(
         queue: Queue,

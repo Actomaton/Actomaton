@@ -1,6 +1,10 @@
 // swift-tools-version:6.0
 
+import Foundation
 import PackageDescription
+
+// `$ TEST_MAIN_ACTOR=1 swift test`
+let usesMainActorInTest = ProcessInfo.processInfo.environment["TEST_MAIN_ACTOR"] == "1"
 
 let package = Package(
     name: "Actomaton",
@@ -16,7 +20,11 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
         .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0")
-    ],
+    ] + (
+        usesMainActorInTest ? [
+            .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", from: "1.1.0")
+        ] : []
+    ),
     targets: [
         .target(
             name: "Actomaton",
@@ -36,7 +44,11 @@ let package = Package(
             ]),
         .target(
             name: "TestFixtures",
-            dependencies: ["Actomaton"],
+            dependencies: ["Actomaton"] + (
+                usesMainActorInTest ? [
+                    .product(name: "ConcurrencyExtras", package: "swift-concurrency-extras")
+                ] : []
+            ),
             path: "./Tests/TestFixtures"
         ),
         .testTarget(
@@ -52,5 +64,5 @@ let package = Package(
             dependencies: ["Actomaton", "ActomatonDebugging"]
         )
     ],
-    swiftLanguageVersions: [.version("6")]
+    swiftLanguageModes: [.v6]
 )

@@ -1,11 +1,11 @@
-# NOTE: Async tests are currently disabled due to its indeterminacy nature of effectful computation.
-
 PLATFORM_IOS = iOS Simulator,id=$(call udid_for,iOS,iPhone \d\+ Pro [^M])
 PLATFORM_MACOS = macOS
 PLATFORM_MAC_CATALYST = macOS,variant=Mac Catalyst
 PLATFORM_TVOS = tvOS Simulator,id=$(call udid_for,tvOS,TV)
 PLATFORM_VISIONOS = visionOS Simulator,id=$(call udid_for,visionOS,Vision)
 PLATFORM_WATCHOS = watchOS Simulator,id=$(call udid_for,watchOS,Watch)
+
+TEST_MAIN_ACTOR = 1
 
 # Base path after host name, required for GitHub Pages.
 # Note that `documentation/{module_name}` is automatically added to the end of this path in Swift-DocC,
@@ -16,34 +16,28 @@ DOCBUILD_BUILD_DIR := .docbuild
 DOCBUILD_PRODUCT_DIR := $(DOCBUILD_BUILD_DIR)/Build/Products/Debug-iphonesimulator
 DOCBUILD_OUTPUT_DIR := docbuild
 
-.PHONY: build-macOS
-build-macOS:
-	$(MAKE) build DESTINATION='$(PLATFORM_MACOS)'
+# e.g. `make xcode-build OS=iOS`
+.PHONY: xcode-build
+xcode-build:
+	$(MAKE) _xcode ACTION="clean build"
 
-.PHONY: build-iOS
-build-iOS:
-	$(MAKE) build DESTINATION='$(PLATFORM_IOS)'
+# e.g. `make xcode-test OS=iOS`
+# WARNING: Swift Concurrency does not work well on GitHub Actions Mac runners.
+.PHONY: xcode-test
+xcode-test:
+	$(MAKE) _xcode ACTION="clean build test"
 
-.PHONY: build-watchOS
-build-watchOS:
-	$(MAKE) build DESTINATION='$(PLATFORM_WATCHOS)'
+.PHONY: _xcode
+_xcode:
+	set -o pipefail && TEST_MAIN_ACTOR=$(TEST_MAIN_ACTOR) xcodebuild $(ACTION) -scheme Actomaton-Package -destination 'platform=$(PLATFORM_$(shell echo $(OS) | tr '[:lower:]' '[:upper:]'))' | xcpretty
 
-.PHONY: build-tvOS
-build-tvOS:
-	$(MAKE) build DESTINATION='$(PLATFORM_TVOS)'
+.PHONY: swift-test
+swift-test:
+	TEST_MAIN_ACTOR=$(TEST_MAIN_ACTOR) swift test
 
-.PHONY: build-macCatalyst
-build-macCatalyst:
-	$(MAKE) build DESTINATION='$(PLATFORM_MAC_CATALYST)'
-
-.PHONY: build-visionOS
-build-visionOS:
-	$(MAKE) build DESTINATION='$(PLATFORM_VISIONOS)'
-
-.PHONY: build
-build:
-	set -o pipefail && \
-		xcodebuild build -scheme Actomaton-Package -destination 'platform=${DESTINATION}' | xcpretty
+#--------------------------------------------------
+# DocC
+#--------------------------------------------------
 
 .PHONY: docs
 docs:

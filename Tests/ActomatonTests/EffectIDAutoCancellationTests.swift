@@ -6,7 +6,7 @@ import Combine
 #endif
 
 /// Tests for `Newest1EffectQueueProtocol` where previous effect will be automatically cancelled by the next effect.
-final class EffectIDAutoCancellationTests: XCTestCase
+final class EffectIDAutoCancellationTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
 
