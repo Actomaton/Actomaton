@@ -18,7 +18,7 @@ final class TimerTests: MainTestCase
             AsyncStream<()> { continuation in
                 let task = Task {
                     while true {
-                        try await tick(1)
+                        try await tick(2)
                         continuation.yield(())
                     }
                 }
@@ -65,13 +65,13 @@ final class TimerTests: MainTestCase
 
         assertEqual(await actomaton.state, 0)
 
-        try await tick(1.3)
+        try await tick(2.3)
         assertEqual(await actomaton.state, 1)
 
-        try await tick(1.3)
+        try await tick(2.3)
         assertEqual(await actomaton.state, 2)
 
-        try await tick(1.3)
+        try await tick(2.3)
         assertEqual(await actomaton.state, 3)
 
         await actomaton.send(.stop)
