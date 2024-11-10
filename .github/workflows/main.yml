@@ -12,6 +12,7 @@ on:
 
 jobs:
   xcodebuild:
+    name: Xcode ${{ matrix.xcode }} build ${{ matrix.platform }}
     runs-on: macos-14
     strategy:
       matrix:
@@ -22,17 +23,19 @@ jobs:
     - name: Select Xcode ${{ matrix.xcode }}
       run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
     - name: Build ${{ matrix.platform }} package
-      run: make build-${{ matrix.platform}}
+      run: make xcode-build OS=${{ matrix.platform}}
 
   ubuntu:
+    name: Ubuntu test (Swift ${{ matrix.swift }})
+    runs-on: ubuntu-latest
+    container: swift:${{ matrix.swift }}
     strategy:
       matrix:
         swift:
           - '6.0.2'
-    name: Ubuntu (Swift ${{ matrix.swift }})
-    runs-on: ubuntu-latest
-    container: swift:${{ matrix.swift }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build Ubuntu upackage
-        run: swift build
+
+      # NOTE: `make` command not available in the container.
+      - name: Build Ubuntu package
+        run: TEST_MAIN_ACTOR=1 swift test
