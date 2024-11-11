@@ -10,8 +10,18 @@ public actor Actomaton<Action, State>
 #if canImport(Combine)
     @Published
     public private(set) var state: State
+    {
+        willSet {
+            willChangeState(self, state, newValue)
+        }
+    }
 #else
     public private(set) var state: State
+    {
+        willSet {
+            willChangeState(self, state, newValue)
+        }
+    }
 #endif
 
     /// State-transforming function wrapper that is triggered by Action.
@@ -33,6 +43,10 @@ public actor Actomaton<Action, State>
     /// Underlying actor that replaces Actomaton's `unownedExecutor`.
     private let executingActor: any Actor
 
+    /// State change handler, mainly used for synchronizing with `MainActomaton`'s `@Published state`.
+    /// - Todo: Expose this handler (setter) as `public`, as this handler is useful in Linux which `@Published` is not available.
+    private let willChangeState: (_ isolation: isolated Actomaton, _ old: State, _ new: State) -> Void
+
     /// Initializer without `environment`.
     public init(
         state: State,
@@ -49,7 +63,8 @@ public actor Actomaton<Action, State>
     internal init(
         state: State,
         reducer: Reducer<Action, State, ()>,
-        executingActor: any Actor
+        executingActor: any Actor,
+        willChangeState: @escaping (_ isolation: isolated Actomaton, _ old: State, _ new: State) -> Void = { _, _, _ in }
     )
     {
 #if canImport(Combine)
@@ -59,6 +74,7 @@ public actor Actomaton<Action, State>
 #endif
         self.reducer = reducer
         self.executingActor = executingActor
+        self.willChangeState = willChangeState
     }
 
     /// Initializer with `environment`.

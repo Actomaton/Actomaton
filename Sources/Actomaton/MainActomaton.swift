@@ -57,12 +57,15 @@ package final class MainActomaton2<Action, State>: MainActomaton
         self.$state.eraseToAnyPublisher()
     }
 #else
-    package private(set) var state: State
+    package var state: State
+    {
+        self.actomaton.assumeIsolated { actomaton in
+            actomaton.state
+        }
+    }
 #endif
 
     private let actomaton: Actomaton<Action, State>
-
-    private var stateTask: Task<Void, Never>?
 
     /// Initializer without `environment`.
     package init(
@@ -70,22 +73,26 @@ package final class MainActomaton2<Action, State>: MainActomaton
         reducer: Reducer<Action, State, ()>
     )
     {
+        var willChangeState: (@MainActor (_ old: State, _ new: State) -> Void)?
+
         self.actomaton = Actomaton(
             state: state,
             reducer: reducer,
-            executingActor: MainActor.shared
+            executingActor: MainActor.shared,
+            willChangeState: { @Sendable _, old, new in
+                MainActor.assumeIsolated {
+                    willChangeState?(old, new)
+                }
+            }
         )
+
+#if !DISABLE_COMBINE && canImport(Combine)
+        // Set `MainActomaton`'s `@Published` initial state.
         self.state = state
 
-#if canImport(Combine)
-        let states = self.actomaton.assumeIsolated { actomaton in
-            actomaton.$state.values.dropFirst()
-        }
-
-        self.stateTask = Task { @MainActor [weak self] in
-            for await state in states {
-                self?.state = state
-            }
+        // Update `MainActomaton`'s `@Published` state.
+        willChangeState = { [weak self] old, new in
+            self?.state = new
         }
 #endif
     }
@@ -100,10 +107,6 @@ package final class MainActomaton2<Action, State>: MainActomaton
         self.init(state: state, reducer: Reducer { action, state, _ in
             reducer.run(action, &state, environment)
         })
-    }
-
-    deinit {
-        stateTask?.cancel()
     }
 
     /// Sends `action` to `Actomaton`.
