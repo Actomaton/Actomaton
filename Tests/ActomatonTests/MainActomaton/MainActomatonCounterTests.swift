@@ -1,7 +1,7 @@
 import XCTest
 @testable import Actomaton
 
-#if USE_COMBINE && canImport(Combine)
+#if canImport(Combine)
 import Combine
 #endif
 
