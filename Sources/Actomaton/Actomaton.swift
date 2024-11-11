@@ -7,7 +7,7 @@ import Foundation
 public actor Actomaton<Action, State>
     where Action: Sendable, State: Sendable
 {
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
     @Published
     public private(set) var state: State
     {
@@ -67,7 +67,7 @@ public actor Actomaton<Action, State>
         willChangeState: @escaping (_ isolation: isolated Actomaton, _ old: State, _ new: State) -> Void = { _, _, _ in }
     )
     {
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
         self._state = Published(initialValue: state)
 #else
         self.state = state

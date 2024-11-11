@@ -1,5 +1,5 @@
 import Foundation
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
 import Combine
 #endif
 
@@ -17,7 +17,7 @@ package protocol MainActomaton<Action, State> {
 
     var state: State { get }
 
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
     var statePublisher: AnyPublisher<State, Never> { get }
 #endif
 
@@ -49,7 +49,7 @@ package protocol MainActomaton<Action, State> {
 package final class MainActomaton2<Action, State>: MainActomaton
     where Action: Sendable, State: Sendable
 {
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
     @Published
     package private(set) var state: State
 
@@ -144,7 +144,7 @@ package final class MainActomaton2<Action, State>: MainActomaton
 package final class MainActomaton1<Action, State>: MainActomaton
     where Action: Sendable, State: Sendable
 {
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
     @Published
     package private(set) var state: State
 

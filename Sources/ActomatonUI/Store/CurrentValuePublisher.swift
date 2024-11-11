@@ -1,4 +1,4 @@
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
 import Combine
 
 /// Read-only `CurrentValueSubject` with sharing original value on `map`.

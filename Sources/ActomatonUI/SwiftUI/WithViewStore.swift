@@ -1,4 +1,4 @@
-#if canImport(SwiftUI)
+#if !DISABLE_COMBINE && canImport(Combine) && canImport(SwiftUI)
 import SwiftUI
 
 /// Observable ``ViewStore`` holder view that is created from unobservable ``Store``.

@@ -1,7 +1,7 @@
 import XCTest
 @testable import Actomaton
 
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
 import Combine
 #endif
 
@@ -95,7 +95,7 @@ final class EffectCancellationTests: MainTestCase
         )
         self.actomaton = actomaton
 
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
         var cancellables: [AnyCancellable] = []
 
         await actomaton.$state

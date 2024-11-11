@@ -66,3 +66,12 @@ let package = Package(
     ],
     swiftLanguageModes: [.v6]
 )
+
+//for target in package.targets {
+//    if target.swiftSettings == nil {
+//        target.swiftSettings = []
+//    }
+//
+//    // Simulates Linux build settings from macOS Xcode build.
+//    target.swiftSettings?.append(.define("DISABLE_COMBINE"))
+//}
