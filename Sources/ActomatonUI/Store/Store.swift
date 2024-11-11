@@ -57,7 +57,7 @@ public class Store<Action, State, Environment>
     /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
     public let environment: Environment
 
-    private let _send: @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
+    private let _send: @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), any Error>?
 
     /// Initializer with `environment`.
     public convenience init(
@@ -100,7 +100,7 @@ public class Store<Action, State, Environment>
     internal init(
         state: CurrentValuePublisher<State>,
         environment: Environment,
-        send: @escaping @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), Error>?
+        send: @escaping @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), any Error>?
     )
     {
         self._state = state
@@ -125,7 +125,7 @@ public class Store<Action, State, Environment>
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Error>?
+    ) -> Task<(), any Error>?
     {
         self._send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
@@ -136,7 +136,7 @@ public class Store<Action, State, Environment>
         _ action: BindableAction<Action, State>,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Error>?
+    ) -> Task<(), any Error>?
     {
         self._send(action, priority, tracksFeedbacks)
     }

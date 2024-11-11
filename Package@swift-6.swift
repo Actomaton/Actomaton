@@ -74,4 +74,6 @@ let package = Package(
 //
 //    // Simulates Linux build settings from macOS Xcode build.
 //    target.swiftSettings?.append(.define("DISABLE_COMBINE"))
+//
+//    target.swiftSettings?.append(.enableUpcomingFeature("ExistentialAny"))
 //}

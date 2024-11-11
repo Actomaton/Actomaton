@@ -307,13 +307,13 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
     ///
     /// - Returns: `AsyncThrowingStream<Value, Error>` from routed destination.
     public func sendRouteAsyncStream<Value>(
-        _ makeRoute: @escaping (AsyncThrowingStream<Value, Swift.Error>.Continuation) -> Route
-    ) -> AsyncThrowingStream<Value, Swift.Error>
+        _ makeRoute: @escaping (AsyncThrowingStream<Value, any Error>.Continuation) -> Route
+    ) -> AsyncThrowingStream<Value, any Error>
     {
         // NOTE:
         // Need to use `Swift.Error` and can't make it as generic error type
         // due to `AsyncThrowingStream.init` having equality constraint.
-        AsyncThrowingStream<Value, Swift.Error> { continuation in
+        AsyncThrowingStream<Value, any Error> { continuation in
             let route = makeRoute(continuation)
             self.sendRoute(route)
         }
