@@ -1,4 +1,4 @@
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
 import Combine
 
 // TODO: Remove `@unchecked Sendable` when `Sendable` is supported by each module.

@@ -1,4 +1,4 @@
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
 
 import Dispatch
 import Combine

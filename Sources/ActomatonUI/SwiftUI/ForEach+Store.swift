@@ -1,4 +1,4 @@
-#if canImport(SwiftUI)
+#if !DISABLE_COMBINE && canImport(Combine) && canImport(SwiftUI)
 import SwiftUI
 
 extension ForEach

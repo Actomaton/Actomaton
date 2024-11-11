@@ -1,4 +1,4 @@
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
 
 /// `MainActomaton`-erased wrapper which can ``map(state:)`` into sub-store.
 ///

@@ -2,7 +2,7 @@ import XCTest
 import Foundation
 @testable import Actomaton
 
-#if canImport(Combine)
+#if !DISABLE_COMBINE && canImport(Combine)
 import Combine
 #endif
 
