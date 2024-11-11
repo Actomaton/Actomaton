@@ -85,7 +85,7 @@ internal final class StoreCore<Action, State, Environment>
         _ action: BindableAction<Action, State>,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Error>?
+    ) -> Task<(), any Error>?
     {
         switch action {
         case let .action(action):

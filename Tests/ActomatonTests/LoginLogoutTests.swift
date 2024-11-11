@@ -100,7 +100,7 @@ final class LoginLogoutTests: MainTestCase
     // `loggedOut => loggingIn => loggedIn => loggingOut => loggedOut` succeeds.
     func test_login_logout() async throws
     {
-        var t: Task<(), Error>?
+        var t: Task<(), any Error>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -123,7 +123,7 @@ final class LoginLogoutTests: MainTestCase
     // `loggedOut => loggingIn ==(ForceLogout)==> loggingOut => loggedOut` succeeds.
     func test_login_forceLogout() async throws
     {
-        var t: Task<(), Error>?
+        var t: Task<(), any Error>?
 
         assertEqual(await actomaton.state, .loggedOut)
 

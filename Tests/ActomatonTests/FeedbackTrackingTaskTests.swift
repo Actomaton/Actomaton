@@ -48,7 +48,7 @@ final class FeedbackTrackingTaskTests: MainTestCase
                     state = ._4(count: 0)
                     return Effect(sequence: {
                         AsyncStream<Action> { continuation in
-                            let task = Task<(), Error> {
+                            let task = Task<(), any Error> {
                                 for _ in 1 ... 2 {
                                     try await tick(1) {
                                         continuation.yield(._increment)

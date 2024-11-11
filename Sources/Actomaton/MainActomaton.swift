@@ -38,7 +38,7 @@ package protocol MainActomaton<Action, State> {
         _ action: Action,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
-    ) -> Task<(), Error>?
+    ) -> Task<(), any Error>?
 }
 
 // MARK: - MainActomaton Ver 2
@@ -126,7 +126,7 @@ package final class MainActomaton2<Action, State>: MainActomaton
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Error>?
+    ) -> Task<(), any Error>?
     {
         self.actomaton.assumeIsolated { actomaton in
             actomaton.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
@@ -160,10 +160,10 @@ package final class MainActomaton1<Action, State>: MainActomaton
 
     /// Effect-identified running tasks for manual cancellation or on-deinit cancellation.
     /// - Note: Multiple effects can have same ``EffectID``.
-    private var runningTasks: [EffectID: Set<Task<(), Error>>] = [:]
+    private var runningTasks: [EffectID: Set<Task<(), any Error>>] = [:]
 
     /// Effect-queue-designated running tasks for automatic cancellation & suspension.
-    private var queuedRunningTasks: [EffectQueue: [Task<(), Error>]] = [:]
+    private var queuedRunningTasks: [EffectQueue: [Task<(), any Error>]] = [:]
 
     /// Suspended effects.
     private var pendingEffectKinds: [EffectQueue: [Effect<Action>.Kind]] = [:]
@@ -215,12 +215,12 @@ package final class MainActomaton1<Action, State>: MainActomaton
                 if let effectKind = pendingEffectKinds[effectQueue]?.remove(at: i) {
                     switch effectKind {
                     case let .single(single):
-                        Task<Void, Error>.detached {
+                        Task<Void, any Error>.detached {
                             _ = try await single.run()
                         }
                         .cancel() // Cancel immediately.
                     case let .sequence(sequence):
-                        Task<Void, Error>.detached {
+                        Task<Void, any Error>.detached {
                             _ = try await sequence.sequence()
                         }
                         .cancel() // Cancel immediately.
@@ -251,13 +251,13 @@ package final class MainActomaton1<Action, State>: MainActomaton
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Error>?
+    ) -> Task<(), any Error>?
     {
         Debug.print("[send] \(action), priority = \(String(describing: priority)), tracksFeedbacks = \(tracksFeedbacks)")
 
         let effect = reducer.run(action, &state, ())
 
-        var tasks: [Task<(), Error>] = []
+        var tasks: [Task<(), any Error>] = []
 
         for effectKind in effect.kinds {
             if let task = performEffectKind(effectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
@@ -291,7 +291,7 @@ extension MainActomaton1
         _ effectKind: Effect<Action>.Kind,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), Error>?
+    ) -> Task<(), any Error>?
     {
         switch effectKind {
         case let .single(single):
@@ -391,7 +391,7 @@ extension MainActomaton1
         delay: TimeInterval,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
-    ) -> Task<(), Error>
+    ) -> Task<(), any Error>
     {
         let task = Task.detached(priority: priority) { [weak self] in
             if delay > 0 {
@@ -423,9 +423,9 @@ extension MainActomaton1
         delay: TimeInterval,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
-    ) -> Task<(), Error>
+    ) -> Task<(), any Error>
     {
-        let task = Task<(), Error>.detached(priority: priority) { [weak self] in
+        let task = Task<(), any Error>.detached(priority: priority) { [weak self] in
             if delay > 0 {
                 // NOTE:
                 // In case of cancellation, this `sleep` should not early-exit here
@@ -435,7 +435,7 @@ extension MainActomaton1
 
             guard let seq = try await sequence.sequence() else { return }
 
-            var feedbackTasks: [Task<(), Error>] = []
+            var feedbackTasks: [Task<(), any Error>] = []
 
             for try await nextAction in seq {
                 // Feed back `nextAction`.
@@ -466,7 +466,7 @@ extension MainActomaton1
 
     /// Enqueues running `task` or pending `effectKind` to the buffer, and dequeue after completed.
     private func enqueueTask(
-        _ task: Task<(), Error>,
+        _ task: Task<(), any Error>,
         id: EffectID?,
         queue: AnyEffectQueue?,
         priority: TaskPriority?,
@@ -485,7 +485,7 @@ extension MainActomaton1
         }
 
         // Clean up after `task` is completed.
-        Task<(), Error>.detached(priority: priority) { [weak self] in
+        Task<(), any Error>.detached(priority: priority) { [weak self] in
             // Wait for `task` to complete.
             try await task.value
 
@@ -515,12 +515,12 @@ extension MainActomaton1
         }
     }
 
-    private func removeTask(id: EffectID, task: Task<(), Error>)
+    private func removeTask(id: EffectID, task: Task<(), any Error>)
     {
         self.runningTasks[id]?.remove(task)
     }
 
-    private func removeTaskIfNeeded(task: Task<(), Error>, in queue: AnyEffectQueue)
+    private func removeTaskIfNeeded(task: Task<(), any Error>, in queue: AnyEffectQueue)
     {
         // NOTE: Finding `removingIndex` and `remove` must be atomic.
         if let removingIndex = self.queuedRunningTasks[queue.queue]?.firstIndex(where: { $0 == task }) {
@@ -566,12 +566,12 @@ extension MainActomaton1
     {
         switch effectKind {
         case let .single(single):
-            Task<Void, Error>.detached {
+            Task<Void, any Error>.detached {
                 _ = try await single.run()
             }
             .cancel() // Cancel immediately.
         case let .sequence(sequence):
-            Task<Void, Error>.detached {
+            Task<Void, any Error>.detached {
                 _ = try await sequence.sequence()
             }
             .cancel() // Cancel immediately.

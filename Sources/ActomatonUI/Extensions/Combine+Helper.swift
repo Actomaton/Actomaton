@@ -4,9 +4,9 @@ import Combine
 extension Publisher where Output: Sendable
 {
     /// `Publisher` to `AsyncThrowingStream`.
-    public func toAsyncThrowingStream() -> AsyncThrowingStream<Output, Swift.Error>
+    public func toAsyncThrowingStream() -> AsyncThrowingStream<Output, any Error>
     {
-        AsyncThrowingStream<Output, Swift.Error>(Output.self) { continuation in
+        AsyncThrowingStream<Output, any Error>(Output.self) { continuation in
             let cancellable = self
                 .sink(
                     receiveCompletion: { completion in
