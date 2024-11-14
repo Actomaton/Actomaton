@@ -11,12 +11,28 @@ on:
   pull_request:
 
 jobs:
-  xcodebuild:
+  xcode15-build:
     name: Xcode ${{ matrix.xcode }} build ${{ matrix.platform }}
     runs-on: macos-14
     strategy:
       matrix:
-        xcode: ["15.4", "16.0"]
+        xcode: ["15.4"]
+        platform: ["iOS", "macOS", "watchOS", "tvOS"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Select Xcode ${{ matrix.xcode }}
+      run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
+    - name: Build ${{ matrix.platform }} package
+      run: make xcode-build OS=${{ matrix.platform}}
+
+  # macos-14 runner: intermittent "invalid developer directory" when installing Xcode 16.0
+  # https://github.com/actions/runner/issues/3543#issuecomment-2475016376
+  xcode16-build:
+    name: Xcode ${{ matrix.xcode }} build ${{ matrix.platform }}
+    runs-on: macos-15
+    strategy:
+      matrix:
+        xcode: ["16.0"]
         platform: ["iOS", "macOS", "watchOS", "tvOS"]
     steps:
     - uses: actions/checkout@v4
