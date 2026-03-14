@@ -27,13 +27,13 @@ extension ForEach
         self.init(
             Array(zip(state.indices, state)),
             id: firstKeyPath.appending(path: id)
-        ) { index, child in
+        ) { index, _ in
             // IMPORTANT:
             // Safe array access is needed to avoid `ContiguousArrayBuffer` index out of range error.
             // https://stackoverflow.com/questions/59295206/how-do-you-use-enumerated-with-foreach-in-swiftui/63145650
             let substore = store.map(state: \.[safe: index]).optionalize()
 
-            if let substore = substore {
+            if let substore {
                 content(substore)
             }
         }

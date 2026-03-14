@@ -15,7 +15,8 @@ public struct EffectQueue: Hashable, Sendable
     }
 }
 
-/// A protocol that every effect queue should conform to, for automatic cancellation of existing tasks or suspending of new effects.
+/// A protocol that every effect queue should conform to, for automatic cancellation of existing tasks or suspending of
+/// new effects.
 public protocol EffectQueueProtocol: Hashable, Sendable
 {
     /// Effect buffering policy.

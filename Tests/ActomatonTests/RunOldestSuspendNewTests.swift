@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -70,14 +70,20 @@ final class RunOldestSuspendNewTests: MainTestCase
         // Wait until 1st effect is finished.
         try await tick(1.5)
 
-        assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 1),
-                    "`effectCompletedCount` should increment by 1 because of `OldestSuspendNewEffectQueue`.")
+        assertEqual(
+            await actomaton.state,
+            State(count: 2, effectCompletedCount: 1),
+            "`effectCompletedCount` should increment by 1 because of `OldestSuspendNewEffectQueue`."
+        )
 
         // Wait until 2nd effect is finished.
         try await tick(1.5)
 
-        assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 2),
-                    "`effectCompletedCount` should increment by 2 because of `OldestSuspendNewEffectQueue`.")
+        assertEqual(
+            await actomaton.state,
+            State(count: 2, effectCompletedCount: 2),
+            "`effectCompletedCount` should increment by 2 because of `OldestSuspendNewEffectQueue`."
+        )
 
         // 3rd `increment`.
         await actomaton.send(.increment)
@@ -112,14 +118,20 @@ final class RunOldestSuspendNewTests: MainTestCase
         // Wait until 1st & 2nd effect is finished.
         try await tick(1.5)
 
-        assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2),
-                    "`effectCompletedCount` should increment by 2 because of `OldestSuspendNewEffectQueue`.")
+        assertEqual(
+            await actomaton.state,
+            State(count: 3, effectCompletedCount: 2),
+            "`effectCompletedCount` should increment by 2 because of `OldestSuspendNewEffectQueue`."
+        )
 
         // Wait until 3rd effect is finished.
         try await tick(1.5)
 
-        assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 3),
-                    "`effectCompletedCount` should increment by 3 because of `OldestSuspendNewEffectQueue`.")
+        assertEqual(
+            await actomaton.state,
+            State(count: 3, effectCompletedCount: 3),
+            "`effectCompletedCount` should increment by 3 because of `OldestSuspendNewEffectQueue`."
+        )
 
         // 4th `increment`.
         await actomaton.send(.increment)

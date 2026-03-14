@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -99,7 +99,6 @@ final class FeedbackTrackingTaskTests: MainTestCase
                         return nil
                     }
                 }
-
             }
         )
         self.actomaton = actomaton
@@ -126,11 +125,14 @@ final class FeedbackTrackingTaskTests: MainTestCase
         // Wait for `._1To2`'s effect only (upto `_2To3`'s next state-transition without its effect)
         try await task?.value
 
-        assertEqual(await actomaton.state, ._3,
-                    """
-                    "State should be `_3` because `._2To3` (next action and state change) will also be triggered
-                    as part of `._1To2`'s effect. (NOTE: `._2To3`'s effect won't be awaited)
-                    """)
+        assertEqual(
+            await actomaton.state,
+            ._3,
+            """
+            "State should be `_3` because `._2To3` (next action and state change) will also be triggered
+            as part of `._1To2`'s effect. (NOTE: `._2To3`'s effect won't be awaited)
+            """
+        )
 
         try await tick(1.3)
         assertEqual(await actomaton.state, ._4(count: 0))
@@ -142,8 +144,8 @@ final class FeedbackTrackingTaskTests: MainTestCase
         assertEqual(await actomaton.state, ._4(count: 2))
 
         // Comment-Out: A bit flaky to check this intermediate state, so ignore it.
-        //try await tick(1.3)
-        //assertEqual(await actomaton.state, ._5)
+        // try await tick(1.3)
+        // assertEqual(await actomaton.state, ._5)
 
         try await tick(2)
         assertEqual(await actomaton.state, ._6)
@@ -162,8 +164,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
         // Wait for all: `._1To2`, `._2To3`, `._3To4`, `._increment`, `._4To5`, `._5To6`.
         try await task?.value
 
-        assertEqual(await actomaton.state, ._6,
-                    "Should wait for final result `._6` because `tracksFeedbacks = true`")
+        assertEqual(
+            await actomaton.state,
+            ._6,
+            "Should wait for final result `._6` because `tracksFeedbacks = true`"
+        )
     }
 
     func test_tracksFeedbacks_sequence() async throws
@@ -179,8 +184,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
         // Wait for all: `._3To4`, `._increment`, `._4To5`, `._5To6`.
         try await task?.value
 
-        assertEqual(await actomaton.state, ._6,
-                    "Should wait for final result `._5` because `tracksFeedbacks = true`")
+        assertEqual(
+            await actomaton.state,
+            ._6,
+            "Should wait for final result `._5` because `tracksFeedbacks = true`"
+        )
     }
 }
 

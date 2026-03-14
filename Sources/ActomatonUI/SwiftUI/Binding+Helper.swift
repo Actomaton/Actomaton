@@ -1,6 +1,6 @@
 #if canImport(SwiftUI)
-import SwiftUI
 import CasePaths
+import SwiftUI
 
 // MARK: - Functor
 
@@ -45,7 +45,7 @@ extension Binding
                 casePath.extract(from: self.wrappedValue)
             },
             set: { value, transaction in
-                if let value = value {
+                if let value {
                     self.transaction(transaction).wrappedValue = casePath.embed(value)
                 }
             }

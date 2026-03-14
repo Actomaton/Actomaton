@@ -2,13 +2,15 @@
 import Combine
 import SwiftUI
 
-/// ``Store``'s `ObservableObject` proxy type that can create direct (state-to-state) & indirect (state-to-action) `Binding`s.
+/// ``Store``'s `ObservableObject` proxy type that can create direct (state-to-state) & indirect (state-to-action)
+/// `Binding`s.
 ///
 /// 1. Indirectly mutate `state` by ``binding(get:onChange:)`` and providing action "onChange"
 /// 2. Directly mutate `state` by ``directBinding``
 ///     - Updated state that passes through this `Binding` will NOT pass user-defined `Reducer`.
 ///
-/// Since ``Store`` is not capable of observing its state in SwiftUI, ``ViewStore`` is needed to be attached to SwiftUI view instead, either by:
+/// Since ``Store`` is not capable of observing its state in SwiftUI, ``ViewStore`` is needed to be attached to SwiftUI
+/// view instead, either by:
 ///
 /// 1. Create via ``Store/viewStore`` and attach to `SwiftUI.View` by writing
 ///   `@ObservedObject var viewStore: ViewStore<Action, State>`
@@ -126,7 +128,8 @@ extension ViewStore
         )
     }
 
-    /// Creates indirect `Binding<Bool>` as SwiftUI presentation binding from optional `State`, and sends `Action` on dismissal.
+    /// Creates indirect `Binding<Bool>` as SwiftUI presentation binding from optional `State`, and sends `Action` on
+    /// dismissal.
     public func isPresented<Wrapped>(onDismiss: @autoclosure @escaping () -> Action) -> Binding<Bool>
         where State == Wrapped?
     {

@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -69,8 +69,11 @@ final class RunNewestDiscardOldTests: MainTestCase
 
         try await tick(3)
 
-        assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 1),
-                    "`effectCompletedCount` should increment by 1 (not 2) because of `NewestEffectQueue`")
+        assertEqual(
+            await actomaton.state,
+            State(count: 2, effectCompletedCount: 1),
+            "`effectCompletedCount` should increment by 1 (not 2) because of `NewestEffectQueue`"
+        )
 
         // 3rd `increment`.
         await actomaton.send(.increment)
@@ -108,8 +111,11 @@ final class RunNewestDiscardOldTests: MainTestCase
 
         try await tick(5)
 
-        assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 2),
-                    "`effectCompletedCount` will increment by 2 because of `NewestEffectQueue`")
+        assertEqual(
+            await actomaton.state,
+            State(count: 4, effectCompletedCount: 2),
+            "`effectCompletedCount` will increment by 2 because of `NewestEffectQueue`"
+        )
 
         // 4th `increment`.
         await actomaton.send(.increment)

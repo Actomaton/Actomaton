@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 final class CounterTests: MainTestCase
 {

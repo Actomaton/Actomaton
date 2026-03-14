@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -107,8 +107,11 @@ final class EffectQueueDelayTests: MainTestCase
         assertEqual(await actomaton.state.finishedIDs, ["1", "2", "3", "4"])
 
         // ResultCollector
-        assertEqual(await startedIDs.results, ["1", "2", "3", "4"],
-                    "Should run all effects.")
+        assertEqual(
+            await startedIDs.results,
+            ["1", "2", "3", "4"],
+            "Should run all effects."
+        )
         assertEqual(await cancelledIDs.results, [])
     }
 
@@ -143,8 +146,11 @@ final class EffectQueueDelayTests: MainTestCase
         assertEqual(await actomaton.state.finishedIDs, ["3", "4"])
 
         // ResultCollector
-        assertEqual(await startedIDs.results, ["3", "4"],
-                    "Only last 2 should run effects.")
+        assertEqual(
+            await startedIDs.results,
+            ["3", "4"],
+            "Only last 2 should run effects."
+        )
 
         // NOTE: In Swift 6, cancellation arrival is indeterminate, so requires `sorted()`.
         assertEqual(await cancelledIDs.results.sorted(), ["1", "2"])
@@ -183,8 +189,11 @@ final class EffectQueueDelayTests: MainTestCase
         assertEqual(await actomaton.state.finishedIDs, ["1", "2", "3", "4"])
 
         // ResultCollector
-        assertEqual(await startedIDs.results, ["1", "2", "3", "4"],
-                    "Should run all effects.")
+        assertEqual(
+            await startedIDs.results,
+            ["1", "2", "3", "4"],
+            "Should run all effects."
+        )
         assertEqual(await cancelledIDs.results, [])
     }
 
@@ -215,8 +224,11 @@ final class EffectQueueDelayTests: MainTestCase
         assertEqual(await actomaton.state.finishedIDs, ["1", "2"])
 
         // ResultCollector
-        assertEqual(await startedIDs.results.sorted(), ["1", "2"],
-                    "Only first 2 should run effects.")
+        assertEqual(
+            await startedIDs.results.sorted(),
+            ["1", "2"],
+            "Only first 2 should run effects."
+        )
         assertEqual(await cancelledIDs.results.sorted(), ["3", "4"])
     }
 }
@@ -242,29 +254,49 @@ private struct EffectID: EffectIDProtocol
 private struct DelayedEffectQueue: EffectQueueProtocol
 {
     let delay: TimeInterval
-    var effectQueuePolicy: EffectQueuePolicy { .runNewest(maxCount: .max) }
-    var effectQueueDelay: EffectQueueDelay { .constant(delay * timescale) }
+    var effectQueuePolicy: EffectQueuePolicy {
+        .runNewest(maxCount: .max)
+    }
+
+    var effectQueueDelay: EffectQueueDelay {
+        .constant(delay * timescale)
+    }
 }
 
 private struct DelayedNewest2EffectQueue: EffectQueueProtocol
 {
     let delay: TimeInterval
-    var effectQueuePolicy: EffectQueuePolicy { .runNewest(maxCount: 2) }
-    var effectQueueDelay: EffectQueueDelay { .constant(delay * timescale) }
+    var effectQueuePolicy: EffectQueuePolicy {
+        .runNewest(maxCount: 2)
+    }
+
+    var effectQueueDelay: EffectQueueDelay {
+        .constant(delay * timescale)
+    }
 }
 
 private struct DelayedOldest2SuspendNewEffectQueue: EffectQueueProtocol
 {
     let delay: TimeInterval
-    var effectQueuePolicy: EffectQueuePolicy { .runOldest(maxCount: 2, .suspendNew) }
-    var effectQueueDelay: EffectQueueDelay { .constant(delay * timescale) }
+    var effectQueuePolicy: EffectQueuePolicy {
+        .runOldest(maxCount: 2, .suspendNew)
+    }
+
+    var effectQueueDelay: EffectQueueDelay {
+        .constant(delay * timescale)
+    }
 }
 
 private struct DelayedOldest2DiscardNewEffectQueue: EffectQueueProtocol
 {
     let delay: TimeInterval
-    var effectQueuePolicy: EffectQueuePolicy { .runOldest(maxCount: 2, .discardNew) }
-    var effectQueueDelay: EffectQueueDelay { .constant(delay * timescale) }
+    var effectQueuePolicy: EffectQueuePolicy {
+        .runOldest(maxCount: 2, .discardNew)
+    }
+
+    var effectQueueDelay: EffectQueueDelay {
+        .constant(delay * timescale)
+    }
 }
 
-private let timescale: TimeInterval = TimeInterval(tickTimeInterval) / 1_000_000_000
+private let timescale: TimeInterval = .init(tickTimeInterval) / 1_000_000_000
