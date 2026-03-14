@@ -10,7 +10,7 @@ final class MainActomatonDeinitTests: MainTestCase
     {
         let resultsCollector = ResultsCollector<String>()
 
-        var actomaton: MainActomaton2? = MainActomaton2<Action, State>(
+        var actomaton: MainActomaton? = MainActomaton<Action, State>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, state, _ in
                 switch action {

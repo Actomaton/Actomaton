@@ -9,11 +9,11 @@ import Combine
 @available(macOS 14.0, iOS 17.0, macCatalyst 17.0, watchOS 10.0, tvOS 17.0, *)
 final class MainActomatonCounterTests: MainTestCase
 {
-    fileprivate var actomaton: MainActomaton2<Action, State>!
+    fileprivate var actomaton: MainActomaton<Action, State>!
 
     override func setUp() async throws
     {
-        let actomaton = MainActomaton2<Action, State>(
+        let actomaton = MainActomaton<Action, State>(
             state: State(),
             reducer: Reducer { action, state, _ in
                 switch action {

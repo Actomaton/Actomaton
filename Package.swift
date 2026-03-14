@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.2
 
 import Foundation
 import PackageDescription
@@ -8,7 +8,7 @@ let usesMainActorInTest = ProcessInfo.processInfo.environment["TEST_MAIN_ACTOR"]
 
 let package = Package(
     name: "Actomaton",
-    platforms: [.macOS(.v10_15), .iOS(.v13), .watchOS(.v6), .tvOS(.v13)],
+    platforms: [.macOS("15.4"), .iOS("18.4"), .watchOS("11.4"), .tvOS("18.4")],
     products: [
         .library(
             name: "Actomaton",
@@ -63,5 +63,17 @@ let package = Package(
             name: "ReadMeTests",
             dependencies: ["Actomaton", "ActomatonDebugging"]
         )
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )
+
+//for target in package.targets {
+//    if target.swiftSettings == nil {
+//        target.swiftSettings = []
+//    }
+//
+//    // Simulates Linux build settings from macOS Xcode build.
+//    target.swiftSettings?.append(.define("DISABLE_COMBINE"))
+//
+//    target.swiftSettings?.append(.enableUpcomingFeature("ExistentialAny"))
+//}
