@@ -137,11 +137,22 @@ public actor Actomaton<Action, State>
         let effect = reducer.run(action, &state, ())
 
         var tasks: [Task<(), any Error>] = []
+        var syncActions: [Action] = []
 
         for effectKind in effect.kinds {
             if let task = performEffectKind(effectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
                 tasks.append(task)
             }
+
+            if case let .next(nextAction) = effectKind {
+                Debug.print("[send] Synchronous recursive action: \(nextAction)")
+                syncActions.append(nextAction)
+            }
+        }
+
+        // Send `.next` actions synchronously.
+        for syncAction in syncActions {
+            send(syncAction, priority: priority)
         }
 
         if tasks.isEmpty { return nil }
@@ -192,6 +203,10 @@ extension Actomaton
 
             let delay = calculateEffectDelay(queue: effectKind.queue)
             return makeTask(sequence: sequence, delay: delay, priority: priority, tracksFeedbacks: tracksFeedbacks)
+
+        case .next:
+            // No-op, which will be separately handled before calling `performEffectKind`.
+            return nil
 
         case let .cancel(predicate):
             self.cancelRunningOrPendingEffects(predicate: predicate)
@@ -462,7 +477,7 @@ extension Actomaton
                 _ = try await sequence.sequence()
             }
             .cancel() // Cancel immediately.
-        case .cancel:
+        case .next, .cancel:
             return
         }
     }

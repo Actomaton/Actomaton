@@ -1,5 +1,5 @@
 /// A composable, `State`-transforming function wrapper that is triggered by `Action`.
-public struct Reducer<Action, State, Environment>: Sendable
+public struct Reducer<Action, State, Environment>: Sendable where Action: Sendable
 {
     public let run: @Sendable (Action, inout State, Environment) -> Effect<Action>
 
