@@ -1,5 +1,5 @@
 /// Effect type to run `async`, `AsyncSequence`, or cancellation.
-public struct Effect<Action>: Sendable
+public struct Effect<Action>: Sendable where Action: Sendable
 {
     internal let kinds: [Kind]
 }
@@ -45,7 +45,7 @@ extension Effect
 
     /// `AsyncSequence` side-effect.
     public init<S>(sequence: @escaping @Sendable () async throws -> S?)
-        where S: AsyncSequence, S.Element == Action
+        where S: AsyncSequence & Sendable, S.Element == Action
     {
         self.init(
             kinds: [.sequence(
@@ -61,7 +61,7 @@ extension Effect
     /// `AsyncSequence` side-effect.
     /// - Parameter id: Cancellation identifier.
     public init<ID, S>(id: ID? = nil, sequence: @escaping @Sendable () async throws -> S?)
-        where ID: EffectIDProtocol, S: AsyncSequence, S.Element == Action
+        where ID: EffectIDProtocol, S: AsyncSequence & Sendable, S.Element == Action
     {
         self.init(
             kinds: [.sequence(
@@ -77,7 +77,7 @@ extension Effect
     /// `AsyncSequence` side-effect.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
     public init<S, Queue>(queue: Queue? = nil, sequence: @escaping @Sendable () async throws -> S?)
-        where S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
+        where S: AsyncSequence & Sendable, S.Element == Action, Queue: EffectQueueProtocol
     {
         self.init(
             kinds: [.sequence(
@@ -98,7 +98,7 @@ extension Effect
         queue: Queue? = nil,
         sequence: @escaping @Sendable () async throws -> S?
     )
-        where ID: EffectIDProtocol, S: AsyncSequence, S.Element == Action, Queue: EffectQueueProtocol
+        where ID: EffectIDProtocol, S: AsyncSequence & Sendable, S.Element == Action, Queue: EffectQueueProtocol
     {
         self.init(
             kinds: [.sequence(
@@ -172,7 +172,7 @@ extension Effect
     public static func nextAction(_ action: Action) -> Effect<Action>
         where Action: Sendable
     {
-        self.init(kinds: [.single(Single { action })])
+        self.init(kinds: [.next(action)])
     }
 
     // MARK: - cancel
@@ -231,6 +231,9 @@ extension Effect
             case let .sequence(sequence):
                 return .sequence(sequence.map(action: f))
 
+            case let .next(action):
+                return .next(f(action))
+
             case let .cancel(predicate):
                 return .cancel(predicate)
             }
@@ -249,6 +252,9 @@ extension Effect
             case let .sequence(sequence):
                 return .sequence(sequence.map(id: f))
 
+            case .next:
+                return kind
+
             case let .cancel(predicate):
                 return .cancel(predicate)
             }
@@ -266,6 +272,9 @@ extension Effect
 
             case let .sequence(sequence):
                 return .sequence(sequence.map(queue: { f($0?.queue) }))
+
+            case .next:
+                return kind
 
             case let .cancel(predicate):
                 return .cancel(predicate)
@@ -298,8 +307,16 @@ extension Effect
 {
     internal enum Kind: Sendable
     {
+        /// Single async func effect.
         case single(Single)
+
+        /// AsyncSequence effect.
         case sequence(_Sequence)
+
+        /// No async func effect, only returning next action only.
+        case next(Action)
+
+        /// Cancellation effect with filtering `EffectID`s by a predicate.
         case cancel(@Sendable (EffectID) -> Bool)
 
         internal var single: Single?
@@ -327,6 +344,8 @@ extension Effect
                 return single.id
             case let .sequence(sequence):
                 return sequence.id
+            case .next:
+                return nil
             case .cancel:
                 return nil
             }
@@ -339,6 +358,8 @@ extension Effect
                 return single.queue
             case let .sequence(sequence):
                 return sequence.queue
+            case .next:
+                return nil
             case .cancel:
                 return nil
             }
