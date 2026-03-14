@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -69,8 +69,11 @@ final class RunOldestDiscardNewTests: MainTestCase
 
         try await tick(3)
 
-        assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 1),
-                    "`effectCompletedCount` should increment by 1 (not 2) because of `OldestDiscardNewEffectQueue`")
+        assertEqual(
+            await actomaton.state,
+            State(count: 2, effectCompletedCount: 1),
+            "`effectCompletedCount` should increment by 1 (not 2) because of `OldestDiscardNewEffectQueue`"
+        )
 
         // 3rd `increment`.
         await actomaton.send(.increment)
@@ -81,8 +84,11 @@ final class RunOldestDiscardNewTests: MainTestCase
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2))
 
         let results = await resultsCollector.results.sorted()
-        XCTAssertEqual(results, [2],
-                       "2nd increment's effect should be cancelled by discard.")
+        XCTAssertEqual(
+            results,
+            [2],
+            "2nd increment's effect should be cancelled by discard."
+        )
     }
 
     func test_maxCount2() async throws
@@ -105,8 +111,11 @@ final class RunOldestDiscardNewTests: MainTestCase
 
         try await tick(4)
 
-        assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2),
-                    "`effectCompletedCount` will increment by 2 (not 3) because of `OldestDiscardNewEffectQueue`")
+        assertEqual(
+            await actomaton.state,
+            State(count: 3, effectCompletedCount: 2),
+            "`effectCompletedCount` will increment by 2 (not 3) because of `OldestDiscardNewEffectQueue`"
+        )
 
         // 4th `increment`.
         await actomaton.send(.increment)
@@ -117,8 +126,11 @@ final class RunOldestDiscardNewTests: MainTestCase
         assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 3))
 
         let results = await resultsCollector.results.sorted()
-        XCTAssertEqual(results, [3],
-                       "3rd increment's effect should be cancelled by discard.")
+        XCTAssertEqual(
+            results,
+            [3],
+            "3rd increment's effect should be cancelled by discard."
+        )
     }
 }
 

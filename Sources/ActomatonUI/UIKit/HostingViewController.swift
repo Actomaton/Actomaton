@@ -1,8 +1,8 @@
 #if canImport(UIKit) && canImport(SwiftUI) && !os(watchOS) && !DISABLE_COMBINE && canImport(Combine)
 
-import UIKit
 import Combine
 import SwiftUI
+import UIKit
 
 /// SwiftUI `View` & ``Store`` wrapper view controller that holds `UIHostingController`.
 @MainActor
@@ -23,7 +23,8 @@ open class HostingViewController<Action, State, Environment, Content: SwiftUI.Vi
         super.init(nibName: nil, bundle: nil)
     }
 
-    /// Initializer for ``RouteStore`` as argument, with forgetting ``SendRouteEnvironment/sendRoute`` capability when making `content`.
+    /// Initializer for ``RouteStore`` as argument, with forgetting ``SendRouteEnvironment/sendRoute`` capability when
+    /// making `content`.
     public init<Route>(
         store routeStore: RouteStore<Action, State, Environment, Route>,
         @ViewBuilder content: @escaping @MainActor (Store<Action, State, Environment>) -> Content
@@ -37,6 +38,7 @@ open class HostingViewController<Action, State, Environment, Content: SwiftUI.Vi
         super.init(nibName: nil, bundle: nil)
     }
 
+    @available(*, unavailable)
     public required init?(coder: NSCoder)
     {
         fatalError("init(coder:) has not been implemented")

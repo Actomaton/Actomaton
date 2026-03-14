@@ -373,7 +373,11 @@ extension Effect
         internal let queue: AnyEffectQueue?
         internal let run: @Sendable () async throws -> Action?
 
-        internal init(id: EffectID? = nil, queue: AnyEffectQueue? = nil, run: @escaping @Sendable () async throws -> Action?)
+        internal init(
+            id: EffectID? = nil,
+            queue: AnyEffectQueue? = nil,
+            run: @escaping @Sendable () async throws -> Action?
+        )
         {
             self.id = id
             self.queue = queue

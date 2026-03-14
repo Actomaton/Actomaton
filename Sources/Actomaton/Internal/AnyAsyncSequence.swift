@@ -1,4 +1,5 @@
-// Code from: https://github.com/Apodini/Apodini/blob/develop/Sources/ApodiniExtension/AsyncSequenceHelpers/AnyAsyncSequence.swift
+// Code from:
+// https://github.com/Apodini/Apodini/blob/develop/Sources/ApodiniExtension/AsyncSequenceHelpers/AnyAsyncSequence.swift
 
 /// A type-erased version of a `AsyncSequence` that contains values of type `Element`.
 struct AnyAsyncSequence<Element>: AsyncSequence

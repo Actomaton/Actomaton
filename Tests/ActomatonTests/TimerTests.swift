@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -77,8 +77,11 @@ final class TimerTests: MainTestCase
         await actomaton.send(.stop)
 
         try await tick(3)
-        assertEqual(await actomaton.state, 3,
-                    "Should not increment because timer is stopped.")
+        assertEqual(
+            await actomaton.state,
+            3,
+            "Should not increment because timer is stopped."
+        )
     }
 }
 

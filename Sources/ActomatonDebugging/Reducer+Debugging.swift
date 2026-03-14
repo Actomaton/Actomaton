@@ -68,7 +68,7 @@ extension Reducer
         where Action: Sendable, State: Sendable
     {
         // Return normal reducer without logging.
-        guard let format = format else {
+        guard let format else {
             return Reducer(nextRun)
         }
 
@@ -125,7 +125,8 @@ extension Reducer
                         let name = format.name.map { "\($0) " } ?? ""
 
                         if let diffString = diff(currentState, nextState) {
-                            print("\(name)state diff = ") // NOTE: Adds linebreak because `diffString` contains +- symbols.
+                            print("\(name)state diff = ") // NOTE: Adds linebreak because `diffString` contains +-
+                            // symbols.
                             print(diffString)
                         }
                         else {

@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -22,10 +22,10 @@ final class PendingEffectCancellationTests: MainTestCase
             result2: Result? = nil
         )
         {
-            if let result1 = result1 {
+            if let result1 {
                 self.result1 = result1
             }
-            if let result2 = result2 {
+            if let result2 {
                 self.result2 = result2
             }
         }
@@ -51,7 +51,7 @@ final class PendingEffectCancellationTests: MainTestCase
 
         let actomaton = Actomaton<Action, State>(
             state: .init(),
-            reducer: Reducer { [flags] action, state, _ in
+            reducer: Reducer { [flags] action, _, _ in
                 switch action {
                 case .fetch1:
                     return Effect(id: EffectID(name: "1"), queue: Oldest1SuspendNewEffectQueue()) {
@@ -87,7 +87,6 @@ final class PendingEffectCancellationTests: MainTestCase
                 case .cancelAll:
                     return Effect.cancel(ids: { $0.value is EffectID })
                 }
-
             }
         )
         self.actomaton = actomaton

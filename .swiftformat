@@ -1,0 +1,74 @@
+# SwiftFormat configuration for Actomaton
+# https://github.com/nicklockwood/SwiftFormat
+
+# Swift version
+--swiftversion 6.2
+
+# Formatting options
+--indent 4
+--maxwidth 120
+--linebreaks lf
+--semicolons never
+--self insert
+--elseposition next-line
+--guardelse next-line
+--ifdef outdent
+--indentcase false
+--header ignore
+--importgrouping alpha
+--closingparen balanced
+--wraparguments before-first
+--wrapcollections before-first
+--wrapparameters before-first
+--wraptypealiases before-first
+--funcattributes prev-line
+--typeattributes prev-line
+--storedvarattrs prev-line
+--computedvarattrs preserve
+--patternlet hoist
+--stripunusedargs closure-only
+--modifierorder open,public,internal,fileprivate,private,override,final,required,convenience,static,class,dynamic,optional,lazy,weak,unowned,nonisolated,isolated
+--voidtype void
+
+# Disabled rules
+# NOTE: braces rule disabled because codebase uses hybrid style:
+#   - Allman (next-line brace) for function/type/extension/computed property declarations
+#   - K&R (same-line brace) for closures, willSet/didSet, control flow (if/switch/for)
+# SwiftFormat's --allman flag applies to ALL braces, so we preserve existing style instead.
+--disable braces
+--disable wrapMultilineStatementBraces
+--disable extensionAccessControl
+--disable hoistAwait
+--disable hoistTry
+--disable enumNamespaces
+--disable opaqueGenericParameters
+--disable markTypes
+--disable organizeDeclarations
+--disable docComments
+--disable wrapConditionalBodies
+--disable blankLineAfterSwitchCase
+--disable wrapSwitchCases
+--disable wrapEnumCases
+--disable sortSwitchCases
+--disable blockComments
+--disable acronyms
+--disable simplifyGenericConstraints
+--disable redundantSendable
+--disable redundantAsync
+--disable redundantThrows
+--disable redundantInternal
+--disable redundantSelf
+--disable redundantReturn
+--disable trailingClosures
+--disable trailingCommas
+--disable preferKeyPath
+--disable void
+--disable redundantVariable
+# Avoid too aggressive `fileprivate` to `private` conversion that may fail to compile.
+--disable redundantFileprivate
+# Keep `case someCodingKeyName = "..."` raw value to avoid breaking change when case-renaming occurs.
+--disable redundantRawValues
+
+# Exclude
+--exclude .build
+--exclude Package.swift

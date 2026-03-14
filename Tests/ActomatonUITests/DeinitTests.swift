@@ -1,7 +1,7 @@
 #if !DISABLE_COMBINE && canImport(Combine)
 
-import XCTest
 @testable import ActomatonUI
+import XCTest
 
 /// Tests for `Actomaton.deinit` to run successfully with cancelling running tasks.
 final class DeinitTests: MainTestCase
@@ -13,7 +13,7 @@ final class DeinitTests: MainTestCase
 
         var actomaton: Store? = Store<Action, State, Environment>(
             state: State(),
-            reducer: Reducer { [resultsCollector] action, state, _ in
+            reducer: Reducer { [resultsCollector] action, _, _ in
                 switch action {
                 case .run:
                     return Effect { [resultsCollector] in

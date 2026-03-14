@@ -35,6 +35,14 @@ _xcode:
 swift-test:
 	TEST_MAIN_ACTOR=$(TEST_MAIN_ACTOR) swift test
 
+.PHONY: swiftformat
+swiftformat:
+	swift package plugin --allow-writing-to-package-directory swiftformat
+
+.PHONY: swiftformat-lint
+swiftformat-lint:
+	swift package plugin --allow-writing-to-package-directory swiftformat --lint
+
 #--------------------------------------------------
 # DocC
 #--------------------------------------------------

@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -22,10 +22,10 @@ final class EffectIDAutoCancellationTests: MainTestCase
             is2To3Cancelled: Bool? = nil
         )
         {
-            if let is1To2Cancelled = is1To2Cancelled {
+            if let is1To2Cancelled {
                 self.is1To2Cancelled = is1To2Cancelled
             }
-            if let is2To3Cancelled = is2To3Cancelled {
+            if let is2To3Cancelled {
                 self.is2To3Cancelled = is2To3Cancelled
             }
         }
@@ -82,7 +82,6 @@ final class EffectIDAutoCancellationTests: MainTestCase
                         return nil
                     }
                 }
-
             }
         )
         self.actomaton = actomaton
@@ -126,15 +125,21 @@ final class EffectIDAutoCancellationTests: MainTestCase
         assertEqual(await actomaton.state, ._2)
 
         try await tick(0.1)
-        assertEqual(await actomaton.state, ._2,
-                    "Only delta time has passed, so state should not change")
+        assertEqual(
+            await actomaton.state,
+            ._2,
+            "Only delta time has passed, so state should not change"
+        )
 
         await actomaton.send(._toEnd)
         assertEqual(await actomaton.state, ._end)
 
         try await tick(5)
-        assertEqual(await actomaton.state, ._end,
-                    "Waited for enough time, and state should not change")
+        assertEqual(
+            await actomaton.state,
+            ._end,
+            "Waited for enough time, and state should not change"
+        )
 
         let is1To2Cancelled = await flags.is1To2Cancelled
         XCTAssertTrue(is1To2Cancelled)
@@ -155,15 +160,21 @@ final class EffectIDAutoCancellationTests: MainTestCase
         assertEqual(await actomaton.state, ._3)
 
         try await tick(0.1)
-        assertEqual(await actomaton.state, ._3,
-                    "Only delta time has passed, so state should not change")
+        assertEqual(
+            await actomaton.state,
+            ._3,
+            "Only delta time has passed, so state should not change"
+        )
 
         await actomaton.send(._toEnd)
         assertEqual(await actomaton.state, ._end)
 
         try await tick(5)
-        assertEqual(await actomaton.state, ._end,
-                    "Waited for enough time, and state should not change")
+        assertEqual(
+            await actomaton.state,
+            ._end,
+            "Waited for enough time, and state should not change"
+        )
 
         let is1To2Cancelled = await flags.is1To2Cancelled
         XCTAssertFalse(is1To2Cancelled)

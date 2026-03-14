@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -19,7 +19,7 @@ final class LoginLogoutTests: MainTestCase
             isLoginCancelled: Bool? = nil
         )
         {
-            if let isLoginCancelled = isLoginCancelled {
+            if let isLoginCancelled {
                 self.isLoginCancelled = isLoginCancelled
             }
         }
@@ -56,8 +56,8 @@ final class LoginLogoutTests: MainTestCase
                     return .empty
 
                 case (.logout, .loggedIn),
-                    (.forceLogout, .loggingIn),
-                    (.forceLogout, .loggedIn):
+                     (.forceLogout, .loggingIn),
+                     (.forceLogout, .loggedIn):
                     state = .loggingOut
                     return Effect(queue: LoginFlowEffectQueue()) {
                         try await tick(1)
@@ -140,8 +140,10 @@ final class LoginLogoutTests: MainTestCase
         assertEqual(await actomaton.state, .loggedOut)
 
         let isLoginCancelled = await flags.isLoginCancelled
-        XCTAssertTrue(isLoginCancelled,
-                      "login's effect should be cancelled")
+        XCTAssertTrue(
+            isLoginCancelled,
+            "login's effect should be cancelled"
+        )
     }
 }
 

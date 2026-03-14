@@ -1,6 +1,6 @@
-import XCTest
-import Foundation
 @testable import Actomaton
+import Foundation
+import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
@@ -32,7 +32,7 @@ private func readMe1_4() async throws
         }
     }
 
-    let reducer = Reducer<Action, State, Environment> { action, state, environment in
+    let reducer = Reducer<Action, State, Environment> { action, _, environment in
         switch action {
         case let .fetch(id):
             return Effect(queue: DelayedEffectQueue()) {

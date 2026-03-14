@@ -4,7 +4,8 @@
 ///
 /// - Important: ``Store`` is NOT `ObservableObject` thus its state can't be observed by SwiftUI views.
 ///
-/// To make it observable in SwiftUI, use ``WithViewStore`` (SwiftUI View) to create ``ViewStore`` which is `ObservableObject`.
+/// To make it observable in SwiftUI, use ``WithViewStore`` (SwiftUI View) to create ``ViewStore`` which is
+/// `ObservableObject`.
 /// Note that ``Store/map(state:)`` can narrow down ``Store``'s scope before passing to ``WithViewStore``
 /// so that only the subset of state changes can be observed by SwiftUI, allowing optimized rendering.
 ///
@@ -57,7 +58,10 @@ public class Store<Action, State, Environment>
     /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
     public let environment: Environment
 
-    private let _send: @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), any Error>?
+    private let _send: @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<
+        (),
+        any Error
+    >?
 
     /// Initializer with `environment`.
     public convenience init(
@@ -100,7 +104,10 @@ public class Store<Action, State, Environment>
     internal init(
         state: CurrentValuePublisher<State>,
         environment: Environment,
-        send: @escaping @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<(), any Error>?
+        send: @escaping @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<
+            (),
+            any Error
+        >?
     )
     {
         self._state = state
@@ -201,7 +208,7 @@ extension Store
             state: (
                 get: { $0.map { $0[keyPath: keyPath] } },
                 set: { state, substate in
-                    if let substate = substate {
+                    if let substate {
                         state?[keyPath: keyPath] = substate
                     }
                 }
@@ -304,7 +311,9 @@ extension Store
 
                 case .state:
                     // `SubState` is immutable, so should not reach here.
-                    assertionFailure("Detected the calls of `ViewStore.directBinding` after `Store.indirectMap` which is illegal. Always use `ViewStore.binding(get:onChange:)` whenever using `indirectMap`. Otherwise, direct-binding will be discarded in Release build.")
+                    assertionFailure(
+                        "Detected the calls of `ViewStore.directBinding` after `Store.indirectMap` which is illegal. Always use `ViewStore.binding(get:onChange:)` whenever using `indirectMap`. Otherwise, direct-binding will be discarded in Release build."
+                    )
                     return nil
                 }
             }
@@ -327,7 +336,7 @@ extension Store
                     return self._send(.action(action), priority: priority, tracksFeedbacks: tracksFeedback)
 
                 case let .state(substate):
-                    guard let substate = substate else { return nil }
+                    guard let substate else { return nil }
 
                     let state = casePath.embed(substate)
                     return self._send(.state(state), priority: priority, tracksFeedbacks: tracksFeedback)

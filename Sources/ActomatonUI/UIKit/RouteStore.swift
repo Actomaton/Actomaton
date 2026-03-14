@@ -1,12 +1,12 @@
 #if !DISABLE_COMBINE && canImport(Combine)
 
-import Dispatch
 import Combine
+import Dispatch
 
 /// `Store` wrapper that also outputs `routes`, mainly used for UIKit's navigation handling.
 @MainActor
-public final class RouteStore<Action, State, Environment, Route>
-    : Store<Action, State, SendRouteEnvironment<Environment, Route>>
+public final class RouteStore<Action, State, Environment, Route>:
+    Store<Action, State, SendRouteEnvironment<Environment, Route>>
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
     private let core: StoreCore<Action, State, SendRouteEnvironment<Environment, Route>>

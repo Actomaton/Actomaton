@@ -1,5 +1,5 @@
-import XCTest
 @testable import Actomaton
+import XCTest
 
 /// Tests for `Actomaton.deinit` to run successfully with cancelling running tasks.
 final class DeinitTests: MainTestCase
@@ -10,7 +10,7 @@ final class DeinitTests: MainTestCase
 
         var actomaton: Actomaton? = Actomaton<Action, State>(
             state: State(),
-            reducer: Reducer { [resultsCollector] action, state, _ in
+            reducer: Reducer { [resultsCollector] action, _, _ in
                 switch action {
                 case .run:
                     return Effect { [resultsCollector] in

@@ -44,7 +44,8 @@ public actor Actomaton<Action, State>
     private let executingActor: any Actor
 
     /// State change handler, mainly used for synchronizing with `MainActomaton`'s `@Published state`.
-    /// - Todo: Expose this handler (setter) as `public`, as this handler is useful in Linux which `@Published` is not available.
+    /// - Todo: Expose this handler (setter) as `public`, as this handler is useful in Linux which `@Published` is not
+    /// available.
     private let willChangeState: (_ isolation: isolated Actomaton, _ old: State, _ new: State) -> Void
 
     /// Initializer without `environment`.
@@ -64,7 +65,8 @@ public actor Actomaton<Action, State>
         state: State,
         reducer: Reducer<Action, State, ()>,
         executingActor: any Actor,
-        willChangeState: @escaping (_ isolation: isolated Actomaton, _ old: State, _ new: State) -> Void = { _, _, _ in }
+        willChangeState: @escaping (_ isolation: isolated Actomaton, _ old: State, _ new: State) -> Void = { _, _, _ in
+        }
     )
     {
 #if !DISABLE_COMBINE && canImport(Combine)
@@ -132,7 +134,8 @@ public actor Actomaton<Action, State>
         tracksFeedbacks: Bool = false
     ) -> Task<(), any Error>?
     {
-        Debug.print("[send] \(action), priority = \(String(describing: priority)), tracksFeedbacks = \(tracksFeedbacks)")
+        Debug
+            .print("[send] \(action), priority = \(String(describing: priority)), tracksFeedbacks = \(tracksFeedbacks)")
 
         let effect = reducer.run(action, &state, ())
 
@@ -228,11 +231,14 @@ extension Actomaton
                 for _ in 0 ..< droppingCount {
                     let droppingTask = self.queuedRunningTasks[queue.queue]?.removeFirst()
 
-                    if let droppingTask = droppingTask {
+                    if let droppingTask {
 #if DEBUG
                         let droppingEffectID = self.runningTasks
                             .first(where: { $0.value.contains(droppingTask) })?.key
-                        Debug.print("[checkQueuePolicy] [runNewest] droppingEffectID = \(String(describing: droppingEffectID))")
+                        Debug
+                            .print(
+                                "[checkQueuePolicy] [runNewest] droppingEffectID = \(String(describing: droppingEffectID))"
+                            )
 #endif
                         droppingTask.cancel()
                     }
@@ -274,7 +280,7 @@ extension Actomaton
     private func calculateEffectDelay(queue: AnyEffectQueue?) -> TimeInterval
     {
         // No queue means, immediate task run.
-        guard let queue = queue else { return 0 }
+        guard let queue else { return 0 }
 
         let delayAfterLatestEffect = queue.effectQueueDelay.timeInterval
         let latestEffectDate = self.latestEffectDate[queue.queue, default: Date(timeIntervalSince1970: 0)]
@@ -282,7 +288,10 @@ extension Actomaton
         let targetDelaySinceNow = max(latestEffectDate.timeIntervalSinceNow + delayAfterLatestEffect, 0)
         self.latestEffectDate[queue.queue] = Date(timeIntervalSinceNow: targetDelaySinceNow)
 
-        Debug.print("[calculateEffectDelay] delayAfterLatestExec = \(delayAfterLatestEffect), latestEffectDate = \(latestEffectDate), targetDelaySinceNow = \(targetDelaySinceNow)")
+        Debug
+            .print(
+                "[calculateEffectDelay] delayAfterLatestExec = \(delayAfterLatestEffect), latestEffectDate = \(latestEffectDate), targetDelaySinceNow = \(targetDelaySinceNow)"
+            )
 
         return targetDelaySinceNow
     }
@@ -306,7 +315,7 @@ extension Actomaton
             let nextAction = try await single.run()
 
             // Feed back `nextAction`.
-            if let nextAction = nextAction {
+            if let nextAction {
                 let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
                 if tracksFeedbacks {
                     try await feedbackTask?.value
@@ -343,7 +352,7 @@ extension Actomaton
                 // Feed back `nextAction`.
                 let feedbackTask = await self?.send(nextAction, priority: priority, tracksFeedbacks: tracksFeedbacks)
 
-                if let feedbackTask = feedbackTask {
+                if let feedbackTask {
                     feedbackTasks.append(feedbackTask)
                 }
             }
@@ -361,7 +370,13 @@ extension Actomaton
             }
         }
 
-        self.enqueueTask(task, id: sequence.id, queue: sequence.queue, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        self.enqueueTask(
+            task,
+            id: sequence.id,
+            queue: sequence.queue,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks
+        )
 
         return task
     }
@@ -381,7 +396,7 @@ extension Actomaton
         Debug.print("[enqueueTask] Append id-task: \(effectID)")
         self.runningTasks[effectID, default: []].insert(task)
 
-        if let queue = queue {
+        if let queue {
             Debug.print("[enqueueTask] Append queue-task: \(queue)")
             self.queuedRunningTasks[queue.queue, default: []].append(task)
         }
@@ -394,7 +409,7 @@ extension Actomaton
             Debug.print("[enqueueTask] Task completed, removing id-task: \(effectID)")
             await self?.removeTask(id: effectID, task: task)
 
-            if let queue = queue {
+            if let queue {
                 await self?.removeTaskIfNeeded(task: task, in: queue)
 
                 switch queue.effectQueuePolicy {
@@ -402,7 +417,11 @@ extension Actomaton
                     if let pendingEffectKind = await self?.dequeuePendingEffectKindIfPossible(queue: queue) {
                         Debug.print("[enqueueTask] Extracted pending effect")
 
-                        if let _ = await self?.performEffectKind(pendingEffectKind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+                        if let _ = await self?.performEffectKind(
+                            pendingEffectKind,
+                            priority: priority,
+                            tracksFeedbacks: tracksFeedbacks
+                        ) {
                             Debug.print("[enqueueTask] Pending effect started running")
                         }
                         else {

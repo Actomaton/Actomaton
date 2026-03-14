@@ -2,7 +2,8 @@ import XCTest
 
 // MARK: - Tick
 
-/// - Note: For safe async testing, leeway should have at least 50 millisec (30 millsec isn't enough for MacBook Pro (15-inch, 2018)).
+/// - Note: For safe async testing, leeway should have at least 50 millisec (30 millsec isn't enough for MacBook Pro
+/// (15-inch, 2018)).
 public func tick(_ n: Double) async throws
 {
     try await Task.sleep(nanoseconds: UInt64(Double(tickTimeInterval) * n))
@@ -33,7 +34,7 @@ public func assertEqual<T>(
     _ message: @autoclosure () -> String = "",
     file: StaticString = #filePath,
     line: UInt = #line
-) where T : Equatable
+) where T: Equatable
 {
     XCTAssertEqual(expression1, expression2, message(), file: file, line: line)
 }

@@ -19,7 +19,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
-        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0")
+        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0"),
+        .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.55.3"),
     ] + (
         usesMainActorInTest ? [
             .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", from: "1.1.0")

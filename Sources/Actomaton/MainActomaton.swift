@@ -50,7 +50,7 @@ package final class MainActomaton<Action, State>
         self.state = state
 
         // Update `MainActomaton`'s `@Published` state.
-        willChangeState = { [weak self] old, new in
+        willChangeState = { [weak self] _, new in
             self?.state = new
         }
 #endif
