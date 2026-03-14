@@ -11,6 +11,21 @@ on:
   pull_request:
 
 jobs:
+  swiftformat:
+    name: SwiftFormat lint
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache SPM build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: swiftformat-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftformat-
+      - name: Lint
+        run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+
   xcode26-build:
     name: Xcode ${{ matrix.xcode }} build ${{ matrix.platform }}
     runs-on: macos-26
