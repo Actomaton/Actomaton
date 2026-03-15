@@ -8,7 +8,8 @@ let usesMainActorInTest = ProcessInfo.processInfo.environment["TEST_MAIN_ACTOR"]
 
 let package = Package(
     name: "Actomaton",
-    platforms: [.macOS("15.4"), .iOS("18.4"), .watchOS("11.4"), .tvOS("18.4")],
+    // Xcode 16.4 / Swift 6.2
+    platforms: [.macOS("15.4"), .iOS("18.4"), .watchOS("11.4"), .tvOS("18.4"), .visionOS("2.4")],
     products: [
         .library(
             name: "Actomaton",
