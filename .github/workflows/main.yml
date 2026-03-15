@@ -32,7 +32,7 @@ jobs:
     strategy:
       matrix:
         xcode: ["26.0"]
-        platform: ["iOS", "macOS", "watchOS", "tvOS"]
+        platform: ["iOS", "macOS", "watchOS", "tvOS", "visionOS"]
     steps:
     - uses: actions/checkout@v4
     - name: Select Xcode ${{ matrix.xcode }}
