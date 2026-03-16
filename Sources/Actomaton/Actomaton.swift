@@ -153,16 +153,18 @@ public actor Actomaton<Action, State>
             }
         }
 
-        // Send `.next` actions synchronously.
+        // Send `.next` actions synchronously, collecting their tasks.
         for syncAction in syncActions {
-            send(syncAction, priority: priority)
+            if let task = send(syncAction, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+                tasks.append(task)
+            }
         }
 
         if tasks.isEmpty { return nil }
 
         let tasks_ = tasks
 
-        // Unifies `tasks`.
+        // Make a detached task that waits for all `tasks`.
         return Task.detached {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 for task in tasks_ {
