@@ -1,6 +1,6 @@
 # 🎭 Actomaton
 
-[![Swift 6.0](https://img.shields.io/badge/swift-6.0-orange.svg?style=flat)](https://swift.org/download/)
+[![Swift 6.2](https://img.shields.io/badge/swift-6.2-orange.svg?style=flat)](https://swift.org/download/)
 ![](https://github.com/Actomaton/Actomaton/actions/workflows/main.yml/badge.svg)
 
 🧑‍🎤 Actor + 🤖 Automaton = 🎭 Actomaton
@@ -8,22 +8,43 @@
 **Actomaton** is Swift `async`/`await` & `Actor`-powered effectful state-management framework
 inspired by [Elm](http://elm-lang.org/) and [swift-composable-architecture](https://github.com/pointfreeco/swift-composable-architecture).
 
-This repository consists of 3 frameworks:
+## Overview
 
-1. `Actomaton`: Actor-based effect-handling state-machine at its core. Linux ready.
+This repository consists of 5 modules:
+
+1. **`Actomaton`**: Actor-based effect-handling state-machine, which is a convenience layer that wires `ActomatonCore` + `ActomatonEffect` together.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomaton/)
-2. `ActomatonUI`: SwiftUI & UIKit & Combine support
+2. **`ActomatonUI`**: SwiftUI & UIKit & Combine support.
     - [Documentation (Currently in Japanese only)](https://actomaton.github.io/Actomaton/documentation/actomatonui/)
-3. `ActomatonDebugging`: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
+3. **`ActomatonDebugging`**: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatondebugging/)
 
-These frameworks depend on [swift-case-paths](https://github.com/pointfreeco/swift-case-paths) as Functional Prism library, which is a powerful tool to construct an App-level Mega-Reducer from each screen's Reducers.
+In addition, the following lower-level modules are available for advanced use cases:
 
-This framework is a successor of the following projects:
+4. **`ActomatonCore`**: Generic Mealy machine (`MealyMachine`) and composable `MealyReducer`, independent of any effect system. Pair it with a pluggable `EffectManagerProtocol` conformer to choose what "output" means — `Void` (no effects), `Action?` (synchronous feedback), or your own custom type.
+5. **`ActomatonEffect`**: The `Effect<Action>` type and its default `EffectManager` — queue-based async task lifecycle (creation, cancellation, suspension, delay).
 
-- [Harvest](https://github.com/inamiy/Harvest) (using Combine with SwiftUI support)
-- [ReactiveAutomaton](https://github.com/inamiy/ReactiveAutomaton) (using [ReactiveSwift](https://github.com/ReactiveCocoa/ReactiveSwift))
-- [RxAutomaton](https://github.com/inamiy/RxAutomaton) (using [RxSwift](https://github.com/ReactiveX/RxSwift))
+### Module dependency graph
+
+```
+ActomatonCore          -- generic MealyMachine + MealyReducer + EffectManagerProtocol
+  └─ ActomatonEffect   -- Effect<Action>, EffectManager, EffectQueue, EffectID
+       └─ Actomaton    -- Actomaton typealias, Reducer typealias, CasePath integration
+            ├─ ActomatonUI         -- Store, RouteStore (SwiftUI / UIKit)
+            └─ ActomatonDebugging  -- debug / log reducers
+```
+
+### Why the split?
+
+`ActomatonCore` is intentionally free of `Effect` and async task management.
+This makes `MealyMachine` usable in contexts where full effect infrastructure is overkill — for example, purely synchronous state machines, game logic, or protocol parsers.
+Built-in `EffectManagerProtocol` conformers cover common cases:
+
+| Conformer | Output type | Use case |
+|---|---|---|
+| `EffectManager` | `Effect<Action>` | Full async effect lifecycle (in `ActomatonEffect`) |
+| `NoOpEffectManager` | `Void` | Pure state transitions, no side-effects |
+| `ActionEffectManager` | `Action?` | Synchronous action feedback loops |
 
 ## Installation
 
@@ -526,6 +547,12 @@ To find out more, check the following resources:
 - [Functional iOS Architecture for SwiftUI - Speaker Deck](https://speakerdeck.com/inamiy/functional-ios-architecture-for-swiftui)
 - [Functional iOS Architecture for SwiftUI (English)](https://zenn.dev/inamiy/books/3dd014a50f321040a047)
 - [Swift アクターモデルと Elm Architecture の融合](https://speakerdeck.com/inamiy/iosdc-japan-2022) (Japanese)
+
+`Actomaton` is a successor of the following projects:
+
+- [Harvest](https://github.com/inamiy/Harvest) (using Combine with SwiftUI support)
+- [ReactiveAutomaton](https://github.com/inamiy/ReactiveAutomaton) (using [ReactiveSwift](https://github.com/ReactiveCocoa/ReactiveSwift))
+- [RxAutomaton](https://github.com/inamiy/RxAutomaton) (using [RxSwift](https://github.com/ReactiveX/RxSwift))
 
 ## License
 

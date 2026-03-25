@@ -3,14 +3,14 @@ import CustomDump
 
 // MARK: - debug (logging on `#if DEBUG`)
 
-extension Reducer
+extension Reducer where Output == Effect<Action>
 {
     /// Debug-logging `Action` and `State` during `self`'s reducer's run, only in DEBUG configuration.
     public func debug(
         _ name: String? = nil,
         action actionLogFormat: ActionLogFormat? = .all(maxDepth: .max),
         state stateLogFormat: StateLogFormat? = .diff
-    ) -> Reducer
+    ) -> Self
         where Action: Sendable, State: Sendable
     {
 #if DEBUG
@@ -27,8 +27,8 @@ extension Reducer
         _ name: String? = nil,
         action actionLogFormat: ActionLogFormat? = .all(maxDepth: .max),
         state stateLogFormat: StateLogFormat? = .diff,
-        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Reducer.empty.run
-    ) -> Reducer
+        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Self.empty.run
+    ) -> Self
         where Action: Sendable, State: Sendable
     {
 #if DEBUG
@@ -37,20 +37,20 @@ extension Reducer
             nextRun
         )
 #else
-        Reducer(nextRun)
+        Self(nextRun)
 #endif
     }
 }
 
 // MARK: - log
 
-extension Reducer
+extension Reducer where Output == Effect<Action>
 {
     /// Debug-logging `Action` and `State` during `self`'s reducer's run, using ``LogFormat``.
     ///
     /// - Parameters:
     ///   - format: ``LogFormat`` that formats console-logging. No logging if `format = nil`.
-    public func log(format: LogFormat?) -> Reducer
+    public func log(format: LogFormat?) -> Self
         where Action: Sendable, State: Sendable
     {
         Self.log(format: format, self.run)
@@ -63,29 +63,29 @@ extension Reducer
     ///   - format: ``LogFormat`` that formats console-logging. No logging if `format = nil`.
     public static func log(
         format: LogFormat?,
-        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Reducer.empty.run
-    ) -> Reducer
+        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Self.empty.run
+    ) -> Self
         where Action: Sendable, State: Sendable
     {
         // Return normal reducer without logging.
         guard let format else {
-            return Reducer(nextRun)
+            return Self(nextRun)
         }
 
-        return Reducer { action, state, environment in
+        return Self { action, state, environment in
             let currentState = state // Needs copy to not carry `inout`.
 
             /// Effect for  Action & State `.simple` or `.all` printing.
             let preEffect = Effect<Action>.fireAndForget {
-                let name = format.name.map { "\($0) " } ?? ""
+                let name = format.name.map { "[\($0)]" } ?? ""
 
                 if let actionLogFormat = format.actionLogFormat {
                     switch actionLogFormat.format {
                     case .simple:
-                        print("\(name)action = \(debugCaseOutput(action))")
+                        print("\(name) action = \(debugCaseOutput(action))")
 
                     case let .all(maxDepth):
-                        print("\(name)action = ", terminator: "") // NOTE: No linebreak before `customDump`.
+                        print("\(name) action = ", terminator: "") // NOTE: No linebreak before `customDump`.
                         customDump(action, maxDepth: maxDepth)
                     }
                 }
@@ -93,7 +93,7 @@ extension Reducer
                 if let stateLogFormat = format.stateLogFormat {
                     switch stateLogFormat.format {
                     case .simple:
-                        print("\(name)state = ", terminator: "") // NOTE: No linebreak before `customDump`.
+                        print("\(name) state = ", terminator: "") // NOTE: No linebreak before `customDump`.
 
                         var output = ""
                         customDump(currentState, to: &output, maxDepth: 1)
@@ -101,7 +101,7 @@ extension Reducer
                         print(output)
 
                     case let .all(maxDepth):
-                        print("\(name)state = ", terminator: "") // NOTE: No linebreak before `customDump`.
+                        print("\(name) state = ", terminator: "") // NOTE: No linebreak before `customDump`.
                         customDump(currentState, maxDepth: maxDepth)
 
                     case .diff:
@@ -122,15 +122,15 @@ extension Reducer
                         break
 
                     case .diff:
-                        let name = format.name.map { "\($0) " } ?? ""
+                        let name = format.name.map { "[\($0)]" } ?? ""
 
                         if let diffString = diff(currentState, nextState) {
-                            print("\(name)state diff = ") // NOTE: Adds linebreak because `diffString` contains +-
+                            print("\(name) state diff = ") // NOTE: Adds linebreak because `diffString` contains +-
                             // symbols.
                             print(diffString)
                         }
                         else {
-                            print("\(name)state diff = (no diff)")
+                            print("\(name) state diff = (no diff)")
                         }
                     }
                 }

@@ -75,13 +75,13 @@ extension Oldest1SuspendNewEffectQueueProtocol
 
 // MARK: - Internals
 
-struct AnyEffectQueue: EffectQueueProtocol, Sendable
+public struct AnyEffectQueue: EffectQueueProtocol, Sendable
 {
-    let queue: EffectQueue
-    let effectQueuePolicy: EffectQueuePolicy
-    let effectQueueDelay: EffectQueueDelay
+    public let queue: EffectQueue
+    public let effectQueuePolicy: EffectQueuePolicy
+    public let effectQueueDelay: EffectQueueDelay
 
-    init<Queue>(_ queue: Queue)
+    public init<Queue>(_ queue: Queue)
         where Queue: EffectQueueProtocol
     {
         self.queue = EffectQueue(queue)
