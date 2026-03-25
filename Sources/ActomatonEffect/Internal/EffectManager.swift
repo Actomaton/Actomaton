@@ -1,5 +1,5 @@
-import Foundation
 import ActomatonCore
+import Foundation
 
 /// Default ``EffectManagerProtocol`` implementation that manages ``Effect<Action>`` with queue-based task lifecycle.
 ///
@@ -32,7 +32,11 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Closure to run a block within the owning actor's isolation for safe bookkeeping updates.
     /// Wraps the protocol's `performIsolated` with a safe downcast from `any EffectManagerProtocol` to `EffectManager`,
     /// so that call sites (e.g. `enqueueTask`) receive the concrete type directly without casting.
-    private var performIsolated: (@Sendable (@escaping @Sendable (isolated any Actor, EffectManager<Action, State>) -> Void) async -> Void)?
+    private var performIsolated: (
+        @Sendable (
+            @escaping @Sendable (isolated any Actor, EffectManager<Action, State>) -> Void
+        ) async -> Void
+    )?
 
     package init() {}
 
@@ -48,7 +52,8 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         // Wrap with downcast so call sites receive the concrete type directly.
         self.performIsolated = { f in
             await performIsolated { actor, anyEffectManager in
-                // NOTE: `anyEffectManager` is a typing workaround to suppress Swift compiler warning, which is safe to downcast.
+                // NOTE: `anyEffectManager` is a typing workaround to suppress Swift compiler warning, which is safe to
+                // downcast.
                 f(actor, anyEffectManager as! Self)
             }
         }

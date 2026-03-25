@@ -91,7 +91,7 @@ private func makeDoubleLoopMachine(n: Int, m: Int) -> MealyMachine<LoopAction, L
         reducer: MealyReducer { action, state, _ in
             switch action {
             case .start:
-                guard n > 0 && m > 0 else { return nil }
+                guard n > 0, m > 0 else { return nil }
                 return .doSomething(i: 0, j: 0)
 
             case let .doSomething(i, j):

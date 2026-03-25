@@ -1,6 +1,7 @@
 import Foundation
 
-/// Simple `Action`-based Effect Manager where `Output` is `Action?` that allows synchronous action feedback loop without side-effects.
+/// Simple `Action`-based Effect Manager where `Output` is `Action?` that allows synchronous action feedback loop
+/// without side-effects.
 public final class ActionEffectManager<Action, State>: EffectManagerProtocol
     where Action: Sendable
 {
@@ -16,8 +17,7 @@ public final class ActionEffectManager<Action, State>: EffectManagerProtocol
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
-    {
-    }
+    {}
 
     public func preprocessOutput(
         _ output: Output,
@@ -26,7 +26,8 @@ public final class ActionEffectManager<Action, State>: EffectManagerProtocol
     {
         if let output {
             return preprocessOutput(sendReducer(output), sendReducer: sendReducer)
-        } else {
+        }
+        else {
             return nil
         }
     }
@@ -41,6 +42,5 @@ public final class ActionEffectManager<Action, State>: EffectManagerProtocol
     }
 
     public func shutDown()
-    {
-    }
+    {}
 }

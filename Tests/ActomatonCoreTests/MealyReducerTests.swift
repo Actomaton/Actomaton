@@ -150,8 +150,7 @@ private final class StringEffectManager<Action: Sendable, State>: EffectManagerP
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
-    {
-    }
+    {}
 
     func preprocessOutput(
         _ output: String,

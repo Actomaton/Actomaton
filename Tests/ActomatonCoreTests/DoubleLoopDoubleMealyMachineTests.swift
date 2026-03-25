@@ -92,7 +92,7 @@ private func makeOuterMachine(n: Int, m: Int) -> MealyMachine<OuterAction, Outer
         reducer: MealyReducer { action, state, _ in
             switch action {
             case .start:
-                guard n > 0 && m > 0 else { return nil }
+                guard n > 0, m > 0 else { return nil }
                 let results = makePairsForRow(i: 0, m: m)
                 return .innerDone(results: results)
 

@@ -1,6 +1,7 @@
 import Foundation
 
-/// Deterministic finite state machine that receives "action" and with "current state" transform to "next state" & additional "output",
+/// Deterministic finite state machine that receives "action" and with "current state" transform to "next state" &
+/// additional "output",
 /// which then generates Swift Concurrency side-effects via ``EffectManagerProtocol``.
 public actor MealyMachine<Action, State, Output>
 {
@@ -73,7 +74,9 @@ public actor MealyMachine<Action, State, Output>
         reducer: MealyReducer<Action, State, (), Output>,
         effectManager: some EffectManagerProtocol<Action, State, Output>,
         executingActor: any Actor,
-        willChangeState: @escaping (_ isolation: isolated MealyMachine, _ old: State, _ new: State) -> Void = { _, _, _ in }
+        willChangeState: @escaping (
+            _ isolation: isolated MealyMachine, _ old: State, _ new: State
+        ) -> Void = { _, _, _ in }
     ) where Action: Sendable
     {
 #if !DISABLE_COMBINE && canImport(Combine)

@@ -16,15 +16,13 @@ public final class NoOpEffectManager<Action, State>: EffectManagerProtocol
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
-    {
-    }
+    {}
 
     public func preprocessOutput(
         _ output: Output,
         sendReducer: (Action) -> Output
     )
-    {
-    }
+    {}
 
     public func processOutput(
         _ output: Output,
@@ -36,6 +34,5 @@ public final class NoOpEffectManager<Action, State>: EffectManagerProtocol
     }
 
     public func shutDown()
-    {
-    }
+    {}
 }

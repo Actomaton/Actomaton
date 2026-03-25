@@ -20,7 +20,8 @@ public protocol EffectManagerProtocol<Action, State, Output>: AnyObject
     ///   - isolatedPerform:
     ///     Closure to run a block within the owning actor's isolation.
     ///     This method is a proof that `self` (EffectManager) is owned and protected by `isolated any Actor`,
-    ///     which guarantees e.g. safe clean up work inside `Task` closure while `self` is usually a non-`Sendable` class.
+    ///     which guarantees e.g. safe clean up work inside `Task` closure while `self` is usually a non-`Sendable`
+    /// class.
     ///   - sendAction:
     ///     Closure to send feedback actions back to the owning actor.
     ///
@@ -41,7 +42,8 @@ public protocol EffectManagerProtocol<Action, State, Output>: AnyObject
     /// Recursively resolves synchronous output by running the reducer via `sendReducer`,
     /// returning the preprocessed output with only async effects remaining.
     ///
-    /// Called by ``MealyMachine/send(_:priority:tracksFeedbacks:)`` before ``processOutput(_:priority:tracksFeedbacks:)``.
+    /// Called by ``MealyMachine/send(_:priority:tracksFeedbacks:)`` before
+    /// ``processOutput(_:priority:tracksFeedbacks:)``.
     func preprocessOutput(
         _ output: Output,
         sendReducer: (Action) -> Output

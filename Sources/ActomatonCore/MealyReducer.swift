@@ -55,7 +55,8 @@ public struct MealyReducer<Action, State, Environment, Output>: Sendable
     // MARK: - Functor
 
     /// Changes `Output`.
-    public func map<Output2>(output f: @escaping @Sendable (Output) -> Output2) -> MealyReducer<Action, State, Environment, Output2>
+    public func map<Output2>(output f: @escaping @Sendable (Output) -> Output2)
+        -> MealyReducer<Action, State, Environment, Output2>
     {
         .init { action, state, environment in
             let output = self.run(action, &state, environment)
