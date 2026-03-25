@@ -1,8 +1,8 @@
 // MARK: - DebugLog
 
-enum Debug
+package enum Debug
 {
-    static func print(_ msg: Any)
+    package static func print(_ msg: Any)
     {
 #if DEBUG
 //        Swift.print("===>", msg)

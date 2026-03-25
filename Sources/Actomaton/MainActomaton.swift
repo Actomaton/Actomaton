@@ -37,12 +37,13 @@ package final class MainActomaton<Action, State>
         self.actomaton = Actomaton(
             state: state,
             reducer: reducer,
+            effectManager: EffectManager<Action, State>(),
             executingActor: MainActor.shared,
             willChangeState: { @Sendable _, old, new in
                 MainActor.assumeIsolated {
                     willChangeState?(old, new)
                 }
-            }
+            },
         )
 
 #if !DISABLE_COMBINE && canImport(Combine)
@@ -69,17 +70,6 @@ package final class MainActomaton<Action, State>
     }
 
     /// Sends `action` to `Actomaton`.
-    ///
-    /// - Parameters:
-    ///   - priority:
-    ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
-    ///   - tracksFeedbacks:
-    ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
-    ///     so that their wait-for-all and cancellations are possible.
-    ///     Default is `false`.
-    ///
-    /// - Returns:
-    ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
     @discardableResult
     package func send(
         _ action: Action,

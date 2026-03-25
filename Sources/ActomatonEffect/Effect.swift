@@ -1,7 +1,12 @@
 /// Effect type to run `async`, `AsyncSequence`, or cancellation.
 public struct Effect<Action>: Sendable where Action: Sendable
 {
-    internal let kinds: [Kind]
+    package let kinds: [Kind]
+
+    package init(kinds: [Kind])
+    {
+        self.kinds = kinds
+    }
 }
 
 // MARK: - Public Initializers
@@ -305,7 +310,7 @@ extension Effect
 
 extension Effect
 {
-    internal enum Kind: Sendable
+    package enum Kind: Sendable
     {
         /// Single async func effect.
         case single(Single)
@@ -367,7 +372,7 @@ extension Effect
     }
 
     /// Wrapper of `async`.
-    internal struct Single: Sendable
+    package struct Single: Sendable
     {
         internal let id: EffectID?
         internal let queue: AnyEffectQueue?
@@ -405,7 +410,7 @@ extension Effect
     }
 
     /// Wrapper of `AsyncSequence`.
-    internal struct _Sequence: Sendable
+    package struct _Sequence: Sendable
     {
         internal let id: EffectID?
         internal let queue: AnyEffectQueue?
