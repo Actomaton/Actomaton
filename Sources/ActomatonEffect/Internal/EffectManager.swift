@@ -30,11 +30,9 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     private var sendAction: (@Sendable (Action, TaskPriority?, Bool) async -> Task<(), any Error>?)?
 
     /// Closure to run a block within the owning actor's isolation for safe bookkeeping updates.
-    /// Wraps the protocol's `performIsolated` with a safe downcast from `any EffectManagerProtocol` to `EffectManager`,
-    /// so that call sites (e.g. `enqueueTask`) receive the concrete type directly without casting.
     private var performIsolated: (
         @Sendable (
-            @escaping @Sendable (isolated any Actor, EffectManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, EffectManager<Action, State>) -> Void
         ) async -> Void
     )?
 
@@ -44,19 +42,12 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
 
     package func setUp(
         performIsolated: @escaping @Sendable (
-            @escaping @Sendable (isolated any Actor, any EffectManagerProtocol<Action, State, Output>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, EffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
     {
-        // Wrap with downcast so call sites receive the concrete type directly.
-        self.performIsolated = { f in
-            await performIsolated { actor, anyEffectManager in
-                // NOTE: `anyEffectManager` is a typing workaround to suppress Swift compiler warning, which is safe to
-                // downcast.
-                f(actor, anyEffectManager as! Self)
-            }
-        }
+        self.performIsolated = performIsolated
         self.sendAction = sendAction
     }
 

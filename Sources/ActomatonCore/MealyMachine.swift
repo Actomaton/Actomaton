@@ -69,15 +69,15 @@ public actor MealyMachine<Action, State, Output>
 
     /// Initializer with custom `executingActor`.
     /// Used for ``MainActomaton`` construction.
-    package init(
+    package init<EffM>(
         state: State,
         reducer: MealyReducer<Action, State, (), Output>,
-        effectManager: some EffectManagerProtocol<Action, State, Output>,
+        effectManager: EffM,
         executingActor: any Actor,
         willChangeState: @escaping (
             _ isolation: isolated MealyMachine, _ old: State, _ new: State
         ) -> Void = { _, _, _ in }
-    ) where Action: Sendable
+    ) where Action: Sendable, EffM: EffectManagerProtocol<Action, State, Output>
     {
 #if !DISABLE_COMBINE && canImport(Combine)
         self._state = Published(initialValue: state)
@@ -89,10 +89,26 @@ public actor MealyMachine<Action, State, Output>
         self.executingActor = executingActor
         self.willChangeState = willChangeState
 
-        effectManager.setUp(
-            performIsolated: { [weak self] f in
+        typealias NonSendablePerformIsolated = (
+            _ runEffM: @escaping @Sendable (isolated any Actor, EffM) -> Void
+        ) async -> Void
+
+        typealias SendablePerformIsolated = @Sendable (
+            _ runEffM: @escaping @Sendable (isolated any Actor, EffM) -> Void
+        ) async -> Void
+
+        // Create as non-`@Sendable` closure to avoid too conservative `SendableMetatype` check of `EffM`,
+        // then `unsafeBitCast` to `@Sendable` for passing to `effectManager.setUp()`.
+        // This is considered as a safe operation because the only capture is `[weak self]` which is `Sendable`.
+        let performIsolated: SendablePerformIsolated = unsafeBitCast(
+            { [weak self] f in
                 await self?.performIsolated(f)
-            },
+            } as NonSendablePerformIsolated,
+            to: SendablePerformIsolated.self
+        )
+
+        effectManager.setUp(
+            performIsolated: performIsolated,
             sendAction: { [weak self] action, priority, tracksFeedbacks in
                 await self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
             }
@@ -130,15 +146,15 @@ public actor MealyMachine<Action, State, Output>
         return effectManager.processOutput(output_, priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
 
-    /// Runs a block within `self`'s isolation.
+    /// Runs a block within `self`'s isolation with `EffM` force-casting.
     /// This method is a proof that `effectManager` is owned and protected by `self`.
     ///
     /// Used by ``EffectManagerProtocol`` conformers to re-enter actor isolation from detached tasks.
-    private func performIsolated(
-        _ f: @Sendable (isolated any Actor, any EffectManagerProtocol<Action, State, Output>) -> Void
-    )
+    private func performIsolated<EffM>(
+        _ f: @Sendable (isolated any Actor, EffM) -> Void
+    ) where EffM: EffectManagerProtocol<Action, State, Output>
     {
-        f(self, self.effectManager)
+        f(self, self.effectManager as! EffM)
     }
 }
 

@@ -146,7 +146,7 @@ private final class StringEffectManager<Action: Sendable, State>: EffectManagerP
 
     func setUp(
         performIsolated: @escaping @Sendable (
-            @escaping @Sendable (isolated any Actor, any EffectManagerProtocol<Action, State, Output>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, StringEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
