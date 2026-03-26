@@ -17,24 +17,16 @@ public protocol EffectManagerProtocol<Action, State, Output>: AnyObject
     /// Called once by ``MealyMachine`` after initialization.
     ///
     /// - Parameters:
-    ///   - isolatedPerform:
+    ///   - performIsolated:
     ///     Closure to run a block within the owning actor's isolation.
     ///     This method is a proof that `self` (EffectManager) is owned and protected by `isolated any Actor`,
     ///     which guarantees e.g. safe clean up work inside `Task` closure while `self` is usually a non-`Sendable`
     /// class.
     ///   - sendAction:
     ///     Closure to send feedback actions back to the owning actor.
-    ///
-    /// - Warning:
-    ///   Technically, `performIsolated` closure's second parameter should be typed as `Self`
-    ///   rather than `any EffectManagerProtocol`.
-    ///   However, Swift 6.2 compiler complains about this due to `SendableMetatype` check
-    ///   that shows a warning message: "Capture of non-Sendable type 'EffM.Type' in an isolated closure".
-    ///   Thus, as a workaround, we loosen the closure parameter type from `Self` to `any EffectManagerProtocol`,
-    ///   and let `EffectManager` implementation side call `as! Self` cast instead, which will be a safe operation.
     func setUp(
         performIsolated: @escaping @Sendable (
-            @escaping @Sendable (isolated any Actor, any EffectManagerProtocol<Action, State, Output>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, Self) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
