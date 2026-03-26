@@ -93,6 +93,7 @@ public actor MealyMachine<Action, State, Output>
             _ runEffM: @escaping @Sendable (isolated any Actor, EffM) -> Void
         ) async -> Void
 
+        // swiftformat:disable:next wrapAttributes
         typealias SendablePerformIsolated = @Sendable (
             _ runEffM: @escaping @Sendable (isolated any Actor, EffM) -> Void
         ) async -> Void
