@@ -37,11 +37,11 @@ swift-test:
 
 .PHONY: swiftformat
 swiftformat:
-	swift package plugin --allow-writing-to-package-directory swiftformat
+	SWIFTFORMAT=1 swift package plugin --allow-writing-to-package-directory swiftformat
 
 .PHONY: swiftformat-lint
 swiftformat-lint:
-	swift package plugin --allow-writing-to-package-directory swiftformat --lint
+	SWIFTFORMAT=1 swift package plugin --allow-writing-to-package-directory swiftformat --lint
 
 #--------------------------------------------------
 # DocC
