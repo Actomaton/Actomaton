@@ -25,13 +25,18 @@ let package = Package(
             targets: ["ActomatonEffect"]
         ),
     ],
-    dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
-        .package(url: "https://github.com/pointfreeco/swift-clocks", from: "1.0.6"),
-        .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", from: "1.1.0"),
-        .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0"),
-        .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.55.3"),
-    ],
+    dependencies: {
+        var deps: [Package.Dependency] = [
+            .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
+            .package(url: "https://github.com/pointfreeco/swift-clocks", from: "1.0.6"),
+            .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", from: "1.1.0"),
+            .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0"),
+        ]
+        if ProcessInfo.processInfo.environment["SWIFTFORMAT"] != nil {
+            deps.append(.package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.55.3"))
+        }
+        return deps
+    }(),
     targets: [
         .target(
             name: "ActomatonCore",
