@@ -28,7 +28,8 @@ final class MainActomatonCounterTests: MainTestCase
                         print("decrement")
                     }
                 }
-            }
+            },
+            effectContext: effectContext
         )
         self.actomaton = actomaton
     }

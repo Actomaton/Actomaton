@@ -10,14 +10,15 @@ final class DeinitTests: MainTestCase
     func test_deinit() async throws
     {
         let resultsCollector = ResultsCollector<String>()
+        let clock = self.clock
 
         var actomaton: Store? = Store<Action, State, Environment>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, _, _ in
                 switch action {
                 case .run:
-                    return Effect { [resultsCollector] in
-                        return try await tick(5) {
+                    return Effect { [resultsCollector] context in
+                        return try await context.clock.sleep(for: .ticks(5)) {
                             await resultsCollector.append("Effect succeeded")
                             return nil
                         } ifCancelled: {
@@ -28,13 +29,14 @@ final class DeinitTests: MainTestCase
                     }
                 }
             },
-            environment: Environment(resultsCollector: resultsCollector)
+            environment: Environment(resultsCollector: resultsCollector),
+            effectContext: effectContext
         )
 
         weak var weakActomaton = actomaton
 
         let task = actomaton?.send(.run)
-        try await tick(1)
+        await clock.advance(by: .ticks(1))
 
         // Deinit `actomaton`.
         actomaton = nil
@@ -53,6 +55,8 @@ final class DeinitTests: MainTestCase
             Set(results), ["Effect cancelled", "DeinitChecker deinit"],
             "Running effect should be cancelled, and `DeinitChecker` should deinit."
         )
+
+        _ = weakActomaton
     }
 }
 

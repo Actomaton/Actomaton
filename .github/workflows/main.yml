@@ -51,6 +51,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # NOTE: `make` command not available in the container.
+      - name: Install make
+        run: apt-get update && apt-get install -y make
+
       - name: Build Ubuntu package
-        run: TEST_MAIN_ACTOR=1 swift test
+        run: CI=1 make swift-test

@@ -14,11 +14,11 @@ final class TimerTests: MainTestCase
     {
         struct TimerID: EffectIDProtocol {}
 
-        let timerEffect = Effect(id: TimerID(), sequence: {
+        let timerEffect = Effect(id: TimerID(), sequence: { context in
             AsyncStream<()> { continuation in
                 let task = Task {
                     while true {
-                        try await tick(2)
+                        try await context.clock.sleep(for: .ticks(2))
                         continuation.yield(())
                     }
                 }
@@ -42,7 +42,8 @@ final class TimerTests: MainTestCase
                 case .stop:
                     return .cancel(id: TimerID())
                 }
-            }
+            },
+            effectContext: effectContext
         )
         self.actomaton = actomaton
 
@@ -65,18 +66,18 @@ final class TimerTests: MainTestCase
 
         assertEqual(await actomaton.state, 0)
 
-        try await tick(2.3)
+        await clock.advance(by: .ticks(2.3))
         assertEqual(await actomaton.state, 1)
 
-        try await tick(2.3)
+        await clock.advance(by: .ticks(2.3))
         assertEqual(await actomaton.state, 2)
 
-        try await tick(2.3)
+        await clock.advance(by: .ticks(2.3))
         assertEqual(await actomaton.state, 3)
 
         await actomaton.send(.stop)
 
-        try await tick(3)
+        await clock.advance(by: .ticks(3))
         assertEqual(
             await actomaton.state,
             3,

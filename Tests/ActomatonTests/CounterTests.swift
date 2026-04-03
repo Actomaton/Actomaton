@@ -22,7 +22,8 @@ final class CounterTests: MainTestCase
                         print("decrement")
                     }
                 }
-            }
+            },
+            effectContext: effectContext
         )
         self.actomaton = actomaton
     }

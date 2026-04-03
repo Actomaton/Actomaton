@@ -37,14 +37,14 @@ final class LoginLogoutTests: MainTestCase
                 switch (action, state) {
                 case (.login, .loggedOut):
                     state = .loggingIn
-                    return Effect(queue: LoginFlowEffectQueue()) {
+                    return Effect(queue: LoginFlowEffectQueue()) { context in
                         do {
-                            try await tick(1)
-                            return .loginOK
-                        }
-                        catch is CancellationError {
-                            await flags.mark(isLoginCancelled: true)
-                            return nil
+                            return try await context.clock.sleep(for: .ticks(1)) {
+                                return .loginOK
+                            } ifCancelled: {
+                                await flags.mark(isLoginCancelled: true)
+                                return nil
+                            }
                         }
                         catch {
                             return nil
@@ -59,8 +59,8 @@ final class LoginLogoutTests: MainTestCase
                      (.forceLogout, .loggingIn),
                      (.forceLogout, .loggedIn):
                     state = .loggingOut
-                    return Effect(queue: LoginFlowEffectQueue()) {
-                        try await tick(1)
+                    return Effect(queue: LoginFlowEffectQueue()) { context in
+                        try await context.clock.sleep(for: .ticks(1))
                         return .logoutOK
                     }
 
@@ -71,7 +71,8 @@ final class LoginLogoutTests: MainTestCase
                 default:
                     return .empty
                 }
-            }
+            },
+            effectContext: effectContext
         )
         self.actomaton = actomaton
 
@@ -107,12 +108,14 @@ final class LoginLogoutTests: MainTestCase
         t = await actomaton.send(.login)
         assertEqual(await actomaton.state, .loggingIn)
 
+        await clock.advance(by: .ticks(1))
         try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedIn)
 
         t = await actomaton.send(.logout)
         assertEqual(await actomaton.state, .loggingOut)
 
+        await clock.advance(by: .ticks(1))
         try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -131,11 +134,12 @@ final class LoginLogoutTests: MainTestCase
         assertEqual(await actomaton.state, .loggingIn)
 
         // Wait for a while and interrupt by `forceLogout`.
-        try await tick(0.1)
+        await clock.advance(by: .ticks(0.1))
         t = await actomaton.send(.forceLogout)
 
         assertEqual(await actomaton.state, .loggingOut)
 
+        await clock.advance(by: .ticks(1))
         try await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 

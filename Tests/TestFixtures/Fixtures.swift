@@ -1,28 +1,77 @@
+import Clocks
 import XCTest
 
-// MARK: - Tick
+// MARK: - Clock.advance(by: TestDuration)
 
-/// - Note: For safe async testing, leeway should have at least 50 millisec (30 millsec isn't enough for MacBook Pro
-/// (15-inch, 2018)).
-public func tick(_ n: Double) async throws
+extension TestClock where Duration == Swift.Duration
 {
-    try await Task.sleep(nanoseconds: UInt64(Double(tickTimeInterval) * n))
+    public func advance(
+        by duration: TestDuration
+    ) async
+    {
+        await self.advance(by: duration.duration)
+    }
 }
 
-public let tickTimeInterval: UInt64 = 50_000_000 // 50 ms
-
-public func tick<T>(
-    _ n: Double,
-    ifSucceeded: () async throws -> T,
-    ifCancelled: () async throws -> T
-) async throws -> T
+extension ContinuousClock
 {
-    do {
-        try await tick(n)
-        return try await ifSucceeded()
+    public func advance(
+        by duration: TestDuration
+    ) async
+    {
+        try? await self.sleep(for: duration.duration)
     }
-    catch is CancellationError {
-        return try await ifCancelled()
+}
+
+// MARK: - Clock.sleep(for: TestDuration)
+
+extension Clock where Duration == Swift.Duration
+{
+    public func sleep(
+        for duration: TestDuration
+    ) async throws
+    {
+        try await self.sleep(for: duration.duration)
+    }
+
+    public func sleep<T>(
+        for duration: TestDuration,
+        ifSucceeded: () async throws -> T,
+        ifCancelled: () async throws -> T
+    ) async throws -> T
+    {
+        do {
+            try await self.sleep(for: duration.duration)
+            return try await ifSucceeded()
+        }
+        catch is CancellationError {
+            return try await ifCancelled()
+        }
+    }
+}
+
+// MARK: - Clock.sleep(until: TestDuration)
+
+extension Clock where Duration == Swift.Duration
+{
+    public func sleep(
+        until duration: TestDuration,
+        tolerance: Duration? = nil
+    ) async throws
+    {
+        let deadline = self.now.advanced(by: duration.duration)
+        try await self.sleep(until: deadline, tolerance: tolerance)
+    }
+}
+
+// MARK: - settle
+
+public func settle(
+    yields: Int = 10
+) async
+{
+    for _ in 0 ..< yields {
+        await Task.yield()
     }
 }
 

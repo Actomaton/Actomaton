@@ -33,11 +33,11 @@ final class RunNewestDiscardOldTests: MainTestCase
                 case .increment:
                     state.count += 1
 
-                    return Effect(queue: NewestEffectQueue(maxCount: maxCount)) { [state] in
-                        try await tick(1) {
+                    return Effect(queue: NewestEffectQueue(maxCount: maxCount)) { [state] context in
+                        return try await context.clock.sleep(for: .ticks(1)) {
                             Debug.print("Effect success")
                             return .effectCompleted
-                        } ifCancelled: { [resultsCollector] in
+                        } ifCancelled: {
                             await resultsCollector.append(state.count)
                             Debug.print("Effect cancelled: \(state.count)")
                             return nil
@@ -48,7 +48,8 @@ final class RunNewestDiscardOldTests: MainTestCase
                     state.effectCompletedCount += 1
                     return .empty
                 }
-            }
+            },
+            effectContext: effectContext
         )
         self.actomaton = actomaton
     }
@@ -67,7 +68,7 @@ final class RunNewestDiscardOldTests: MainTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 2, effectCompletedCount: 0))
 
-        try await tick(3)
+        await clock.advance(by: .ticks(3))
 
         assertEqual(
             await actomaton.state,
@@ -79,7 +80,7 @@ final class RunNewestDiscardOldTests: MainTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 1))
 
-        try await tick(3)
+        await clock.advance(by: .ticks(3))
 
         assertEqual(await actomaton.state, State(count: 3, effectCompletedCount: 2))
 
@@ -109,7 +110,7 @@ final class RunNewestDiscardOldTests: MainTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 4, effectCompletedCount: 0))
 
-        try await tick(5)
+        await clock.advance(by: .ticks(5))
 
         assertEqual(
             await actomaton.state,
@@ -121,7 +122,7 @@ final class RunNewestDiscardOldTests: MainTestCase
         await actomaton.send(.increment)
         assertEqual(await actomaton.state, State(count: 5, effectCompletedCount: 2))
 
-        try await tick(3)
+        await clock.advance(by: .ticks(3))
 
         assertEqual(await actomaton.state, State(count: 5, effectCompletedCount: 3))
 
