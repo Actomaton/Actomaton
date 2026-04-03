@@ -55,7 +55,7 @@ jobs:
         run: apt-get update && apt-get install -y make
 
       - name: Build Ubuntu package
-        run: CI=1 make swift-test
+        run: TEST_CLOCK=1 make swift-test
 
   required:
     name: Required
