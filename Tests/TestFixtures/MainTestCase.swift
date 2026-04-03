@@ -13,7 +13,7 @@ import ConcurrencyExtras
 /// [More information](https://www.pointfree.co/blog/posts/110-reliably-testing-async-code-in-swift)
 open class MainTestCase: XCTestCase
 {
-#if CI
+#if TEST_CLOCK
     public let clock = TestClock<Duration>()
 #else
     public let clock = ContinuousClock()

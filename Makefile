@@ -5,7 +5,7 @@ PLATFORM_TVOS = tvOS Simulator,id=$(call udid_for,tvOS,TV)
 PLATFORM_VISIONOS = visionOS Simulator,id=$(call udid_for,visionOS,Vision)
 PLATFORM_WATCHOS = watchOS Simulator,id=$(call udid_for,watchOS,Watch)
 
-SWIFT_TEST_FLAGS = $(if $(CI),-Xswiftc -DCI,)
+SWIFT_TEST_FLAGS = $(if $(filter 1,$(TEST_CLOCK)),-Xswiftc -DTEST_CLOCK,)
 
 # Base path after host name, required for GitHub Pages.
 # Note that `documentation/{module_name}` is automatically added to the end of this path in Swift-DocC,
