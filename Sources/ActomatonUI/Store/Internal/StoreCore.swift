@@ -20,6 +20,7 @@ internal final class StoreCore<Action, State, Environment>
         state initialState: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment,
+        effectContext: EffectContext,
         configuration: StoreConfiguration
     )
     {
@@ -30,7 +31,8 @@ internal final class StoreCore<Action, State, Environment>
             state: initialState,
             reducer: lift(reducer: reducer)
                 .log(format: configuration.logFormat),
-            environment: environment
+            environment: environment,
+            effectContext: effectContext
         )
 
         self.actomaton.statePublisher

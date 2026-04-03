@@ -29,7 +29,8 @@ package final class MainActomaton<Action, State>
     /// Initializer without `environment`.
     package init(
         state: State,
-        reducer: Reducer<Action, State, ()>
+        reducer: Reducer<Action, State, ()>,
+        effectContext: EffectContext = .init(clock: ContinuousClock())
     )
     {
         var willChangeState: (@MainActor (_ old: State, _ new: State) -> Void)?
@@ -37,7 +38,7 @@ package final class MainActomaton<Action, State>
         self.actomaton = Actomaton(
             state: state,
             reducer: reducer,
-            effectManager: EffectManager<Action, State>(),
+            effectManager: EffectManager<Action, State>(effectContext: effectContext),
             executingActor: MainActor.shared,
             willChangeState: { @Sendable _, old, new in
                 MainActor.assumeIsolated {
@@ -61,12 +62,17 @@ package final class MainActomaton<Action, State>
     package convenience init<Environment>(
         state: State,
         reducer: Reducer<Action, State, Environment>,
-        environment: Environment
+        environment: Environment,
+        effectContext: EffectContext = .init(clock: ContinuousClock())
     ) where Environment: Sendable
     {
-        self.init(state: state, reducer: Reducer { action, state, _ in
-            reducer.run(action, &state, environment)
-        })
+        self.init(
+            state: state,
+            reducer: Reducer { action, state, _ in
+                reducer.run(action, &state, environment)
+            },
+            effectContext: effectContext
+        )
     }
 
     /// Sends `action` to `Actomaton`.
