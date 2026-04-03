@@ -25,6 +25,8 @@ jobs:
           restore-keys: swiftformat-
       - name: Lint
         run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+        env:
+          SWIFTFORMAT: 1
 
   xcode-build:
     name: Xcode build ${{ matrix.platform }}
