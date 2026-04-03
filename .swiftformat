@@ -29,6 +29,7 @@
 --stripunusedargs closure-only
 --modifierorder open,public,internal,fileprivate,private,override,final,required,convenience,static,class,dynamic,optional,lazy,weak,unowned,nonisolated,isolated
 --voidtype void
+--extensionacl on-declarations
 
 # Disabled rules
 # NOTE: braces rule disabled because codebase uses hybrid style:
@@ -37,7 +38,6 @@
 # SwiftFormat's --allman flag applies to ALL braces, so we preserve existing style instead.
 --disable braces
 --disable wrapMultilineStatementBraces
---disable extensionAccessControl
 --disable hoistAwait
 --disable hoistTry
 --disable enumNamespaces

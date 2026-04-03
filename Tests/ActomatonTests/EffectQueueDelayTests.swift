@@ -10,7 +10,7 @@ final class EffectQueueDelayTests: MainTestCase
 {
     private func makeActomaton<Queue: EffectQueueProtocol>(
         queue: Queue,
-        effectTime: TimeInterval
+        effectTime: TestDuration
     ) -> (Actomaton<Action, State>, startedIDs: ResultsCollector<String>, cancelledIDs: ResultsCollector<String>)
     {
         let startedIDs: ResultsCollector<String> = .init()
@@ -21,7 +21,7 @@ final class EffectQueueDelayTests: MainTestCase
             reducer: Reducer { action, state, _ in
                 switch action {
                 case let .fetch(id):
-                    return Effect(id: EffectID(name: "running \(id)"), queue: queue) {
+                    return Effect(id: EffectID(name: "running \(id)"), queue: queue) { context in
                         // NOTE: Due to `queue`'s delay, this scope may run at delayed schedule time.
 
                         print("Start: \(id), Task.isCancelled = \(Task.isCancelled)")
@@ -35,10 +35,10 @@ final class EffectQueueDelayTests: MainTestCase
                         // Swift 6 requirement:
                         // Swift 5.7 worked with 1 ms delay, but Swift 6 will need 10 ms.
                         do {
-                            try await Task.sleep(nanoseconds: 10_000_000)
+                            try await context.clock.sleep(for: .ticks(0.2))
                         }
                         catch {
-                            // Ignore cancellation handling during `Task.sleep`.
+                            // Ignore cancellation handling during `clock.sleep`.
                         }
 
                         print("Start (recheck): \(id), Task.isCancelled = \(Task.isCancelled)")
@@ -50,7 +50,7 @@ final class EffectQueueDelayTests: MainTestCase
                             await startedIDs.append(id)
                         }
 
-                        return try await tick(effectTime) {
+                        return try await context.clock.sleep(for: effectTime) {
                             return ._didFetch(id: id)
                         } ifCancelled: { () -> Action? in
                             print("Effect \(id) cancelled")
@@ -66,7 +66,8 @@ final class EffectQueueDelayTests: MainTestCase
                         print("Finished: \(id)")
                     }
                 }
-            }
+            },
+            effectContext: effectContext
         )
 
         return (actomaton, startedIDs, cancelledIDs)
@@ -74,8 +75,8 @@ final class EffectQueueDelayTests: MainTestCase
 
     func test_DelayedEffectQueue() async throws
     {
-        let delay: TimeInterval = 3
-        let effectTime: TimeInterval = 2
+        let delay = TestDuration.ticks(3)
+        let effectTime = TestDuration.ticks(2)
 
         // `.runNewest(maxCount: .max)`.
         let (actomaton, startedIDs, cancelledIDs) = makeActomaton(
@@ -94,16 +95,16 @@ final class EffectQueueDelayTests: MainTestCase
 
         assertEqual(await actomaton.state.finishedIDs, [])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1", "2"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1", "2", "3"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1", "2", "3", "4"])
 
         // ResultCollector
@@ -118,8 +119,8 @@ final class EffectQueueDelayTests: MainTestCase
     // NOTE: Behaves similar to debounce, but up to `.runNewest(N)` effects.
     func test_DelayedNewest2EffectQueue() async throws
     {
-        let delay: TimeInterval = 2
-        let effectTime: TimeInterval = 1
+        let delay = TestDuration.ticks(2)
+        let effectTime = TestDuration.ticks(1)
 
         // `.runNewest(2)`
         let (actomaton, startedIDs, cancelledIDs) = makeActomaton(
@@ -139,10 +140,10 @@ final class EffectQueueDelayTests: MainTestCase
         // NOTE:
         // `delay * 2` for waiting from "1" to "3", then `effectTime + 0.75` for waiting "3"
         // to be safely completed but before fetching "4".
-        try await tick(delay * 2 + effectTime + 0.75)
+        await clock.advance(by: delay * 2.0 + effectTime + .ticks(0.75))
         assertEqual(await actomaton.state.finishedIDs, ["3"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["3", "4"])
 
         // ResultCollector
@@ -158,8 +159,8 @@ final class EffectQueueDelayTests: MainTestCase
 
     func test_DelayedOldest2SuspendNewEffectQueue() async throws
     {
-        let delay: TimeInterval = 2
-        let effectTime: TimeInterval = 3
+        let delay = TestDuration.ticks(2)
+        let effectTime = TestDuration.ticks(3)
 
         // `.runOldest(2, .suspendNew)`
         let (actomaton, startedIDs, cancelledIDs) = makeActomaton(
@@ -176,16 +177,16 @@ final class EffectQueueDelayTests: MainTestCase
 
         assertEqual(await actomaton.state.finishedIDs, [])
 
-        try await tick(effectTime + 0.5)
+        await clock.advance(by: effectTime + .ticks(0.5))
         assertEqual(await actomaton.state.finishedIDs, ["1"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1", "2"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1", "2", "3"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1", "2", "3", "4"])
 
         // ResultCollector
@@ -199,8 +200,8 @@ final class EffectQueueDelayTests: MainTestCase
 
     func test_DelayedOldest2DiscardNewEffectQueue() async throws
     {
-        let delay: TimeInterval = 2
-        let effectTime: TimeInterval = 3
+        let delay = TestDuration.ticks(2)
+        let effectTime = TestDuration.ticks(3)
 
         // `.runOldest(2, .discardNew)`
         let (actomaton, startedIDs, cancelledIDs) = makeActomaton(
@@ -217,10 +218,10 @@ final class EffectQueueDelayTests: MainTestCase
 
         assertEqual(await actomaton.state.finishedIDs, [])
 
-        try await tick(effectTime + 0.5)
+        await clock.advance(by: effectTime + .ticks(0.5))
         assertEqual(await actomaton.state.finishedIDs, ["1"])
 
-        try await tick(delay)
+        await clock.advance(by: delay)
         assertEqual(await actomaton.state.finishedIDs, ["1", "2"])
 
         // ResultCollector
@@ -253,50 +254,48 @@ private struct EffectID: EffectIDProtocol
 
 private struct DelayedEffectQueue: EffectQueueProtocol
 {
-    let delay: TimeInterval
+    let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {
         .runNewest(maxCount: .max)
     }
 
     var effectQueueDelay: EffectQueueDelay {
-        .constant(delay * timescale)
+        .constant(delay.timeInterval)
     }
 }
 
 private struct DelayedNewest2EffectQueue: EffectQueueProtocol
 {
-    let delay: TimeInterval
+    let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {
         .runNewest(maxCount: 2)
     }
 
     var effectQueueDelay: EffectQueueDelay {
-        .constant(delay * timescale)
+        .constant(delay.timeInterval)
     }
 }
 
 private struct DelayedOldest2SuspendNewEffectQueue: EffectQueueProtocol
 {
-    let delay: TimeInterval
+    let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {
         .runOldest(maxCount: 2, .suspendNew)
     }
 
     var effectQueueDelay: EffectQueueDelay {
-        .constant(delay * timescale)
+        .constant(delay.timeInterval)
     }
 }
 
 private struct DelayedOldest2DiscardNewEffectQueue: EffectQueueProtocol
 {
-    let delay: TimeInterval
+    let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {
         .runOldest(maxCount: 2, .discardNew)
     }
 
     var effectQueueDelay: EffectQueueDelay {
-        .constant(delay * timescale)
+        .constant(delay.timeInterval)
     }
 }
-
-private let timescale: TimeInterval = .init(tickTimeInterval) / 1_000_000_000

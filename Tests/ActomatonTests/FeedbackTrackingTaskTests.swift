@@ -20,8 +20,8 @@ final class FeedbackTrackingTaskTests: MainTestCase
                     guard state == ._1 else { return .empty }
 
                     state = ._2
-                    return Effect {
-                        try await tick(1) {
+                    return Effect { context in
+                        return try await context.clock.sleep(for: .ticks(1)) {
                             return ._2To3
                         } ifCancelled: {
                             Debug.print("_1To2 cancelled")
@@ -33,8 +33,8 @@ final class FeedbackTrackingTaskTests: MainTestCase
                     guard state == ._2 else { return .empty }
 
                     state = ._3
-                    return Effect {
-                        try await tick(1) {
+                    return Effect { context in
+                        return try await context.clock.sleep(for: .ticks(1)) {
                             return ._3To4
                         } ifCancelled: {
                             Debug.print("_2To3 cancelled")
@@ -46,18 +46,18 @@ final class FeedbackTrackingTaskTests: MainTestCase
                     guard state == ._3 else { return .empty }
 
                     state = ._4(count: 0)
-                    return Effect(sequence: {
+                    return Effect(sequence: { context in
                         AsyncStream<Action> { continuation in
                             let task = Task<(), any Error> {
                                 for _ in 1 ... 2 {
-                                    try await tick(1) {
+                                    try await context.clock.sleep(for: .ticks(1)) {
                                         continuation.yield(._increment)
                                     } ifCancelled: {
                                         Debug.print("_3To4 cancelled")
                                     }
                                 }
 
-                                try await tick(1)
+                                try await context.clock.sleep(for: .ticks(1))
                                 continuation.yield(._4To5)
                                 continuation.finish()
                             }
@@ -77,8 +77,8 @@ final class FeedbackTrackingTaskTests: MainTestCase
                     guard case ._4 = state else { return .empty }
 
                     state = ._5
-                    return Effect {
-                        try await tick(1) {
+                    return Effect { context in
+                        return try await context.clock.sleep(for: .ticks(1)) {
                             return ._5To6
                         } ifCancelled: {
                             Debug.print("_4To5 cancelled")
@@ -94,12 +94,13 @@ final class FeedbackTrackingTaskTests: MainTestCase
 
                 case ._toEnd:
                     state = ._end
-                    return Effect {
-                        try await tick(1)
+                    return Effect { context in
+                        try await context.clock.sleep(for: .ticks(1))
                         return nil
                     }
                 }
-            }
+            },
+            effectContext: effectContext
         )
         self.actomaton = actomaton
 
@@ -123,6 +124,7 @@ final class FeedbackTrackingTaskTests: MainTestCase
         let task = await actomaton.send(._1To2, tracksFeedbacks: false)
 
         // Wait for `._1To2`'s effect only (upto `_2To3`'s next state-transition without its effect)
+        await clock.advance(by: .ticks(1))
         try await task?.value
 
         assertEqual(
@@ -134,20 +136,20 @@ final class FeedbackTrackingTaskTests: MainTestCase
             """
         )
 
-        try await tick(1.3)
+        await clock.advance(by: .ticks(1.3))
         assertEqual(await actomaton.state, ._4(count: 0))
 
-        try await tick(1.3)
+        await clock.advance(by: .ticks(1.3))
         assertEqual(await actomaton.state, ._4(count: 1))
 
-        try await tick(1.3)
+        await clock.advance(by: .ticks(1.3))
         assertEqual(await actomaton.state, ._4(count: 2))
 
         // Comment-Out: A bit flaky to check this intermediate state, so ignore it.
         // try await tick(1.3)
         // assertEqual(await actomaton.state, ._5)
 
-        try await tick(2)
+        await clock.advance(by: .ticks(2))
         assertEqual(await actomaton.state, ._6)
     }
 
@@ -162,6 +164,7 @@ final class FeedbackTrackingTaskTests: MainTestCase
         let task = await actomaton.send(._1To2, tracksFeedbacks: true)
 
         // Wait for all: `._1To2`, `._2To3`, `._3To4`, `._increment`, `._4To5`, `._5To6`.
+        await clock.advance(by: .ticks(6))
         try await task?.value
 
         assertEqual(
@@ -182,6 +185,7 @@ final class FeedbackTrackingTaskTests: MainTestCase
         let task = await actomaton.send(._3To4, tracksFeedbacks: true)
 
         // Wait for all: `._3To4`, `._increment`, `._4To5`, `._5To6`.
+        await clock.advance(by: .ticks(4))
         try await task?.value
 
         assertEqual(

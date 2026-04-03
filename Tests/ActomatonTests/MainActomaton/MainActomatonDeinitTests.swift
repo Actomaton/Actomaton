@@ -9,14 +9,15 @@ final class MainActomatonDeinitTests: MainTestCase
     func test_deinit() async throws
     {
         let resultsCollector = ResultsCollector<String>()
+        let clock = self.clock
 
         var actomaton: MainActomaton? = MainActomaton<Action, State>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, _, _ in
                 switch action {
                 case .run:
-                    return Effect { [resultsCollector] in
-                        return try await tick(5) {
+                    return Effect { [resultsCollector] context in
+                        return try await context.clock.sleep(for: .ticks(5)) {
                             await resultsCollector.append("Effect succeeded")
                             return nil
                         } ifCancelled: {
@@ -27,13 +28,14 @@ final class MainActomatonDeinitTests: MainTestCase
                     }
                 }
             },
-            environment: Environment(resultsCollector: resultsCollector)
+            environment: Environment(resultsCollector: resultsCollector),
+            effectContext: effectContext
         )
 
         weak var weakActomaton = actomaton
 
         let task = actomaton?.send(.run)
-        try await tick(1)
+        await clock.advance(by: .ticks(1))
 
         // Deinit `actomaton`.
         actomaton = nil
@@ -42,8 +44,7 @@ final class MainActomatonDeinitTests: MainTestCase
         // Wait until deinit fully completes.
         try? await task?.value
 
-        // Wait another 10ms for reliable deinit completion.
-        try await Task.sleep(nanoseconds: 10_000_000)
+        await settle()
 
         // Check results.
         //
@@ -55,6 +56,8 @@ final class MainActomatonDeinitTests: MainTestCase
             Set(results), ["Effect cancelled", "DeinitChecker deinit"],
             "Running effect should be cancelled, and `DeinitChecker` should deinit."
         )
+
+        weakActomaton = nil // For suppressing `WeakMutability` warning.
     }
 }
 

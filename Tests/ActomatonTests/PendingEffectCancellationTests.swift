@@ -54,8 +54,8 @@ final class PendingEffectCancellationTests: MainTestCase
             reducer: Reducer { [flags] action, _, _ in
                 switch action {
                 case .fetch1:
-                    return Effect(id: EffectID(name: "1"), queue: Oldest1SuspendNewEffectQueue()) {
-                        try await tick(1) {
+                    return Effect(id: EffectID(name: "1"), queue: Oldest1SuspendNewEffectQueue()) { context in
+                        return try await context.clock.sleep(for: .ticks(1)) {
                             return ._didFetch1
                         } ifCancelled: {
                             Debug.print("Effect 1 cancelled")
@@ -65,8 +65,8 @@ final class PendingEffectCancellationTests: MainTestCase
                     }
 
                 case .fetch2:
-                    return Effect(id: EffectID(name: "2"), queue: Oldest1SuspendNewEffectQueue()) {
-                        try await tick(1) {
+                    return Effect(id: EffectID(name: "2"), queue: Oldest1SuspendNewEffectQueue()) { context in
+                        return try await context.clock.sleep(for: .ticks(1)) {
                             return ._didFetch2
                         } ifCancelled: {
                             // NOTE: When Effect 2 is suspended and cancelled before execution,
@@ -87,7 +87,8 @@ final class PendingEffectCancellationTests: MainTestCase
                 case .cancelAll:
                     return Effect.cancel(ids: { $0.value is EffectID })
                 }
-            }
+            },
+            effectContext: effectContext
         )
         self.actomaton = actomaton
 
@@ -110,12 +111,12 @@ final class PendingEffectCancellationTests: MainTestCase
         await actomaton.send(.fetch1)
         await actomaton.send(.fetch2) // NOTE: This fetch will be suspended by `Oldest1SuspendNewEffectQueue`.
 
-        try await tick(1.5)
+        await clock.advance(by: .ticks(1.5))
 
         assertEqual(await flags.result1, .completed)
         assertEqual(await flags.result2, .initial, "Should not complete yet.")
 
-        try await tick(1.5)
+        await clock.advance(by: .ticks(1.5))
 
         assertEqual(await flags.result1, .completed)
         assertEqual(await flags.result2, .completed)
@@ -131,7 +132,7 @@ final class PendingEffectCancellationTests: MainTestCase
 
         await actomaton.send(.cancelAll)
 
-        try await tick(1.5)
+        await clock.advance(by: .ticks(1.5))
 
         assertEqual(await flags.result1, .cancelled)
         assertEqual(await flags.result2, .cancelled)

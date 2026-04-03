@@ -5,7 +5,7 @@ PLATFORM_TVOS = tvOS Simulator,id=$(call udid_for,tvOS,TV)
 PLATFORM_VISIONOS = visionOS Simulator,id=$(call udid_for,visionOS,Vision)
 PLATFORM_WATCHOS = watchOS Simulator,id=$(call udid_for,watchOS,Watch)
 
-TEST_MAIN_ACTOR = 1
+SWIFT_TEST_FLAGS = $(if $(CI),-Xswiftc -DCI,)
 
 # Base path after host name, required for GitHub Pages.
 # Note that `documentation/{module_name}` is automatically added to the end of this path in Swift-DocC,
@@ -29,11 +29,11 @@ xcode-test:
 
 .PHONY: _xcode
 _xcode:
-	set -o pipefail && TEST_MAIN_ACTOR=$(TEST_MAIN_ACTOR) xcodebuild $(ACTION) -scheme Actomaton-Package -destination 'platform=$(PLATFORM_$(shell echo $(OS) | tr '[:lower:]' '[:upper:]'))' | xcpretty
+	set -o pipefail && xcodebuild $(ACTION) -scheme Actomaton-Package -destination 'platform=$(PLATFORM_$(shell echo $(OS) | tr '[:lower:]' '[:upper:]'))' | xcpretty
 
 .PHONY: swift-test
 swift-test:
-	TEST_MAIN_ACTOR=$(TEST_MAIN_ACTOR) swift test
+	swift test $(SWIFT_TEST_FLAGS)
 
 .PHONY: swiftformat
 swiftformat:

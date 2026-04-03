@@ -68,6 +68,7 @@ let package = Package(
             name: "TestFixtures",
             dependencies: [
                 "Actomaton",
+                .product(name: "Clocks", package: "swift-clocks"),
                 .product(name: "ConcurrencyExtras", package: "swift-concurrency-extras")
             ],
             path: "./Tests/TestFixtures"
