@@ -3,9 +3,6 @@
 import Foundation
 import PackageDescription
 
-// `$ TEST_MAIN_ACTOR=1 swift test`
-let usesMainActorInTest = ProcessInfo.processInfo.environment["TEST_MAIN_ACTOR"] == "1"
-
 let package = Package(
     name: "Actomaton",
     // Xcode 16.4 / Swift 6.2
@@ -30,13 +27,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
+        .package(url: "https://github.com/pointfreeco/swift-clocks", from: "1.0.6"),
+        .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", from: "1.1.0"),
         .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0"),
         .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.55.3"),
-    ] + (
-        usesMainActorInTest ? [
-            .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", from: "1.1.0")
-        ] : []
-    ),
+    ],
     targets: [
         .target(
             name: "ActomatonCore",
@@ -46,6 +41,7 @@ let package = Package(
             name: "ActomatonEffect",
             dependencies: [
                 "ActomatonCore",
+                .product(name: "Clocks", package: "swift-clocks"),
             ]
         ),
         .target(
@@ -70,11 +66,10 @@ let package = Package(
             ]),
         .target(
             name: "TestFixtures",
-            dependencies: ["Actomaton"] + (
-                usesMainActorInTest ? [
-                    .product(name: "ConcurrencyExtras", package: "swift-concurrency-extras")
-                ] : []
-            ),
+            dependencies: [
+                "Actomaton",
+                .product(name: "ConcurrencyExtras", package: "swift-concurrency-extras")
+            ],
             path: "./Tests/TestFixtures"
         ),
         .testTarget(

@@ -7,6 +7,41 @@ import Combine
 #endif
 
 /// Compile-only test for README.
+private func readMe1_1_effectContext() async throws
+{
+    enum Action: Sendable {
+        case start
+        case finished
+    }
+
+    struct State: Sendable {
+        var isRunning = false
+    }
+
+    let reducer = Reducer<Action, State, Void> { action, state, _ in
+        switch action {
+        case .start:
+            state.isRunning = true
+            return Effect { context in
+                try await context.clock.sleep(for: .seconds(1))
+                return .finished
+            }
+
+        case .finished:
+            state.isRunning = false
+            return .empty
+        }
+    }
+
+    let actomaton = Actomaton<Action, State>(
+        state: State(),
+        reducer: reducer
+    )
+
+    _ = await actomaton.send(.start)
+}
+
+/// Compile-only test for README.
 private func readMe1_4() async throws
 {
     enum Action: Sendable {

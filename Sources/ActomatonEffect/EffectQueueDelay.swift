@@ -15,4 +15,11 @@ public enum EffectQueueDelay: Hashable, Sendable
             return TimeInterval.random(in: timeRange)
         }
     }
+
+    var duration: Duration
+    {
+        .nanoseconds(
+            Int64(self.timeInterval * 1_000_000_000)
+        )
+    }
 }

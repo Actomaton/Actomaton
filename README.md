@@ -131,9 +131,9 @@ reducer = Reducer { action, state, environment in
         }
     case .decrement:
         state.count -= 1
-        return Effect.fireAndForget {
+        return Effect.fireAndForget { context in
             print("decrement and sleep...")
-            try await Task.sleep(...) // NOTE: We can use `await`!
+            try await context.clock.sleep(for: .seconds(1))
             print("I'm awake!")
         }
     }

@@ -17,6 +17,7 @@ public final class RouteStore<Action, State, Environment, Route>:
         state: State,
         reducer: Reducer<Action, State, SendRouteEnvironment<Environment, Route>>,
         environment: Environment,
+        effectContext: EffectContext = .init(clock: ContinuousClock()),
         configuration: StoreConfiguration = .init(),
         routeType: Route.Type = Route.self // for quick type-inference
     )
@@ -33,6 +34,7 @@ public final class RouteStore<Action, State, Environment, Route>:
             state: state,
             reducer: reducer,
             environment: sendRouteEnvironment,
+            effectContext: effectContext,
             configuration: configuration
         )
         self.core = core
@@ -48,13 +50,15 @@ public final class RouteStore<Action, State, Environment, Route>:
     public convenience init(
         state: State,
         reducer: Reducer<Action, State, SendRouteEnvironment<Void, Route>>,
-        routeType: Route.Type = Route.self // for quick type-inference
+        effectContext: EffectContext = .init(clock: ContinuousClock()),
+        routeType: Route.Type = Route.self
     ) where Environment == Void
     {
         self.init(
             state: state,
             reducer: reducer,
-            environment: ()
+            environment: (),
+            effectContext: effectContext
         )
     }
 

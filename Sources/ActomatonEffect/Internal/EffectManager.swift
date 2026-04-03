@@ -1,4 +1,5 @@
 import ActomatonCore
+import Clocks
 import Foundation
 
 /// Default ``EffectManagerProtocol`` implementation that manages ``Effect<Action>`` with queue-based task lifecycle.
@@ -9,6 +10,8 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     where Action: Sendable
 {
     package typealias Output = Effect<Action>
+
+    private let effectContext: EffectContext
 
     // MARK: - Task tracking
 
@@ -22,8 +25,8 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Suspended effects.
     private var pendingEffectKinds: [EffectQueue: [Effect<Action>.Kind]] = [:]
 
-    /// Tracked latest effect start date for delayed effects calculation.
-    private var latestEffectDate: [EffectQueue: Date] = [:]
+    /// Tracked latest effect start time for delayed effects calculation.
+    private var latestEffectTime: [EffectQueue: AnyClock<Duration>.Instant] = [:]
 
     // MARK: - Callbacks (set via setUp)
 
@@ -36,7 +39,12 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         ) async -> Void
     )?
 
-    package init() {}
+    package init(
+        effectContext: EffectContext
+    )
+    {
+        self.effectContext = effectContext
+    }
 
     // MARK: - EffectManagerProtocol
 
@@ -171,10 +179,10 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         case .single, .sequence:
             let shouldExecute = checkQueuePolicy(effectKind: kind)
             if shouldExecute {
-                let delay = calculateEffectDelay(queue: kind.queue)
+                let time = calculateEffectTime(queue: kind.queue)
                 if let task = makeTask(
                     effectKind: kind,
-                    delay: delay,
+                    time: time,
                     priority: priority,
                     tracksFeedbacks: tracksFeedbacks
                 )
@@ -247,20 +255,21 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Creates a detached task for the given effect kind.
     private func makeTask(
         effectKind: Effect<Action>.Kind,
-        delay: TimeInterval,
+        time: AnyClock<Duration>.Instant?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     ) -> Task<(), any Error>?
     {
         let sendAction = self.sendAction
+        let context = self.effectContext
 
         switch effectKind {
         case let .single(single):
             let task = Task.detached(priority: priority) {
-                if delay > 0 {
-                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                if let time {
+                    try? await context.clock.sleep(until: time, tolerance: nil)
                 }
-                let nextAction = try await single.run()
+                let nextAction = try await single.run(context)
                 if let nextAction {
                     let feedbackTask = await sendAction?(nextAction, priority, tracksFeedbacks)
                     if tracksFeedbacks {
@@ -279,10 +288,10 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
 
         case let .sequence(sequence):
             let task = Task<(), any Error>.detached(priority: priority) {
-                if delay > 0 {
-                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                if let time {
+                    try? await context.clock.sleep(until: time, tolerance: nil)
                 }
-                guard let seq = try await sequence.sequence() else { return }
+                guard let seq = try await sequence.sequence(context) else { return }
                 var feedbackTasks: [Task<(), any Error>] = []
                 for try await nextAction in seq {
                     let feedbackTask = await sendAction?(nextAction, priority, tracksFeedbacks)
@@ -386,24 +395,32 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         }
     }
 
-    /// Calculates effect delay based on `latestTaskRunningDate` for necessary sleep in `makeTask`.
-    private func calculateEffectDelay(queue: AnyEffectQueue?) -> TimeInterval
+    /// Calculates absolute effect start time for queue-based delay scheduling.
+    ///
+    /// Returns `nil` when the effect should run immediately without additional sleeping.
+    private func calculateEffectTime(queue: AnyEffectQueue?) -> AnyClock<Duration>.Instant?
     {
-        // No queue means, immediate task run.
-        guard let queue else { return 0 }
+        guard let queue else { return nil }
 
-        let delayAfterLatestEffect = queue.effectQueueDelay.timeInterval
-        let latestDate = self.latestEffectDate[queue.queue, default: Date(timeIntervalSince1970: 0)]
+        let now = self.effectContext.clock.now
 
-        let targetDelaySinceNow = max(latestDate.timeIntervalSinceNow + delayAfterLatestEffect, 0)
-        self.latestEffectDate[queue.queue] = Date(timeIntervalSinceNow: targetDelaySinceNow)
+        guard let latestTime = self.latestEffectTime[queue.queue] else {
+            self.latestEffectTime[queue.queue] = now
+            return nil
+        }
 
-        Debug
-            .print(
-                "[calculateEffectDelay] delayAfterLatestExec = \(delayAfterLatestEffect), latestEffectDate = \(latestDate), targetDelaySinceNow = \(targetDelaySinceNow)"
-            )
+        let targetDelay = now.duration(to: latestTime) + queue.effectQueueDelay.duration
 
-        return targetDelaySinceNow
+        if targetDelay <= .zero {
+            self.latestEffectTime[queue.queue] = now
+            return nil
+        }
+
+        let nextTime = now.advanced(by: targetDelay)
+        self.latestEffectTime[queue.queue] = nextTime
+
+        Debug.print("[calculateEffectDelay] scheduled via effectContext.clock")
+        return nextTime
     }
 
     /// Dequeues a pending effect if possible (for `runOldest-suspendNew` policy).
@@ -416,11 +433,11 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     {
         guard pendingEffectKinds[queue.queue]?.isEmpty == false else { return nil }
         let kind = pendingEffectKinds[queue.queue]!.removeFirst()
-        let delay = calculateEffectDelay(queue: queue)
+        let time = calculateEffectTime(queue: queue)
         Debug.print("[dequeuePendingIfPossible] Dequeued pending effect")
         return makeTask(
             effectKind: kind,
-            delay: delay,
+            time: time,
             priority: priority,
             tracksFeedbacks: tracksFeedbacks
         )
@@ -430,15 +447,17 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// so that cancellation can still be delivered to `Effect`'s async scope.
     private func cancelEffectKind(_ effectKind: Effect<Action>.Kind)
     {
+        let context = self.effectContext
+
         switch effectKind {
         case let .single(single):
             Task<Void, any Error>.detached {
-                _ = try await single.run()
+                _ = try await single.run(context)
             }
             .cancel() // Cancel immediately.
         case let .sequence(sequence):
             Task<Void, any Error>.detached {
-                _ = try await sequence.sequence()
+                _ = try await sequence.sequence(context)
             }
             .cancel() // Cancel immediately.
         case .next, .cancel:

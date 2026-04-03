@@ -7,13 +7,14 @@ extension MealyMachine where Output == Effect<Action>
     /// Initializer without `environment`.
     public init(
         state: State,
-        reducer: Reducer<Action, State, ()>
+        reducer: Reducer<Action, State, ()>,
+        effectContext: EffectContext = .init(clock: ContinuousClock())
     ) where Action: Sendable
     {
         self.init(
             state: state,
             reducer: reducer,
-            effectManager: EffectManager<Action, State>()
+            effectManager: EffectManager<Action, State>(effectContext: effectContext)
         )
     }
 
@@ -21,12 +22,17 @@ extension MealyMachine where Output == Effect<Action>
     public init<Environment>(
         state: State,
         reducer: Reducer<Action, State, Environment>,
-        environment: Environment
+        environment: Environment,
+        effectContext: EffectContext = .init(clock: ContinuousClock())
     ) where Action: Sendable, Environment: Sendable
     {
-        self.init(state: state, reducer: Reducer { action, state, _ in
-            reducer.run(action, &state, environment)
-        })
+        self.init(
+            state: state,
+            reducer: Reducer<Action, State, ()> { action, state, _ in
+                reducer.run(action, &state, environment)
+            },
+            effectManager: EffectManager<Action, State>(effectContext: effectContext)
+        )
     }
 
     /// Initializer with `environment` and custom `executingActor`.
@@ -35,6 +41,7 @@ extension MealyMachine where Output == Effect<Action>
         state: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment,
+        effectContext: EffectContext,
         executingActor: any Actor
     ) where Action: Sendable, Environment: Sendable
     {
@@ -43,7 +50,7 @@ extension MealyMachine where Output == Effect<Action>
             reducer: Reducer<Action, State, ()> { action, state, _ in
                 reducer.run(action, &state, environment)
             },
-            effectManager: EffectManager<Action, State>(),
+            effectManager: EffectManager<Action, State>(effectContext: effectContext),
             executingActor: executingActor
         )
     }
