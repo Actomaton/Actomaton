@@ -85,16 +85,16 @@ private struct Pair: Equatable, Sendable
 /// using `makePairsForRow` (a pure computation), and action feedback drives the `i` loop.
 /// Each `.innerDone(results)` action appends results, increments `i`, and feeds back
 /// the next iteration — or returns `nil` when all rows are complete.
-private func makeOuterMachine(n: Int, m: Int) -> MealyMachine<OuterAction, OuterState, OuterAction?>
+private func makeOuterMachine(n: Int, m: Int) -> MealyMachine<OuterAction, OuterState, [OuterAction]>
 {
     MealyMachine(
         state: OuterState(),
         reducer: MealyReducer { action, state, _ in
             switch action {
             case .start:
-                guard n > 0, m > 0 else { return nil }
+                guard n > 0, m > 0 else { return [] }
                 let results = makePairsForRow(i: 0, m: m)
-                return .innerDone(results: results)
+                return [.innerDone(results: results)]
 
             case let .innerDone(results):
                 state.results.append(contentsOf: results)
@@ -102,10 +102,10 @@ private func makeOuterMachine(n: Int, m: Int) -> MealyMachine<OuterAction, Outer
 
                 if state.i < n {
                     let innerResults = makePairsForRow(i: state.i, m: m)
-                    return .innerDone(results: innerResults)
+                    return [.innerDone(results: innerResults)]
                 }
                 else {
-                    return nil
+                    return []
                 }
             }
         },

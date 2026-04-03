@@ -6,16 +6,16 @@ final class MealyMachineActionFeedbackTests: XCTestCase
 {
     func test_singleFeedback() async
     {
-        let machine = MealyMachine<FeedbackAction, String, FeedbackAction?>(
+        let machine = MealyMachine<FeedbackAction, String, [FeedbackAction]>(
             state: "",
             reducer: MealyReducer { action, state, _ in
                 switch action {
                 case .start:
                     state = "started"
-                    return .finish
+                    return [.finish]
                 case .finish:
                     state = "finished"
-                    return nil
+                    return []
                 }
             },
             effectManager: ActionEffectManager()
@@ -30,19 +30,19 @@ final class MealyMachineActionFeedbackTests: XCTestCase
 
     func test_chainedFeedback() async
     {
-        let machine = MealyMachine<ChainAction, [String], ChainAction?>(
+        let machine = MealyMachine<ChainAction, [String], [ChainAction]>(
             state: [],
             reducer: MealyReducer { action, state, _ in
                 switch action {
                 case .step1:
                     state.append("step1")
-                    return .step2
+                    return [.step2]
                 case .step2:
                     state.append("step2")
-                    return .step3
+                    return [.step3]
                 case .step3:
                     state.append("step3")
-                    return nil
+                    return []
                 }
             },
             effectManager: ActionEffectManager()
@@ -55,11 +55,11 @@ final class MealyMachineActionFeedbackTests: XCTestCase
 
     func test_noFeedback() async
     {
-        let machine = MealyMachine<ChainAction, [String], ChainAction?>(
+        let machine = MealyMachine<ChainAction, [String], [ChainAction]>(
             state: [],
             reducer: MealyReducer { action, state, _ in
                 state.append("\(action)")
-                return nil
+                return []
             },
             effectManager: ActionEffectManager()
         )

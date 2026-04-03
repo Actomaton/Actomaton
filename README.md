@@ -44,7 +44,7 @@ Built-in `EffectManagerProtocol` conformers cover common cases:
 |---|---|---|
 | `EffectManager` | `Effect<Action>` | Full async effect lifecycle (in `ActomatonEffect`) |
 | `NoOpEffectManager` | `Void` | Pure state transitions, no side-effects |
-| `ActionEffectManager` | `Action?` | Synchronous action feedback loops |
+| `ActionEffectManager` | `[Action]` | Synchronous action feedback loops |
 
 ## Installation
 
