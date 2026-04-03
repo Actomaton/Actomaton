@@ -84,27 +84,27 @@ private struct LoopState: Equatable, Sendable
 ///
 /// Each iteration maps to a `.doSomething(i, j)` action whose reducer returns
 /// the next `(i, j)` as feedback, or `nil` when done.
-private func makeDoubleLoopMachine(n: Int, m: Int) -> MealyMachine<LoopAction, LoopState, LoopAction?>
+private func makeDoubleLoopMachine(n: Int, m: Int) -> MealyMachine<LoopAction, LoopState, [LoopAction]>
 {
     MealyMachine(
         state: LoopState(),
         reducer: MealyReducer { action, state, _ in
             switch action {
             case .start:
-                guard n > 0, m > 0 else { return nil }
-                return .doSomething(i: 0, j: 0)
+                guard n > 0, m > 0 else { return [] }
+                return [.doSomething(i: 0, j: 0)]
 
             case let .doSomething(i, j):
                 state.results.append(Pair(i: i, j: j))
 
                 if j + 1 < m {
-                    return .doSomething(i: i, j: j + 1)
+                    return [.doSomething(i: i, j: j + 1)]
                 }
                 else if i + 1 < n {
-                    return .doSomething(i: i + 1, j: 0)
+                    return [.doSomething(i: i + 1, j: 0)]
                 }
                 else {
-                    return nil
+                    return []
                 }
             }
         },

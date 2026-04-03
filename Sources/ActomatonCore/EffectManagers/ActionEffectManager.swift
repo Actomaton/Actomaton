@@ -1,11 +1,15 @@
 import Foundation
 
-/// Simple `Action`-based Effect Manager where `Output` is `Action?` that allows synchronous action feedback loop
+/// Simple `Action`-based Effect Manager where `Output` is `[Action]` that allows synchronous action feedback loop
 /// without side-effects.
+///
+/// Each action in the output array is fed back into the reducer sequentially.
+/// Any further actions produced by those feedback calls are recursively processed
+/// until no more actions remain.
 public final class ActionEffectManager<Action, State>: EffectManagerProtocol
     where Action: Sendable
 {
-    public typealias Output = Action?
+    public typealias Output = [Action]
 
     public init() {}
 
@@ -24,12 +28,12 @@ public final class ActionEffectManager<Action, State>: EffectManagerProtocol
         sendReducer: (Action) -> Output
     ) -> Output
     {
-        if let output {
-            return preprocessOutput(sendReducer(output), sendReducer: sendReducer)
+        var remaining: [Action] = []
+        for action in output {
+            let nested = preprocessOutput(sendReducer(action), sendReducer: sendReducer)
+            remaining.append(contentsOf: nested)
         }
-        else {
-            return nil
-        }
+        return remaining
     }
 
     public func processOutput(
