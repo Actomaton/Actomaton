@@ -56,7 +56,7 @@ final class DeinitTests: MainTestCase
             "Running effect should be cancelled, and `DeinitChecker` should deinit."
         )
 
-        _ = weakActomaton
+        weakActomaton = nil // For suppressing `WeakMutability` warning.
     }
 }
 
