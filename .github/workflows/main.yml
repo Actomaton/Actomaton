@@ -26,8 +26,8 @@ jobs:
       - name: Lint
         run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
 
-  xcode26-build:
-    name: Xcode ${{ matrix.xcode }} build ${{ matrix.platform }}
+  xcode-build:
+    name: Xcode build ${{ matrix.platform }}
     runs-on: macos-26
     strategy:
       matrix:
@@ -41,7 +41,7 @@ jobs:
       run: make xcode-build OS=${{ matrix.platform}}
 
   ubuntu:
-    name: Ubuntu test (Swift ${{ matrix.swift }})
+    name: Ubuntu test
     runs-on: ubuntu-latest
     container: swift:${{ matrix.swift }}
     strategy:
@@ -56,3 +56,18 @@ jobs:
 
       - name: Build Ubuntu package
         run: CI=1 make swift-test
+
+  required:
+    name: Required
+    needs:
+      - swiftformat
+      - xcode-build
+      - ubuntu
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs
+        env:
+          NEEDS: ${{ toJson(needs) }}
+        run: |
+          ! echo "$NEEDS" | jq -e 'to_entries[] | { job: .key, result: .value.result } | select((.result == "success" or .result == "skipped") | not)'
