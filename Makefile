@@ -142,6 +142,11 @@ _docc:
 		--hosting-base-path $(DOC_HOSTING_BASE_PATH) \
 		--output-path $(DOCBUILD_OUTPUT_DIR)
 
+	@# Workaround: Create theme-settings.json if missing (required by DocC renderer).
+	@# https://github.com/swiftlang/swift-docc-render/issues/1000
+	@# Fix merged in swift-docc-render#1001 but not yet shipped in release toolchains.
+	test -f $(DOCBUILD_OUTPUT_DIR)/theme-settings.json || echo '{}' > $(DOCBUILD_OUTPUT_DIR)/theme-settings.json
+
 define udid_for
 $(shell xcrun simctl list devices available '$(1)' | grep '$(2)' | sort -r | head -1 | awk -F '[()]' '{ print $$(NF-3) }')
 endef
