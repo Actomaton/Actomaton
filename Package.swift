@@ -24,6 +24,10 @@ let package = Package(
             name: "ActomatonEffect",
             targets: ["ActomatonEffect"]
         ),
+        .library(
+            name: "ActomatonTesting",
+            targets: ["ActomatonTesting"]
+        ),
     ],
     dependencies: {
         var deps: [Package.Dependency] = [
@@ -73,6 +77,14 @@ let package = Package(
                 .product(name: "CustomDump", package: "swift-custom-dump")
             ]),
         .target(
+            name: "ActomatonTesting",
+            dependencies: [
+                "ActomatonCore",
+                "ActomatonEffect",
+                .product(name: "CustomDump", package: "swift-custom-dump"),
+            ]
+        ),
+        .target(
             name: "TestFixtures",
             dependencies: [
                 "Actomaton",
@@ -92,6 +104,10 @@ let package = Package(
         .testTarget(
             name: "ActomatonUITests",
             dependencies: ["ActomatonUI", "TestFixtures"]
+        ),
+        .testTarget(
+            name: "ActomatonTestingTests",
+            dependencies: ["ActomatonTesting"]
         ),
         .testTarget(
             name: "ReadMeTests",
