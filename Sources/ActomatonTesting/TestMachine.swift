@@ -58,7 +58,7 @@ public final class TestMachine<Action, State, Environment>
     {
         let mappedReducer: MealyReducer<Action, State, Environment, [Action]> = reducer.map(output: { effect in
             effect.kinds.compactMap { kind in
-                if case .next(let action) = kind { return action }
+                if case let .next(action) = kind { return action }
                 return nil
             }
         })
