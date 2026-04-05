@@ -10,7 +10,7 @@ inspired by [Elm](http://elm-lang.org/) and [swift-composable-architecture](http
 
 ## Overview
 
-This repository consists of 5 modules:
+This repository consists of 6 modules:
 
 1. **`Actomaton`**: Actor-based effect-handling state-machine, which is a convenience layer that wires `ActomatonCore` + `ActomatonEffect` together.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomaton/)
@@ -19,19 +19,22 @@ This repository consists of 5 modules:
 3. **`ActomatonDebugging`**: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatondebugging/)
 
+4. **`ActomatonTesting`**: `TestMachine` — exhaustive state-transition testing utility. Wraps `MealyMachine` + `ActionEffectManager` to assert state changes with `customDump` diffs, similar to TCA's `TestStore`.
+
 In addition, the following lower-level modules are available for advanced use cases:
 
-4. **`ActomatonCore`**: Generic Mealy machine (`MealyMachine`) and composable `MealyReducer`, independent of any effect system. Pair it with a pluggable `EffectManagerProtocol` conformer to choose what "output" means — `Void` (no effects), `Action?` (synchronous feedback), or your own custom type.
-5. **`ActomatonEffect`**: The `Effect<Action>` type and its default `EffectManager` — queue-based async task lifecycle (creation, cancellation, suspension, delay).
+5. **`ActomatonCore`**: Generic Mealy machine (`MealyMachine`) and composable `MealyReducer`, independent of any effect system. Pair it with a pluggable `EffectManagerProtocol` conformer to choose what "output" means — `Void` (no effects), `Action?` (synchronous feedback), or your own custom type.
+6. **`ActomatonEffect`**: The `Effect<Action>` type and its default `EffectManager` — queue-based async task lifecycle (creation, cancellation, suspension, delay).
 
 ### Module dependency graph
 
 ```
 ActomatonCore          -- generic MealyMachine + MealyReducer + EffectManagerProtocol
   └─ ActomatonEffect   -- Effect<Action>, EffectManager, EffectQueue, EffectID
-       └─ Actomaton    -- Actomaton typealias, Reducer typealias, CasePath integration
-            ├─ ActomatonUI         -- Store, RouteStore (SwiftUI / UIKit)
-            └─ ActomatonDebugging  -- debug / log reducers
+       ├─ Actomaton    -- Actomaton typealias, Reducer typealias, CasePath integration
+       │    ├─ ActomatonUI         -- Store, RouteStore (SwiftUI / UIKit)
+       │    └─ ActomatonDebugging  -- debug / log reducers
+       └─ ActomatonTesting         -- TestMachine (exhaustive state-transition testing)
 ```
 
 ### Why the split?
