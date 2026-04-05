@@ -109,6 +109,39 @@ _docs:
 	@# Clean up.
 	rm -rf $(DOCBUILD_BUILD_DIR)
 
+#--------------------------------------------------
+# DocC (experimental combined documentation via swift-docc-plugin)
+#--------------------------------------------------
+
+.PHONY: docc
+docc:
+	$(MAKE) _docc DOC_HOSTING_BASE_PATH=$(DOC_HOSTING_BASE_PATH)
+
+.PHONY: docc-local
+docc-local:
+	@# NOTE: `DOC_HOSTING_BASE_PATH=/` is only for local viewer, and does not work for GitHub Pages.
+	$(MAKE) _docc DOC_HOSTING_BASE_PATH=/
+
+	#--------------------------------------------------
+	# Open http://localhost:8000/documentation
+	#--------------------------------------------------
+	python3 -m http.server 8000 -d $(DOCBUILD_OUTPUT_DIR)
+
+.PHONY: _docc
+_docc:
+	rm -rf $(DOCBUILD_OUTPUT_DIR)
+
+	DOCC=1 swift package \
+		--allow-writing-to-directory $(DOCBUILD_OUTPUT_DIR) \
+		generate-documentation \
+		--enable-experimental-combined-documentation \
+		--target Actomaton \
+		--target ActomatonUI \
+		--target ActomatonDebugging \
+		--transform-for-static-hosting \
+		--hosting-base-path $(DOC_HOSTING_BASE_PATH) \
+		--output-path $(DOCBUILD_OUTPUT_DIR)
+
 define udid_for
 $(shell xcrun simctl list devices available '$(1)' | grep '$(2)' | sort -r | head -1 | awk -F '[()]' '{ print $$(NF-3) }')
 endef

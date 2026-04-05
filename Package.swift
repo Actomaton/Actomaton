@@ -32,6 +32,9 @@ let package = Package(
             .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", from: "1.1.0"),
             .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0"),
         ]
+        if ProcessInfo.processInfo.environment["DOCC"] != nil {
+            deps.append(.package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.6"))
+        }
         if ProcessInfo.processInfo.environment["SWIFTFORMAT"] != nil {
             deps.append(.package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.55.3"))
         }
