@@ -101,6 +101,65 @@ public protocol Oldest1SuspendNewEffectQueueProtocol: EffectQueueProtocol {}
 
 so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueueProtocol {}`
 
+## Dynamic maxCount
+
+Since ``EffectQueueProtocol`` conforms to `Hashable`, you can make `maxCount` dynamic at runtime by separating the queue's identity (hash/equality) from its policy values. The key insight is that `EffectManager` looks up queued tasks by the queue's hash, but reads `maxCount` from the queue instance passed with each effect.
+
+```swift
+struct DynamicQueue: EffectQueueProtocol {
+    var maxCount: Int
+
+    var effectQueuePolicy: EffectQueuePolicy {
+        .runNewest(maxCount: maxCount)
+    }
+
+    // Hash and equality ignore maxCount, so all instances
+    // map to the same queue in EffectManager.
+    func hash(into hasher: inout Hasher) {
+        hasher.combine("DynamicQueue")
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        true
+    }
+}
+```
+
+Then use the current state to decide `maxCount` each time an effect is created:
+
+```swift
+enum Action: Sendable {
+    case fetch(id: String)
+    case updateMaxConcurrent(Int)
+    case _didFetch(Data)
+}
+
+struct State: Sendable {
+    var maxConcurrent: Int = 2
+}
+
+let reducer = Reducer<Action, State, Environment> { action, state, environment in
+    switch action {
+    case let .fetch(id):
+        // maxCount is determined by the current state at send time.
+        let queue = DynamicQueue(maxCount: state.maxConcurrent)
+        return Effect(queue: queue) {
+            let data = try await environment.fetch(id)
+            return ._didFetch(data)
+        }
+
+    case let .updateMaxConcurrent(n):
+        state.maxConcurrent = n
+        return .empty
+
+    case let ._didFetch(data):
+        return .empty
+    }
+}
+```
+
+By sending `.updateMaxConcurrent(5)`, subsequent `.fetch` effects will use `maxCount: 5` while sharing the same underlying queue.
+
 ## Next Step
 
 <doc:05-ReducerComposition>
