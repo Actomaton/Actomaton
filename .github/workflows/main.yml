@@ -65,16 +65,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Swift 6.2.4
+      - name: Set up Swift 6.2.1
         uses: swift-actions/setup-swift@v2
         with:
-          swift-version: "6.2.4"
+          swift-version: "6.2.1"
 
       - name: Install Wasm SDK
         run: |
           swift sdk install \
-            --checksum 32fdb8772d73bb174f77b5c59bc88a0d55003d75712832129394d3465158fb43 \
-            https://download.swift.org/swift-6.2.4-release/wasm-sdk/swift-6.2.4-RELEASE/swift-6.2.4-RELEASE_wasm.artifactbundle.tar.gz
+            --checksum 482b9f95462b87bedfafca94a092cf9ec4496671ca13b43745097122d20f18af \
+            https://download.swift.org/swift-6.2.1-release/wasm-sdk/swift-6.2.1-RELEASE/swift-6.2.1-RELEASE_wasm.artifactbundle.tar.gz
 
       - name: Install wasmtime
         run: |
@@ -89,10 +89,10 @@ jobs:
           restore-keys: wasm-${{ runner.os }}-
 
       - name: Build Wasm package
-        run: make wasm-build WASM_SWIFT=swift WASM_SWIFT_SELECTOR=
+        run: make wasm-build WASM_SWIFT=swift WASM_SWIFT_SELECTOR= WASM_SWIFT_SDK=swift-6.2.1-RELEASE_wasm
 
       - name: Test Wasm package
-        run: make wasm-test WASM_SWIFT=swift WASM_SWIFT_SELECTOR=
+        run: make wasm-test WASM_SWIFT=swift WASM_SWIFT_SELECTOR= WASM_SWIFT_SDK=swift-6.2.1-RELEASE_wasm
 
   required:
     name: Required
