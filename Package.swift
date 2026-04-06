@@ -110,6 +110,15 @@ let package = Package(
             dependencies: ["ActomatonTesting", "TestFixtures"]
         ),
         .testTarget(
+            name: "WasmSmokeTests",
+            dependencies: [
+                "Actomaton",
+                "ActomatonCore",
+                "ActomatonDebugging",
+                "ActomatonTesting",
+            ]
+        ),
+        .testTarget(
             name: "ReadMeTests",
             dependencies: ["Actomaton", "ActomatonDebugging"]
         )

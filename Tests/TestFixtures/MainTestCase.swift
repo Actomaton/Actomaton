@@ -24,6 +24,7 @@ open class MainTestCase: XCTestCase
         EffectContext(clock: self.clock)
     }
 
+#if !os(WASI)
     open override func invokeTest()
     {
 #if canImport(ConcurrencyExtras)
@@ -34,4 +35,5 @@ open class MainTestCase: XCTestCase
         super.invokeTest()
 #endif
     }
+#endif
 }

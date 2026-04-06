@@ -1,7 +1,7 @@
 # ``Actomaton``
 
 Swift `async`/`await` & `Actor`-powered effectful state-management framework.
-Linux ready.
+Linux and Wasm ready.
 
 ## Overview
 
@@ -10,7 +10,7 @@ Linux ready.
 - Repository: [https://github.com/Actomaton/Actomaton](https://github.com/Actomaton/Actomaton)
 
 This module is the heart of all the other modules, which is not only for building UI architecture 
-but for building "any" stateful and effectful computations in any platforms (including Linux).
+but for building "any" stateful and effectful computations in any platforms (including Linux and Wasm).
 
 All the business logic and its essential types will be defined by the developers under the following categories:
 
