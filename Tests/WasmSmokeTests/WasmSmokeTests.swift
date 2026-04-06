@@ -5,7 +5,7 @@ import ActomatonTesting
 import Testing
 
 @Test
-func mealyMachineTransitionsOnWasm() async
+func `mealy machine transitions on wasm`() async
 {
     let reducer = MealyReducer<CounterAction, CounterState, Void, Void> { action, state, _ in
         switch action {
@@ -28,7 +28,7 @@ func mealyMachineTransitionsOnWasm() async
 }
 
 @Test
-func actomatonRunsSynchronousEffectsOnWasm() async
+func `actomaton runs synchronous effects on wasm`() async
 {
     let reducer = Reducer<CounterAction, CounterState, Void> { action, state, _ in
         switch action {
@@ -52,7 +52,7 @@ func actomatonRunsSynchronousEffectsOnWasm() async
 }
 
 @Test
-func auxiliaryModulesInitializeOnWasm() async
+func `auxiliary modules initialize on wasm`() async
 {
     let format = LogFormat(name: "wasm", action: .simple, state: .simple)
     let timeout = TestTimeoutError(duration: .seconds(1))
