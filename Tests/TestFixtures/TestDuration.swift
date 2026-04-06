@@ -5,17 +5,17 @@ import Foundation
 /// One tick is currently 50 ms.
 public struct TestDuration: Sendable, Hashable
 {
-    public let ticks: TimeInterval
+    public let ticks: Ticks
 
     private init(
-        ticks: TimeInterval
+        ticks: Ticks
     )
     {
         self.ticks = ticks
     }
 
     public static func ticks(
-        _ ticks: TimeInterval
+        _ ticks: Ticks
     ) -> Self
     {
         Self(ticks: ticks)
@@ -30,6 +30,8 @@ public struct TestDuration: Sendable, Hashable
     {
         .nanoseconds(Int64((Double(oneTickNanoseconds) * self.ticks).rounded()))
     }
+
+    public typealias Ticks = Double
 }
 
 public func + (
