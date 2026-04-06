@@ -29,6 +29,11 @@ xcode-test:
 _xcode:
 	set -o pipefail && xcodebuild $(ACTION) -scheme Actomaton-Package -destination 'platform=$(PLATFORM_$(shell echo $(OS) | tr '[:lower:]' '[:upper:]'))' | xcpretty
 
+.PHONY: linux-test
+linux-test:
+	docker run --rm -v "$$(pwd):/work" -w /work swift:6.2 bash -c \
+		"apt-get update && apt-get install -y make && TEST_CLOCK=1 make swift-test"
+
 .PHONY: swift-test
 swift-test:
 	swift test $(SWIFT_TEST_FLAGS)
