@@ -105,10 +105,12 @@ public actor TestMachine<Action, State, Environment>
         if !unhandledActions.isEmpty {
             var actions = ""
             customDump(unhandledActions, to: &actions)
+            let s = unhandledActions.count == 1 ? "" : "s"
 
             XCTFail(
                 """
-                Must handle \(unhandledActions.count) received action\(unhandledActions.count == 1 ? "" : "s") before sending an action.
+                Must handle \(unhandledActions.count) received \
+                action\(s) before sending an action.
 
                   \(fileID):\(line)
 
@@ -234,7 +236,8 @@ extension TestMachine
             fileID: fileID,
             filePath: filePath,
             line: line
-        ) else { return }
+        )
+        else { return }
 
         guard
             let (receivedAction, stateBefore, stateAfter) = await self.nextReceivedAction()

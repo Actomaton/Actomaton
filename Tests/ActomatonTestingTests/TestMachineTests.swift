@@ -70,8 +70,7 @@ final class TestMachineTests: MainTestCase
             try await task.finish(timeout: .milliseconds(50))
             XCTFail("Expected timeout.")
         }
-        catch is TestTimeoutError {
-        }
+        catch is TestTimeoutError {}
         catch {
             XCTFail("Unexpected error: \(error)")
         }
@@ -324,7 +323,9 @@ private enum CounterAction: Equatable, Sendable
     case reset
 }
 
-private let counterReducer = MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
+private let counterReducer = MealyReducer<
+    CounterAction, CounterState, Void, Effect<CounterAction>
+> { action, state, _ in
     switch action {
     case .increment:
         state.count += 1
