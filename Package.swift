@@ -107,7 +107,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ActomatonTestingTests",
-            dependencies: ["ActomatonTesting"]
+            dependencies: ["ActomatonTesting", "TestFixtures"]
         ),
         .testTarget(
             name: "ReadMeTests",
