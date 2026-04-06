@@ -59,12 +59,48 @@ jobs:
       - name: Build Ubuntu package
         run: TEST_CLOCK=1 make swift-test
 
+  wasm:
+    name: Wasm test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Swift 6.2.4
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.2.4"
+
+      - name: Install Wasm SDK
+        run: |
+          swift sdk install \
+            --checksum 32fdb8772d73bb174f77b5c59bc88a0d55003d75712832129394d3465158fb43 \
+            https://download.swift.org/swift-6.2.4-release/wasm-sdk/swift-6.2.4-RELEASE/swift-6.2.4-RELEASE_wasm.artifactbundle.tar.gz
+
+      - name: Install wasmtime
+        run: |
+          curl https://wasmtime.dev/install.sh -sSf | bash
+          echo "$HOME/.wasmtime/bin" >> "$GITHUB_PATH"
+
+      - name: Cache SPM build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: wasm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: wasm-${{ runner.os }}-
+
+      - name: Build Wasm package
+        run: make wasm-build WASM_SWIFT=swift WASM_SWIFT_SELECTOR=
+
+      - name: Test Wasm package
+        run: make wasm-test WASM_SWIFT=swift WASM_SWIFT_SELECTOR=
+
   required:
     name: Required
     needs:
       - swiftformat
       - xcode-build
       - ubuntu
+      - wasm
     if: always()
     runs-on: ubuntu-latest
     steps:

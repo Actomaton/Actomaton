@@ -6,6 +6,20 @@ PLATFORM_VISIONOS = visionOS Simulator,id=$(call udid_for,visionOS,Vision)
 PLATFORM_WATCHOS = watchOS Simulator,id=$(call udid_for,watchOS,Watch)
 
 SWIFT_TEST_FLAGS = $(if $(filter 1,$(TEST_CLOCK)),-Xswiftc -DTEST_CLOCK,)
+SWIFTLY_SWIFT ?= swiftly run swift
+SWIFTLY_TOOLCHAIN ?= 6.2.4
+SWIFTLY_SELECTOR ?= +$(SWIFTLY_TOOLCHAIN)
+SWIFTLY_TEST_FLAGS ?= -Xswiftc -DACTOMATON_ISOLATED_DEINIT_WORKAROUND
+WASM_SWIFTLY ?= swiftly
+WASM_SWIFT_TOOLCHAIN ?= 6.2.4
+WASM_SWIFT_SDK ?= swift-6.2.4-RELEASE_wasm
+WASM_SWIFT_INSTALL_FLAGS ?= --assume-yes
+WASM_SDK_URL ?= https://download.swift.org/swift-6.2.4-release/wasm-sdk/swift-6.2.4-RELEASE/swift-6.2.4-RELEASE_wasm.artifactbundle.tar.gz
+WASM_SDK_CHECKSUM ?= 32fdb8772d73bb174f77b5c59bc88a0d55003d75712832129394d3465158fb43
+WASM_SWIFT ?= swiftly run swift
+WASM_SWIFT_SELECTOR ?= +$(WASM_SWIFT_TOOLCHAIN)
+WASM_BUILD_TARGETS = ActomatonCore ActomatonEffect Actomaton ActomatonDebugging ActomatonTesting
+WASM_BUILD_TARGET_FLAGS = $(foreach target,$(WASM_BUILD_TARGETS),--target $(target))
 
 # Base path after host name, required for GitHub Pages.
 # Note that `documentation/{module_name}` is automatically added to the end of this path in Swift-DocC,
@@ -37,6 +51,36 @@ linux-test:
 .PHONY: swift-test
 swift-test:
 	swift test $(SWIFT_TEST_FLAGS)
+
+.PHONY: swiftly-build
+swiftly-build:
+	$(SWIFTLY_SWIFT) build $(SWIFTLY_SELECTOR)
+
+.PHONY: swiftly-test
+swiftly-test:
+	$(SWIFTLY_SWIFT) test $(SWIFT_TEST_FLAGS) $(SWIFTLY_TEST_FLAGS) $(SWIFTLY_SELECTOR)
+
+.PHONY: wasm-install
+wasm-install:
+	brew install swiftly wasmtime
+	$(WASM_SWIFTLY) init --no-modify-profile --skip-install --assume-yes
+	$(WASM_SWIFTLY) install $(WASM_SWIFT_TOOLCHAIN) $(WASM_SWIFT_INSTALL_FLAGS)
+	@if $(WASM_SWIFTLY) run swift sdk list $(WASM_SWIFT_SELECTOR) | awk 'BEGIN { found = 0 } $$0 == "$(WASM_SWIFT_SDK)" { found = 1 } END { exit(found ? 0 : 1) }'; then \
+		echo "$(WASM_SWIFT_SDK) already installed"; \
+	else \
+		$(WASM_SWIFTLY) run swift sdk install \
+			--checksum $(WASM_SDK_CHECKSUM) \
+			$(WASM_SDK_URL) \
+			$(WASM_SWIFT_SELECTOR); \
+	fi
+
+.PHONY: wasm-build
+wasm-build:
+	$(WASM_SWIFT) build --swift-sdk $(WASM_SWIFT_SDK) $(WASM_BUILD_TARGET_FLAGS) $(WASM_SWIFT_SELECTOR)
+
+.PHONY: wasm-test
+wasm-test:
+	$(WASM_SWIFT) test --swift-sdk $(WASM_SWIFT_SDK) --disable-xctest --enable-swift-testing $(WASM_SWIFT_SELECTOR)
 
 .PHONY: swiftformat
 swiftformat:

@@ -49,6 +49,11 @@ Built-in `EffectManagerProtocol` conformers cover common cases:
 | `NoOpEffectManager` | `Void` | Pure state transitions, no side-effects |
 | `ActionEffectManager` | `[Action]` | Synchronous action feedback loops |
 
+## Platform Support
+
+- Apple platforms: Full package support, including `ActomatonUI`.
+- Linux / Wasm: Full package except `ActomatonUI` which depends on Combine, SwiftUI, and UIKit.
+
 ## Installation
 
 In `Package.swift`:
@@ -62,8 +67,13 @@ let package = Package(
 )
 ```
 
-Note: Specifying by "git version tag" is not currently supported due to usage of unsafe flags.
-See also: [#56](https://github.com/Actomaton/Actomaton/issues/56)
+### Wasm quick start
+
+```bash
+make wasm-install
+make wasm-build
+make wasm-test
+```
 
 ## Demo App
 

@@ -28,6 +28,16 @@ public actor MealyMachine<Action, State, Output>
     /// Agnostic about reducer and state mutation.
     package let effectManager: any EffectManagerProtocol<Action, State, Output>
 
+#if os(WASI) || ACTOMATON_ISOLATED_DEINIT_WORKAROUND
+    /// Mirrors `effectManager` so `deinit` can shut it down without relying on
+    /// `isolated deinit`, which currently crashes some Swift 6.2.4 toolchains.
+    ///
+    /// `ACTOMATON_ISOLATED_DEINIT_WORKAROUND` exists for non-WASI builds that
+    /// are compiled by the Swift.org 6.2.4 toolchain, where `isolated deinit`
+    /// also crashes during SIL lowering.
+    private nonisolated(unsafe) let unsafeEffectManager: any EffectManagerProtocol<Action, State, Output>
+#endif
+
     /// Underlying actor that replaces `MealyMachine`'s `unownedExecutor`.
     private let executingActor: any Actor
 
@@ -86,6 +96,9 @@ public actor MealyMachine<Action, State, Output>
 #endif
         self.reducer = reducer
         self.effectManager = effectManager
+#if os(WASI) || ACTOMATON_ISOLATED_DEINIT_WORKAROUND
+        self.unsafeEffectManager = effectManager
+#endif
         self.executingActor = executingActor
         self.willChangeState = willChangeState
 
@@ -116,10 +129,17 @@ public actor MealyMachine<Action, State, Output>
         )
     }
 
+#if os(WASI) || ACTOMATON_ISOLATED_DEINIT_WORKAROUND
+    deinit
+    {
+        unsafeEffectManager.shutDown()
+    }
+#else
     isolated deinit
     {
         effectManager.shutDown()
     }
+#endif
 
     /// Sends `action` to `MealyMachine`.
     ///

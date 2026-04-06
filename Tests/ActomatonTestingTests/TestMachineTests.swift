@@ -123,8 +123,8 @@ final class TestMachineTests: MainTestCase
 
     func test_sendFailsFastWhenReceivedActionIsUnhandled() async throws
     {
-#if os(Linux)
-        throw XCTSkip("`XCTExpectFailure` is unavailable on Linux.")
+#if os(Linux) || os(WASI)
+        throw XCTSkip("`XCTExpectFailure` is unavailable on Linux and Wasm.")
 #else
         let recorder = ResultsCollector<CounterAction>()
 
