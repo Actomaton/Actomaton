@@ -33,6 +33,7 @@ final class TestMachineTests: MainTestCase
             state.count = 1
         }
 
+        await clock.advance(by: .ticks(1))
         try await task.finish()
     }
 
@@ -119,6 +120,9 @@ final class TestMachineTests: MainTestCase
 
     func test_sendFailsFastWhenReceivedActionIsUnhandled() async throws
     {
+#if os(Linux)
+        throw XCTSkip("`XCTExpectFailure` is unavailable on Linux.")
+#else
         let recorder = ResultsCollector<CounterAction>()
 
         let tm = TestMachine(
@@ -154,6 +158,7 @@ final class TestMachineTests: MainTestCase
 
         let recordedActions = await recorder.results
         XCTAssertEqual(recordedActions, [.increment, .reset])
+#endif
     }
 
     // MARK: - No-assertion send (state unchanged)
