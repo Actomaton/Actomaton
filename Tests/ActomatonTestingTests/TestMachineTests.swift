@@ -33,7 +33,10 @@ final class TestMachineTests: MainTestCase
             state.count = 1
         }
 
+        // `finish()` waits for task completion, but does not drive `effectContext.clock`.
+        // When `TEST_CLOCK=1`, advance the injected `TestClock` so the effect can complete.
         await clock.advance(by: .ticks(1))
+
         try await task.finish()
     }
 

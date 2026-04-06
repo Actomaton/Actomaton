@@ -25,6 +25,11 @@ public struct TestMachineTask: Sendable
 
     /// Waits for the underlying task to finish, throwing ``TimeoutError`` if it does not finish in
     /// time.
+    ///
+    /// - Important:
+    /// This method only waits for task completion and enforces its timeout using wall-clock time.
+    /// It does not advance an injected test clock. If the effect is sleeping on a ``TestClock`` or
+    /// another manually-driven clock, advance that clock separately before awaiting `finish()`.
     public func finish(timeout: Duration? = nil) async throws
     {
         let duration = timeout ?? self.timeout
