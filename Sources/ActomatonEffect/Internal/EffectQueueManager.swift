@@ -470,7 +470,10 @@ package final class EffectQueueManager<Action, State>: EffectManager
             let kind = pendingEffectKinds[effectQueue]!.removeFirst()
             let time = calculateEffectTime(queue: queue)
 
-            Debug.print("[dequeuePendingIfPossible] Dequeued pending effect (running: \(currentCount), maxCount: \(maxCount))")
+            Debug
+                .print(
+                    "[dequeuePendingIfPossible] Dequeued pending effect (running: \(currentCount), maxCount: \(maxCount))"
+                )
 
             _ = makeTask(
                 effectKind: kind,
