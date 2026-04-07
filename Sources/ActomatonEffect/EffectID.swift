@@ -1,17 +1,22 @@
 /// Effect identifier for manual cancellation via `Effect.cancel`.
 public struct EffectID: Hashable, Sendable
 {
-    private let _value: AnySendableHashable
+    /// Raw value that conforms to `EffectIDProtocol`.
+    public let value: any EffectIDProtocol
 
-    internal init<Value>(_ value: Value) where Value: Hashable & Sendable
+    internal init(_ value: some EffectIDProtocol)
     {
-        self._value = AnySendableHashable(value)
+        self.value = value
     }
 
-    /// Raw value that conforms to `EffectIDProtocol`.
-    public var value: AnyHashable
+    public static func == (lhs: Self, rhs: Self) -> Bool
     {
-        _value.value
+        AnyHashable(lhs.value) == AnyHashable(rhs.value)
+    }
+
+    public func hash(into hasher: inout Hasher)
+    {
+        AnyHashable(value).hash(into: &hasher)
     }
 }
 
