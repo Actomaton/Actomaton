@@ -22,8 +22,8 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// Effect-queue-designated running tasks for automatic cancellation & suspension.
     private var queuedRunningTasks: [_EffectQueue: [Task<(), any Error>]] = [:]
 
-    /// Suspended effects.
-    private var pendingEffectKinds: [_EffectQueue: [Effect<Action>.Kind]] = [:]
+    /// Suspended effects with their original send context.
+    private var pendingEffects: [_EffectQueue: [PendingEffect]] = [:]
 
     /// Tracked latest effect start time for delayed effects calculation.
     private var latestEffectTime: [_EffectQueue: AnyClock<Duration>.Instant] = [:]
@@ -147,11 +147,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
                 // Try to dequeue pending effects.
                 switch currentQueue.effectQueuePolicy {
                 case .runOldest(_, .suspendNew):
-                    dequeuePendingIfPossible(
-                        queue: currentQueue,
-                        priority: priority,
-                        tracksFeedbacks: tracksFeedbacks
-                    )
+                    dequeuePendingIfPossible(queue: currentQueue)
                 default:
                     break
                 }
@@ -169,11 +165,12 @@ package final class EffectQueueManager<Action, State>: EffectManager
         }
 
         // Drain and cancel pending effects to trigger their cancellation handlers.
-        for (queue, kinds) in pendingEffectKinds {
-            for kind in kinds {
-                cancelEffectKind(kind)
+        for (queue, pendings) in pendingEffects {
+            for pending in pendings {
+                cancelEffectKind(pending.kind)
+                pending.onComplete.finish()
             }
-            pendingEffectKinds[queue] = nil
+            pendingEffects[queue] = nil
         }
     }
 
@@ -187,8 +184,8 @@ package final class EffectQueueManager<Action, State>: EffectManager
     {
         switch kind {
         case .single, .sequence:
-            let shouldExecute = checkQueuePolicy(effectKind: kind)
-            if shouldExecute {
+            switch checkQueuePolicy(effectKind: kind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+            case .execute:
                 let time = calculateEffectTime(queue: kind.queue)
                 if let task = makeTask(
                     effectKind: kind,
@@ -199,8 +196,14 @@ package final class EffectQueueManager<Action, State>: EffectManager
                 {
                     return [task]
                 }
+                return []
+
+            case let .suspend(waitTask):
+                return [waitTask]
+
+            case .discard:
+                return []
             }
-            return []
 
         case .next:
             // Should not appear — Actomaton resolves .next before passing to EffectQueueManager.
@@ -213,22 +216,19 @@ package final class EffectQueueManager<Action, State>: EffectManager
         case let .updateQueue(queue):
             latestQueue[_EffectQueue(queue)] = queue
 
-            dequeuePendingIfPossible(
-                queue: queue,
-                priority: priority,
-                tracksFeedbacks: tracksFeedbacks
-            )
+            dequeuePendingIfPossible(queue: queue)
             return []
         }
     }
 
     /// Checks queue policy and performs any needed task drops/suspensions.
-    /// Returns `true` if the effect should be executed.
     private func checkQueuePolicy(
-        effectKind: Effect<Action>.Kind
-    ) -> Bool
+        effectKind: Effect<Action>.Kind,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool
+    ) -> QueuePolicyDecision
     {
-        guard let queue = effectKind.queue else { return true }
+        guard let queue = effectKind.queue else { return .execute }
 
         let effectQueue = _EffectQueue(queue)
 
@@ -256,24 +256,39 @@ package final class EffectQueueManager<Action, State>: EffectManager
                     }
                 }
             }
-            return true
+            return .execute
 
         case let .runOldest(maxCount, overflowPolicy):
             let currentCount = queuedRunningTasks[effectQueue]?.count ?? 0
             if currentCount >= maxCount {
                 switch overflowPolicy {
                 case .suspendNew:
-                    // Enqueue to pending buffer.
+                    // Enqueue to pending buffer with a completion signal
+                    // so the original `send`'s Task can track deferred execution.
                     Debug.print("[checkQueuePolicy] [runOldest-suspendNew] Enqueue to pending buffer")
-                    pendingEffectKinds[effectQueue, default: []].append(effectKind)
-                    return false
+
+                    let (stream, continuation) = AsyncStream<Never>.makeStream()
+
+                    pendingEffects[effectQueue, default: []].append(
+                        PendingEffect(
+                            kind: effectKind,
+                            priority: priority,
+                            tracksFeedbacks: tracksFeedbacks,
+                            onComplete: continuation
+                        )
+                    )
+
+                    let waitTask = Task<(), any Error> {
+                        for await _ in stream {}
+                    }
+                    return .suspend(waitTask: waitTask)
 
                 case .discardNew:
                     cancelEffectKind(effectKind)
-                    return false
+                    return .discard
                 }
             }
-            return true
+            return .execute
         }
     }
 
@@ -409,11 +424,12 @@ package final class EffectQueueManager<Action, State>: EffectManager
         }
 
         // Cancel pending effects.
-        for (effectQueue, effectKinds) in pendingEffectKinds {
-            for (i, effectKind) in effectKinds.enumerated().reversed() {
-                if let effectID = effectKind.id, predicate(effectID.value) {
-                    if let kind = pendingEffectKinds[effectQueue]?.remove(at: i) {
-                        cancelEffectKind(kind)
+        for (effectQueue, pendings) in pendingEffects {
+            for (i, pending) in pendings.enumerated().reversed() {
+                if let effectID = pending.kind.id, predicate(effectID.value) {
+                    if let removed = pendingEffects[effectQueue]?.remove(at: i) {
+                        cancelEffectKind(removed.kind)
+                        removed.onComplete.finish()
                     }
                 }
             }
@@ -453,21 +469,21 @@ package final class EffectQueueManager<Action, State>: EffectManager
     ///
     /// Uses the latest known `maxCount` so that dynamic capacity increases
     /// are reflected immediately, rather than draining one-at-a-time.
+    /// Each dequeued effect uses its original `priority` and `tracksFeedbacks` from the `send` call,
+    /// and signals `onComplete` when the task finishes so that the original `send`'s Task completes.
     private func dequeuePendingIfPossible(
-        queue: any EffectQueue,
-        priority: TaskPriority?,
-        tracksFeedbacks: Bool
+        queue: any EffectQueue
     )
     {
         guard case let .runOldest(maxCount, _) = queue.effectQueuePolicy else { return }
 
         let effectQueue = _EffectQueue(queue)
 
-        while pendingEffectKinds[effectQueue]?.isEmpty == false {
+        while pendingEffects[effectQueue]?.isEmpty == false {
             let currentCount = queuedRunningTasks[effectQueue]?.count ?? 0
             guard currentCount < maxCount else { break }
 
-            let kind = pendingEffectKinds[effectQueue]!.removeFirst()
+            let pending = pendingEffects[effectQueue]!.removeFirst()
             let time = calculateEffectTime(queue: queue)
 
             Debug
@@ -475,12 +491,24 @@ package final class EffectQueueManager<Action, State>: EffectManager
                     "[dequeuePendingIfPossible] Dequeued pending effect (running: \(currentCount), maxCount: \(maxCount))"
                 )
 
-            _ = makeTask(
-                effectKind: kind,
+            let task = makeTask(
+                effectKind: pending.kind,
                 time: time,
-                priority: priority,
-                tracksFeedbacks: tracksFeedbacks
+                priority: pending.priority,
+                tracksFeedbacks: pending.tracksFeedbacks
             )
+
+            // Bridge: signal the original send's waiting task when the dequeued task completes.
+            let onComplete = pending.onComplete
+            if let task {
+                Task<Void, Never> {
+                    _ = await task.result
+                    onComplete.finish()
+                }
+            }
+            else {
+                onComplete.finish()
+            }
         }
     }
 
@@ -504,5 +532,33 @@ package final class EffectQueueManager<Action, State>: EffectManager
         case .next, .cancel, .updateQueue:
             return
         }
+    }
+
+    // MARK: - Nested Types
+
+    /// A suspended effect together with its original `send` context.
+    private struct PendingEffect: Sendable
+    {
+        let kind: Effect<Action>.Kind
+        let priority: TaskPriority?
+        let tracksFeedbacks: Bool
+
+        /// Signalled when the dequeued effect task completes,
+        /// allowing the original `send`'s returned Task to finish.
+        let onComplete: AsyncStream<Never>.Continuation
+    }
+
+    /// Result of queue policy evaluation.
+    private enum QueuePolicyDecision
+    {
+        /// The effect should be executed immediately.
+        case execute
+
+        /// The effect was suspended. The associated task completes when
+        /// the effect is eventually dequeued and finishes.
+        case suspend(waitTask: Task<(), any Error>)
+
+        /// The effect was discarded (e.g. `discardNew` policy).
+        case discard
     }
 }
