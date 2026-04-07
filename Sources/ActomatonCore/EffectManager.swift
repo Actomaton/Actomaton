@@ -6,7 +6,7 @@ import Foundation
 ///
 /// The conformer does NOT own the reducer or state — those are managed by ``MealyMachine``.
 /// It only receives the reducer's output and processes it (e.g., creating tasks, managing queues).
-public protocol EffectManagerProtocol<Action, State, Output>: AnyObject
+public protocol EffectManager<Action, State, Output>: AnyObject
 {
     associatedtype Action
     associatedtype State
@@ -19,7 +19,7 @@ public protocol EffectManagerProtocol<Action, State, Output>: AnyObject
     /// - Parameters:
     ///   - performIsolated:
     ///     Closure to run a block within the owning actor's isolation.
-    ///     This method is a proof that `self` (EffectManager) is owned and protected by `isolated any Actor`,
+    ///     This method is a proof that `self` (the conformer) is owned and protected by `isolated any Actor`,
     ///     which guarantees e.g. safe clean up work inside `Task` closure while `self` is usually a non-`Sendable`
     /// class.
     ///   - sendAction:

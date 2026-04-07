@@ -1,6 +1,6 @@
 import Foundation
 
-/// ``EffectQueueProtocol``'s  delaying strategy.
+/// ``EffectQueue``'s  delaying strategy.
 public enum EffectQueueDelay: Hashable, Sendable
 {
     case constant(TimeInterval)

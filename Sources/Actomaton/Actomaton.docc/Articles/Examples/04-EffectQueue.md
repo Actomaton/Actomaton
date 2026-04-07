@@ -24,7 +24,7 @@ struct Environment: Sendable {
     let fetch: @Sendable (_ id: String) async throws -> Data
 }
 
-struct DelayedEffectQueue: EffectQueueProtocol {
+struct DelayedEffectQueue: EffectQueue {
     // First 3 effects will run concurrently, and other sent effects will be suspended.
     var effectQueuePolicy: EffectQueuePolicy {
         .runOldest(maxCount: 3, .suspendNew)
@@ -61,12 +61,12 @@ await actomaton.send(.fetch(id: "item3")) // min delay of 0.1 (after item2 actua
 await actomaton.send(.fetch(id: "item4")) // starts when item1 or 2 or 3 finishes
 ```
 
-Above code uses a custom `DelayedEffectQueue` that conforms to ``EffectQueueProtocol`` with suspendable ``EffectQueuePolicy`` and delays between each effect by ``EffectQueueDelay``.
+Above code uses a custom `DelayedEffectQueue` that conforms to ``EffectQueue`` with suspendable ``EffectQueuePolicy`` and delays between each effect by ``EffectQueueDelay``.
 
-See [EffectQueuePolicy](https://github.com/Actomaton/Actomaton/blob/main/Sources/Actomaton/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
+See [EffectQueuePolicy](https://github.com/Actomaton/Actomaton/blob/main/Sources/ActomatonEffect/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
 
 ```swift
-/// `EffectQueueProtocol`'s buffering policy.
+/// `EffectQueue`'s buffering policy.
 public enum EffectQueuePolicy: Hashable, Sendable
 {
     /// Runs `maxCount` newest effects, cancelling old running effects.
@@ -86,27 +86,27 @@ public enum EffectQueuePolicy: Hashable, Sendable
 }
 ```
 
-For convenient ``EffectQueueProtocol`` protocol conformance, there are built-in sub-protocols:
+For convenient ``EffectQueue`` protocol conformance, there are built-in sub-protocols:
 
 ```swift
 /// A helper protocol where `effectQueuePolicy` is set to `.runNewest(maxCount: 1)`.
-public protocol Newest1EffectQueueProtocol: EffectQueueProtocol {}
+public protocol Newest1EffectQueue: EffectQueue {}
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .discardNew)`.
-public protocol Oldest1DiscardNewEffectQueueProtocol: EffectQueueProtocol {}
+public protocol Oldest1DiscardNewEffectQueue: EffectQueue {}
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .suspendNew)`.
-public protocol Oldest1SuspendNewEffectQueueProtocol: EffectQueueProtocol {}
+public protocol Oldest1SuspendNewEffectQueue: EffectQueue {}
 ```
 
-so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueueProtocol {}`
+so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueue {}`
 
 ## Dynamic maxCount
 
-Since ``EffectQueueProtocol`` conforms to `Hashable`, you can make `maxCount` dynamic at runtime by separating the queue's identity (hash/equality) from its policy values. The key insight is that `EffectManager` looks up queued tasks by the queue's hash, but reads `maxCount` from the queue instance passed with each effect.
+Since ``EffectQueue`` conforms to `Hashable`, you can make `maxCount` dynamic at runtime by separating the queue's identity (hash/equality) from its policy values. The key insight is that `EffectQueueManager` looks up queued tasks by the queue's hash, but reads `maxCount` from the queue instance passed with each effect.
 
 ```swift
-struct DynamicQueue: EffectQueueProtocol {
+struct DynamicQueue: EffectQueue {
     var maxCount: Int
 
     var effectQueuePolicy: EffectQueuePolicy {
@@ -114,7 +114,7 @@ struct DynamicQueue: EffectQueueProtocol {
     }
 
     // Hash and equality ignore maxCount, so all instances
-    // map to the same queue in EffectManager.
+    // map to the same queue in EffectQueueManager.
     func hash(into hasher: inout Hasher) {
         hasher.combine("DynamicQueue")
     }

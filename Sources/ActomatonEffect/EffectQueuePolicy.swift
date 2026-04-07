@@ -1,4 +1,4 @@
-/// `EffectQueueProtocol`'s buffering policy.
+/// `EffectQueue`'s buffering policy.
 public enum EffectQueuePolicy: Hashable, Sendable
 {
     /// Runs `maxCount` newest effects, cancelling old running effects.

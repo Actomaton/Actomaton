@@ -1,6 +1,6 @@
 /// A protocol that every effect queue should conform to, for automatic cancellation of existing tasks or suspending of
 /// new effects.
-public protocol EffectQueueProtocol: Hashable, Sendable
+public protocol EffectQueue: Hashable, Sendable
 {
     /// Effect buffering policy.
     var effectQueuePolicy: EffectQueuePolicy { get }
@@ -9,7 +9,7 @@ public protocol EffectQueueProtocol: Hashable, Sendable
     var effectQueueDelay: EffectQueueDelay { get }
 }
 
-extension EffectQueueProtocol
+extension EffectQueue
 {
     public var effectQueueDelay: EffectQueueDelay
     {
@@ -17,12 +17,12 @@ extension EffectQueueProtocol
     }
 }
 
-// MARK: - Newest1EffectQueueProtocol
+// MARK: - Newest1EffectQueue
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runNewest(maxCount: 1)`.
-public protocol Newest1EffectQueueProtocol: EffectQueueProtocol {}
+public protocol Newest1EffectQueue: EffectQueue {}
 
-extension Newest1EffectQueueProtocol
+extension Newest1EffectQueue
 {
     public var effectQueuePolicy: EffectQueuePolicy
     {
@@ -30,12 +30,12 @@ extension Newest1EffectQueueProtocol
     }
 }
 
-// MARK: - Oldest1DiscardNewEffectQueueProtocol
+// MARK: - Oldest1DiscardNewEffectQueue
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .discardNew)`.
-public protocol Oldest1DiscardNewEffectQueueProtocol: EffectQueueProtocol {}
+public protocol Oldest1DiscardNewEffectQueue: EffectQueue {}
 
-extension Oldest1DiscardNewEffectQueueProtocol
+extension Oldest1DiscardNewEffectQueue
 {
     public var effectQueuePolicy: EffectQueuePolicy
     {
@@ -43,12 +43,12 @@ extension Oldest1DiscardNewEffectQueueProtocol
     }
 }
 
-// MARK: - Oldest1SuspendNewEffectQueueProtocol
+// MARK: - Oldest1SuspendNewEffectQueue
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .suspendNew)`.
-public protocol Oldest1SuspendNewEffectQueueProtocol: EffectQueueProtocol {}
+public protocol Oldest1SuspendNewEffectQueue: EffectQueue {}
 
-extension Oldest1SuspendNewEffectQueueProtocol
+extension Oldest1SuspendNewEffectQueue
 {
     public var effectQueuePolicy: EffectQueuePolicy
     {

@@ -1,7 +1,7 @@
 import ActomatonCore
 import ActomatonEffect
 
-/// Convenience initializers that default to ``EffectManager``.
+/// Convenience initializers that default to ``EffectQueueManager``.
 extension MealyMachine where Output == Effect<Action>
 {
     /// Initializer without `environment`.
@@ -14,7 +14,7 @@ extension MealyMachine where Output == Effect<Action>
         self.init(
             state: state,
             reducer: reducer,
-            effectManager: EffectManager<Action, State>(effectContext: effectContext)
+            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext)
         )
     }
 
@@ -31,7 +31,7 @@ extension MealyMachine where Output == Effect<Action>
             reducer: Reducer<Action, State, ()> { action, state, _ in
                 reducer.run(action, &state, environment)
             },
-            effectManager: EffectManager<Action, State>(effectContext: effectContext)
+            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext)
         )
     }
 
@@ -50,7 +50,7 @@ extension MealyMachine where Output == Effect<Action>
             reducer: Reducer<Action, State, ()> { action, state, _ in
                 reducer.run(action, &state, environment)
             },
-            effectManager: EffectManager<Action, State>(effectContext: effectContext),
+            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext),
             executingActor: executingActor
         )
     }

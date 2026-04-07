@@ -38,7 +38,7 @@ package final class MainActomaton<Action, State>
         self.actomaton = Actomaton(
             state: state,
             reducer: reducer,
-            effectManager: EffectManager<Action, State>(effectContext: effectContext),
+            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext),
             executingActor: MainActor.shared,
             willChangeState: { @Sendable _, old, new in
                 MainActor.assumeIsolated {

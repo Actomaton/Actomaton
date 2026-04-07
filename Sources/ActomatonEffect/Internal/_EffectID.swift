@@ -1,10 +1,10 @@
 /// Effect identifier for manual cancellation via `Effect.cancel`.
 struct _EffectID: Hashable, Sendable
 {
-    /// Raw value that conforms to `EffectIDProtocol`.
-    let value: any EffectIDProtocol
+    /// Raw value that conforms to `EffectID`.
+    let value: any EffectID
 
-    init(_ value: some EffectIDProtocol)
+    init(_ value: some EffectID)
     {
         self.value = value
     }

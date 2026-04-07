@@ -1,5 +1,5 @@
 /// A protocol that every effect-identifier should conform to.
-public protocol EffectIDProtocol: Hashable, Sendable {}
+public protocol EffectID: Hashable, Sendable {}
 
-/// Default anonymous efffect.
-internal struct DefaultEffectID: EffectIDProtocol {}
+/// Default anonymous effect.
+internal struct DefaultEffectID: EffectID {}

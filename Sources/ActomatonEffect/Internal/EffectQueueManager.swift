@@ -2,11 +2,11 @@ import ActomatonCore
 import Clocks
 import Foundation
 
-/// Default ``EffectManagerProtocol`` implementation that manages ``Effect<Action>`` with queue-based task lifecycle.
+/// Default ``EffectManager`` implementation that manages ``Effect<Action>`` with queue-based task lifecycle.
 ///
 /// Handles task creation, queue policies (newest/oldest), effect delays, and pending effect suspension.
 /// Does NOT own the reducer or state — those are managed by ``MealyMachine``.
-package final class EffectManager<Action, State>: EffectManagerProtocol
+package final class EffectQueueManager<Action, State>: EffectManager
     where Action: Sendable
 {
     package typealias Output = Effect<Action>
@@ -35,7 +35,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Closure to run a block within the owning actor's isolation for safe bookkeeping updates.
     private var performIsolated: (
         @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffectManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, EffectQueueManager<Action, State>) -> Void
         ) async -> Void
     )?
 
@@ -46,11 +46,11 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         self.effectContext = effectContext
     }
 
-    // MARK: - EffectManagerProtocol
+    // MARK: - EffectManager
 
     package func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffectManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, EffectQueueManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
@@ -121,7 +121,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     private func handleTaskCompleted(
         id: _EffectID,
         task: Task<(), any Error>,
-        queue: (any EffectQueueProtocol)?,
+        queue: (any EffectQueue)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     )
@@ -195,7 +195,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
             return []
 
         case .next:
-            // Should not appear — Actomaton resolves .next before passing to EffectManager.
+            // Should not appear — Actomaton resolves .next before passing to EffectQueueManager.
             return []
 
         case let .cancel(predicate):
@@ -335,7 +335,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     private func enqueueTask(
         _ task: Task<(), any Error>,
         id: _EffectID?,
-        queue: (any EffectQueueProtocol)?,
+        queue: (any EffectQueue)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     )
@@ -375,7 +375,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
 
     /// Cancels running and pending effects matching the predicate.
     private func cancelEffects(
-        predicate: @escaping @Sendable (any EffectIDProtocol) -> Bool
+        predicate: @escaping @Sendable (any EffectID) -> Bool
     )
     {
         // Cancel running tasks.
@@ -402,7 +402,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Calculates absolute effect start time for queue-based delay scheduling.
     ///
     /// Returns `nil` when the effect should run immediately without additional sleeping.
-    private func calculateEffectTime(queue: (any EffectQueueProtocol)?) -> AnyClock<Duration>.Instant?
+    private func calculateEffectTime(queue: (any EffectQueue)?) -> AnyClock<Duration>.Instant?
     {
         guard let queue else { return nil }
 
@@ -431,7 +431,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Dequeues a pending effect if possible (for `runOldest-suspendNew` policy).
     @discardableResult
     private func dequeuePendingIfPossible(
-        queue: any EffectQueueProtocol,
+        queue: any EffectQueue,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     ) -> Task<(), any Error>?

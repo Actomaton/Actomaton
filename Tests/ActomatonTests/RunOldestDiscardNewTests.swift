@@ -5,7 +5,7 @@ import XCTest
 import Combine
 #endif
 
-/// Tests for `EffectQueueProtocol` with `EffectQueuePolicy.runOldest(maxCount: n, .discardNew)`.
+/// Tests for `EffectQueue` with `EffectQueuePolicy.runOldest(maxCount: n, .discardNew)`.
 final class RunOldestDiscardNewTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
@@ -16,7 +16,7 @@ final class RunOldestDiscardNewTests: MainTestCase
     {
         self.resultsCollector = ResultsCollector<Int>()
 
-        struct OldestDiscardNewEffectQueue: EffectQueueProtocol
+        struct OldestDiscardNewEffectQueue: EffectQueue
         {
             var maxCount: Int
 

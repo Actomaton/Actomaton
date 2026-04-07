@@ -1,14 +1,14 @@
 import Foundation
 
 /// Effectless, Actionless (feedbackless) Effect Manager where `Output` is `Void`.
-public final class NoOpEffectManager<Action, State>: EffectManagerProtocol
+public final class NoOpEffectManager<Action, State>: EffectManager
     where Action: Sendable
 {
     public typealias Output = Void
 
     public init() {}
 
-    // MARK: - EffectManagerProtocol
+    // MARK: - EffectManager
 
     public func setUp(
         performIsolated: @escaping @Sendable (

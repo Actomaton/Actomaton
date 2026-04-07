@@ -5,7 +5,7 @@ import XCTest
 import Combine
 #endif
 
-/// Tests for `Effect.cancel` to cancel pending effects by `Oldest1SuspendNewEffectQueueProtocol`.
+/// Tests for `Effect.cancel` to cancel pending effects by `Oldest1SuspendNewEffectQueue`.
 final class PendingEffectCancellationTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
@@ -42,19 +42,19 @@ final class PendingEffectCancellationTests: MainTestCase
     {
         flags = Flags()
 
-        struct EffectID: EffectIDProtocol
+        struct CancelEffectID: EffectID
         {
             let name: String
         }
 
-        struct Oldest1SuspendNewEffectQueue: Oldest1SuspendNewEffectQueueProtocol {}
+        struct TestOldest1SuspendNewEffectQueue: Oldest1SuspendNewEffectQueue {}
 
         let actomaton = Actomaton<Action, State>(
             state: .init(),
             reducer: Reducer { [flags] action, _, _ in
                 switch action {
                 case .fetch1:
-                    return Effect(id: EffectID(name: "1"), queue: Oldest1SuspendNewEffectQueue()) { context in
+                    return Effect(id: CancelEffectID(name: "1"), queue: TestOldest1SuspendNewEffectQueue()) { context in
                         return try await context.clock.sleep(for: .ticks(1)) {
                             return ._didFetch1
                         } ifCancelled: {
@@ -65,7 +65,7 @@ final class PendingEffectCancellationTests: MainTestCase
                     }
 
                 case .fetch2:
-                    return Effect(id: EffectID(name: "2"), queue: Oldest1SuspendNewEffectQueue()) { context in
+                    return Effect(id: CancelEffectID(name: "2"), queue: TestOldest1SuspendNewEffectQueue()) { context in
                         return try await context.clock.sleep(for: .ticks(1)) {
                             return ._didFetch2
                         } ifCancelled: {
@@ -85,7 +85,7 @@ final class PendingEffectCancellationTests: MainTestCase
                     return Effect.fireAndForget { await flags.mark(result2: .completed) }
 
                 case .cancelAll:
-                    return Effect.cancel(ids: { $0 is EffectID })
+                    return Effect.cancel(ids: { $0 is CancelEffectID })
                 }
             },
             effectContext: effectContext

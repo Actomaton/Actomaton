@@ -13,7 +13,7 @@ enum Action: Sendable {
 
 typealias State = Int
 
-struct TimerID: EffectIDProtocol {}
+struct TimerID: EffectID {}
 
 struct Environment: Sendable {
     let timerEffect: Effect<Action>

@@ -1,15 +1,15 @@
 /// Effect queue for automatic cancellation of existing tasks or suspending of new effects.
 struct _EffectQueue: Hashable, Sendable
 {
-    /// Raw value that conforms to `EffectQueueProtocol`.
-    let value: any EffectQueueProtocol
+    /// Raw value that conforms to `EffectQueue`.
+    let value: any EffectQueue
 
-    init(_ value: some EffectQueueProtocol)
+    init(_ value: some EffectQueue)
     {
         self.value = value
     }
 
-    init(_ value: any EffectQueueProtocol)
+    init(_ value: any EffectQueue)
     {
         self.value = value
     }

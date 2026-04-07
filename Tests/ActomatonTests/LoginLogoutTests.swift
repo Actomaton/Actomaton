@@ -29,7 +29,7 @@ final class LoginLogoutTests: MainTestCase
     {
         flags = Flags()
 
-        struct LoginFlowEffectQueue: Newest1EffectQueueProtocol {}
+        struct LoginFlowEffectQueue: Newest1EffectQueue {}
 
         let actomaton = Actomaton<Action, State>(
             state: .loggedOut,

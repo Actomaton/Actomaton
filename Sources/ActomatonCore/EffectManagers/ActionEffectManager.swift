@@ -6,14 +6,14 @@ import Foundation
 /// Each action in the output array is fed back into the reducer sequentially.
 /// Any further actions produced by those feedback calls are recursively processed
 /// until no more actions remain.
-public final class ActionEffectManager<Action, State>: EffectManagerProtocol
+public final class ActionEffectManager<Action, State>: EffectManager
     where Action: Sendable
 {
     public typealias Output = [Action]
 
     public init() {}
 
-    // MARK: - EffectManagerProtocol
+    // MARK: - EffectManager
 
     public func setUp(
         performIsolated: @escaping @Sendable (

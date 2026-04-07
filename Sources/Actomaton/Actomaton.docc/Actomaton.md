@@ -63,17 +63,12 @@ To play with real-world app using Actomaton, see SwiftUI / UIKit Gallery app bel
 ### Effects
 
 - ``Effect``
-- ``EffectIDProtocol``
-- ``EffectQueueProtocol``
+- ``EffectID``
+- ``EffectQueue``
 
 ### EffectQueuePolicy and built-ins
 
 - ``EffectQueuePolicy``
-- ``Newest1EffectQueueProtocol``
-- ``Oldest1DiscardNewEffectQueueProtocol``
-- ``Oldest1SuspendNewEffectQueueProtocol``
-
-### EffectID/Queue Wrapper
-
-- ``EffectID``
-- ``EffectQueue``
+- ``Newest1EffectQueue``
+- ``Oldest1DiscardNewEffectQueue``
+- ``Oldest1SuspendNewEffectQueue``
