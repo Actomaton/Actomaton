@@ -90,7 +90,7 @@ public func assertEqual<T>(
 
 // MARK: - ResultsCollector
 
-public actor ResultsCollector<T>
+public actor ResultsCollector <T>
 {
     public private(set) var results: [T] = []
 

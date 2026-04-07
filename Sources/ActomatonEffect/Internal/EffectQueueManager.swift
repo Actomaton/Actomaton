@@ -28,6 +28,10 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// Tracked latest effect start time for delayed effects calculation.
     private var latestEffectTime: [_EffectQueue: AnyClock<Duration>.Instant] = [:]
 
+    /// Latest known queue per effect queue, updated on each new effect submission.
+    /// Used to retrieve the most recent `effectQueuePolicy` (e.g. dynamic `maxCount`) at dequeue time.
+    private var latestQueue: [_EffectQueue: any EffectQueue] = [:]
+
     // MARK: - Callbacks (set via setUp)
 
     private var sendAction: (@Sendable (Action, TaskPriority?, Bool) async -> Task<(), any Error>?)?
@@ -136,11 +140,15 @@ package final class EffectQueueManager<Action, State>: EffectManager
                 Debug.print("[handleTaskCompleted] Remove completed queue-task: \(queue) \(removingIndex)")
                 queuedRunningTasks[effectQueue]?.remove(at: removingIndex)
 
+                // Use the latest known queue to get the most recent policy/maxCount,
+                // falling back to the completing task's queue.
+                let currentQueue = latestQueue[effectQueue] ?? queue
+
                 // Try to dequeue pending effects.
-                switch queue.effectQueuePolicy {
+                switch currentQueue.effectQueuePolicy {
                 case .runOldest(_, .suspendNew):
                     dequeuePendingIfPossible(
-                        queue: queue,
+                        queue: currentQueue,
                         priority: priority,
                         tracksFeedbacks: tracksFeedbacks
                     )
@@ -201,6 +209,16 @@ package final class EffectQueueManager<Action, State>: EffectManager
         case let .cancel(predicate):
             cancelEffects(predicate: predicate)
             return []
+
+        case let .updateQueue(queue):
+            latestQueue[_EffectQueue(queue)] = queue
+
+            dequeuePendingIfPossible(
+                queue: queue,
+                priority: priority,
+                tracksFeedbacks: tracksFeedbacks
+            )
+            return []
         }
     }
 
@@ -213,6 +231,9 @@ package final class EffectQueueManager<Action, State>: EffectManager
         guard let queue = effectKind.queue else { return true }
 
         let effectQueue = _EffectQueue(queue)
+
+        // Track the latest queue so dequeue logic can use the most recent policy/maxCount.
+        latestQueue[effectQueue] = queue
 
         switch queue.effectQueuePolicy {
         case let .runNewest(maxCount):
@@ -323,7 +344,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
             )
             return task
 
-        case .next, .cancel:
+        case .next, .cancel, .updateQueue:
             return nil
         }
     }
@@ -428,28 +449,36 @@ package final class EffectQueueManager<Action, State>: EffectManager
         return nextTime
     }
 
-    /// Dequeues a pending effect if possible (for `runOldest-suspendNew` policy).
-    @discardableResult
+    /// Dequeues pending effects up to the current capacity (for `runOldest-suspendNew` policy).
+    ///
+    /// Uses the latest known `maxCount` so that dynamic capacity increases
+    /// are reflected immediately, rather than draining one-at-a-time.
     private func dequeuePendingIfPossible(
         queue: any EffectQueue,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
-    ) -> Task<(), any Error>?
+    )
     {
+        guard case let .runOldest(maxCount, _) = queue.effectQueuePolicy else { return }
+
         let effectQueue = _EffectQueue(queue)
 
-        guard pendingEffectKinds[effectQueue]?.isEmpty == false else { return nil }
+        while pendingEffectKinds[effectQueue]?.isEmpty == false {
+            let currentCount = queuedRunningTasks[effectQueue]?.count ?? 0
+            guard currentCount < maxCount else { break }
 
-        let kind = pendingEffectKinds[effectQueue]!.removeFirst()
-        let time = calculateEffectTime(queue: queue)
-        Debug.print("[dequeuePendingIfPossible] Dequeued pending effect")
+            let kind = pendingEffectKinds[effectQueue]!.removeFirst()
+            let time = calculateEffectTime(queue: queue)
 
-        return makeTask(
-            effectKind: kind,
-            time: time,
-            priority: priority,
-            tracksFeedbacks: tracksFeedbacks
-        )
+            Debug.print("[dequeuePendingIfPossible] Dequeued pending effect (running: \(currentCount), maxCount: \(maxCount))")
+
+            _ = makeTask(
+                effectKind: kind,
+                time: time,
+                priority: priority,
+                tracksFeedbacks: tracksFeedbacks
+            )
+        }
     }
 
     /// Cancels `effectKind`'s `single` or `sequence` immediately
@@ -469,7 +498,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
                 _ = try await sequence.sequence(context)
             }
             .cancel() // Cancel immediately.
-        case .next, .cancel:
+        case .next, .cancel, .updateQueue:
             return
         }
     }

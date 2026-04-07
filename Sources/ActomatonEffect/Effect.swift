@@ -341,6 +341,23 @@ extension Effect
     {
         Effect(kinds: [.cancel { AnyHashable($0) == AnyHashable(id) }])
     }
+
+    // MARK: - updateQueue
+
+    /// Updates queue metadata (e.g. dynamic `maxCount`) and re-evaluates pending effects
+    /// without creating any async task.
+    ///
+    /// Use this when changing queue capacity via state without sending a new effect:
+    /// ```swift
+    /// case let .updateMaxConcurrent(n):
+    ///     state.maxConcurrent = n
+    ///     return .updateQueue(DynamicQueue(maxCount: n))
+    /// ```
+    public static func updateQueue<Queue>(_ queue: Queue) -> Effect<Action>
+        where Queue: EffectQueue
+    {
+        Effect(kinds: [.updateQueue(queue)])
+    }
 }
 
 // MARK: - Monoid
@@ -388,6 +405,9 @@ extension Effect
 
             case let .cancel(predicate):
                 return .cancel(predicate)
+
+            case let .updateQueue(queue):
+                return .updateQueue(queue)
             }
         })
     }
@@ -409,6 +429,9 @@ extension Effect
 
             case let .cancel(predicate):
                 return .cancel(predicate)
+
+            case .updateQueue:
+                return kind
             }
         })
     }
@@ -430,6 +453,12 @@ extension Effect
 
             case let .cancel(predicate):
                 return .cancel(predicate)
+
+            case let .updateQueue(queue):
+                if let newQueue = f(queue) {
+                    return .updateQueue(newQueue)
+                }
+                return kind
             }
         })
     }
@@ -471,6 +500,9 @@ extension Effect
         /// Cancellation effect with filtering effect IDs by a predicate.
         case cancel(@Sendable (any EffectID) -> Bool)
 
+        /// Updates queue metadata (e.g. dynamic `maxCount`) and re-evaluates pending effects.
+        case updateQueue(any EffectQueue)
+
         internal var single: Single?
         {
             guard case let .single(value) = self else { return nil }
@@ -500,6 +532,8 @@ extension Effect
                 return nil
             case .cancel:
                 return nil
+            case .updateQueue:
+                return nil
             }
         }
 
@@ -514,6 +548,8 @@ extension Effect
                 return nil
             case .cancel:
                 return nil
+            case let .updateQueue(queue):
+                return queue
             }
         }
     }
