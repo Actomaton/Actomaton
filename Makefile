@@ -116,9 +116,12 @@ _docc:
 		--allow-writing-to-directory $(DOCBUILD_OUTPUT_DIR) \
 		generate-documentation \
 		--enable-experimental-combined-documentation \
+		--target ActomatonCore \
+		--target ActomatonEffect \
 		--target Actomaton \
 		--target ActomatonUI \
 		--target ActomatonDebugging \
+		--target ActomatonTesting \
 		--transform-for-static-hosting \
 		--hosting-base-path $(DOC_HOSTING_BASE_PATH) \
 		--output-path $(DOCBUILD_OUTPUT_DIR)
