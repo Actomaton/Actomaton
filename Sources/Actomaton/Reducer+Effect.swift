@@ -67,7 +67,7 @@ extension MealyReducer where Output == Effect<Action>
     // MARK: - Functor
 
     /// Changes `EffectID`.
-    public func map<ID>(id f: @escaping @Sendable (EffectID?) -> ID?) -> Self
+    public func map<ID>(id f: @escaping @Sendable ((any EffectIDProtocol)?) -> ID?) -> Self
         where ID: EffectIDProtocol
     {
         .init { action, state, environment in
@@ -78,7 +78,7 @@ extension MealyReducer where Output == Effect<Action>
     }
 
     /// Changes `EffectQueue`.
-    public func map<Queue>(queue f: @escaping @Sendable (EffectQueue?) -> Queue?) -> Self
+    public func map<Queue>(queue f: @escaping @Sendable ((any EffectQueueProtocol)?) -> Queue?) -> Self
         where Queue: EffectQueueProtocol
     {
         .init { action, state, environment in
