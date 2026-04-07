@@ -121,7 +121,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     private func handleTaskCompleted(
         id: EffectID,
         task: Task<(), any Error>,
-        queue: AnyEffectQueue?,
+        queue: (any EffectQueueProtocol)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     )
@@ -130,9 +130,11 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         runningTasks[id]?.remove(task)
 
         if let queue {
-            if let removingIndex = queuedRunningTasks[queue.queue]?.firstIndex(where: { $0 == task }) {
+            let effectQueue = EffectQueue(queue)
+
+            if let removingIndex = queuedRunningTasks[effectQueue]?.firstIndex(where: { $0 == task }) {
                 Debug.print("[handleTaskCompleted] Remove completed queue-task: \(queue) \(removingIndex)")
-                queuedRunningTasks[queue.queue]?.remove(at: removingIndex)
+                queuedRunningTasks[effectQueue]?.remove(at: removingIndex)
 
                 // Try to dequeue pending effects.
                 switch queue.effectQueuePolicy {
@@ -210,13 +212,15 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     {
         guard let queue = effectKind.queue else { return true }
 
+        let effectQueue = EffectQueue(queue)
+
         switch queue.effectQueuePolicy {
         case let .runNewest(maxCount):
             // NOTE: +1 to make a space for new effect.
-            let droppingCount = (queuedRunningTasks[queue.queue]?.count ?? 0) - maxCount + 1
+            let droppingCount = (queuedRunningTasks[effectQueue]?.count ?? 0) - maxCount + 1
             if droppingCount > 0 {
                 for _ in 0 ..< droppingCount {
-                    let droppingTask = queuedRunningTasks[queue.queue]?.removeFirst()
+                    let droppingTask = queuedRunningTasks[effectQueue]?.removeFirst()
 
                     if let droppingTask {
 #if DEBUG
@@ -234,13 +238,13 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
             return true
 
         case let .runOldest(maxCount, overflowPolicy):
-            let currentCount = queuedRunningTasks[queue.queue]?.count ?? 0
+            let currentCount = queuedRunningTasks[effectQueue]?.count ?? 0
             if currentCount >= maxCount {
                 switch overflowPolicy {
                 case .suspendNew:
                     // Enqueue to pending buffer.
                     Debug.print("[checkQueuePolicy] [runOldest-suspendNew] Enqueue to pending buffer")
-                    pendingEffectKinds[queue.queue, default: []].append(effectKind)
+                    pendingEffectKinds[effectQueue, default: []].append(effectKind)
                     return false
 
                 case .discardNew:
@@ -331,7 +335,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     private func enqueueTask(
         _ task: Task<(), any Error>,
         id: EffectID?,
-        queue: AnyEffectQueue?,
+        queue: (any EffectQueueProtocol)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     )
@@ -344,7 +348,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
 
         if let queue {
             Debug.print("[enqueueTask] Append queue-task: \(queue)")
-            self.queuedRunningTasks[queue.queue, default: []].append(task)
+            self.queuedRunningTasks[EffectQueue(queue), default: []].append(task)
         }
 
         // Clean up after `task` is completed.
@@ -398,26 +402,27 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Calculates absolute effect start time for queue-based delay scheduling.
     ///
     /// Returns `nil` when the effect should run immediately without additional sleeping.
-    private func calculateEffectTime(queue: AnyEffectQueue?) -> AnyClock<Duration>.Instant?
+    private func calculateEffectTime(queue: (any EffectQueueProtocol)?) -> AnyClock<Duration>.Instant?
     {
         guard let queue else { return nil }
 
+        let effectQueue = EffectQueue(queue)
         let now = self.effectContext.clock.now
 
-        guard let latestTime = self.latestEffectTime[queue.queue] else {
-            self.latestEffectTime[queue.queue] = now
+        guard let latestTime = self.latestEffectTime[effectQueue] else {
+            self.latestEffectTime[effectQueue] = now
             return nil
         }
 
         let targetDelay = now.duration(to: latestTime) + queue.effectQueueDelay.duration
 
         if targetDelay <= .zero {
-            self.latestEffectTime[queue.queue] = now
+            self.latestEffectTime[effectQueue] = now
             return nil
         }
 
         let nextTime = now.advanced(by: targetDelay)
-        self.latestEffectTime[queue.queue] = nextTime
+        self.latestEffectTime[effectQueue] = nextTime
 
         Debug.print("[calculateEffectDelay] scheduled via effectContext.clock")
         return nextTime
@@ -426,15 +431,19 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// Dequeues a pending effect if possible (for `runOldest-suspendNew` policy).
     @discardableResult
     private func dequeuePendingIfPossible(
-        queue: AnyEffectQueue,
+        queue: any EffectQueueProtocol,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     ) -> Task<(), any Error>?
     {
-        guard pendingEffectKinds[queue.queue]?.isEmpty == false else { return nil }
-        let kind = pendingEffectKinds[queue.queue]!.removeFirst()
+        let effectQueue = EffectQueue(queue)
+
+        guard pendingEffectKinds[effectQueue]?.isEmpty == false else { return nil }
+
+        let kind = pendingEffectKinds[effectQueue]!.removeFirst()
         let time = calculateEffectTime(queue: queue)
         Debug.print("[dequeuePendingIfPossible] Dequeued pending effect")
+
         return makeTask(
             effectKind: kind,
             time: time,
