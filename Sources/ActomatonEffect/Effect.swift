@@ -393,7 +393,7 @@ extension Effect
     }
 
     /// Changes `EffectID`.
-    public func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect
+    public func map<ID>(id f: @escaping ((any EffectIDProtocol)?) -> ID?) -> Effect
         where ID: EffectIDProtocol
     {
         .init(kinds: self.kinds.map { kind in
@@ -414,16 +414,16 @@ extension Effect
     }
 
     /// Changes `EffectQueue`.
-    public func map<Queue>(queue f: @escaping (EffectQueue?) -> Queue?) -> Effect
+    public func map<Queue>(queue f: @escaping ((any EffectQueueProtocol)?) -> Queue?) -> Effect
         where Queue: EffectQueueProtocol
     {
         .init(kinds: self.kinds.map { kind in
             switch kind {
             case let .single(single):
-                return .single(single.map(queue: { f($0.map(EffectQueue.init)) }))
+                return .single(single.map(queue: { f($0) }))
 
             case let .sequence(sequence):
-                return .sequence(sequence.map(queue: { f($0.map(EffectQueue.init)) }))
+                return .sequence(sequence.map(queue: { f($0) }))
 
             case .next:
                 return kind
@@ -543,10 +543,10 @@ extension Effect
             }
         }
 
-        internal func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect.Single
+        internal func map<ID>(id f: @escaping ((any EffectIDProtocol)?) -> ID?) -> Effect.Single
             where ID: EffectIDProtocol
         {
-            .init(id: f(id).map(EffectID.init), queue: queue, run: run)
+            .init(id: f(id?.value).map(EffectID.init), queue: queue, run: run)
         }
 
         internal func map(
@@ -593,10 +593,10 @@ extension Effect
             })
         }
 
-        internal func map<ID>(id f: @escaping (EffectID?) -> ID?) -> Effect._Sequence
+        internal func map<ID>(id f: @escaping ((any EffectIDProtocol)?) -> ID?) -> Effect._Sequence
             where ID: EffectIDProtocol
         {
-            .init(id: f(id).map(EffectID.init), queue: queue, sequence: sequence)
+            .init(id: f(id?.value).map(EffectID.init), queue: queue, sequence: sequence)
         }
 
         internal func map(
