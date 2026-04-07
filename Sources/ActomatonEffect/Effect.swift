@@ -561,12 +561,14 @@ extension Effect
     {
         internal let id: EffectID?
         internal let queue: AnyEffectQueue?
-        internal let sequence: @Sendable (EffectContext) async throws -> (any AsyncSequence<Action, any Error> & Sendable)?
+        internal let sequence: @Sendable (EffectContext) async throws
+            -> (any AsyncSequence<Action, any Error> & Sendable)?
 
         internal init(
             id: EffectID? = nil,
             queue: AnyEffectQueue? = nil,
-            sequence: @escaping @Sendable (EffectContext) async throws -> (any AsyncSequence<Action, any Error> & Sendable)?
+            sequence: @escaping @Sendable (EffectContext) async throws
+                -> (any AsyncSequence<Action, any Error> & Sendable)?
         )
         {
             self.id = id
@@ -577,7 +579,8 @@ extension Effect
         internal func map<Action2>(action f: @escaping @Sendable (Action) -> Action2) -> Effect<Action2>._Sequence
         {
             // Open Existential
-            @Sendable func _mapAsyncSequence(
+            @Sendable
+            func _mapAsyncSequence(
                 _ seq: some AsyncSequence<Action, any Error> & Sendable
             ) -> any AsyncSequence<Action2, any Error> & Sendable {
                 seq.map(f)
