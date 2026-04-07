@@ -9,6 +9,11 @@ public struct EffectQueue: Hashable, Sendable
         self.value = value
     }
 
+    internal init(_ value: any EffectQueueProtocol)
+    {
+        self.value = value
+    }
+
     public static func == (lhs: Self, rhs: Self) -> Bool
     {
         AnyHashable(lhs.value) == AnyHashable(rhs.value)
@@ -75,22 +80,5 @@ extension Oldest1SuspendNewEffectQueueProtocol
     public var effectQueuePolicy: EffectQueuePolicy
     {
         .runOldest(maxCount: 1, .suspendNew)
-    }
-}
-
-// MARK: - Internals
-
-public struct AnyEffectQueue: EffectQueueProtocol, Sendable
-{
-    public let queue: EffectQueue
-    public let effectQueuePolicy: EffectQueuePolicy
-    public let effectQueueDelay: EffectQueueDelay
-
-    public init<Queue>(_ queue: Queue)
-        where Queue: EffectQueueProtocol
-    {
-        self.queue = EffectQueue(queue)
-        self.effectQueuePolicy = queue.effectQueuePolicy
-        self.effectQueueDelay = queue.effectQueueDelay
     }
 }

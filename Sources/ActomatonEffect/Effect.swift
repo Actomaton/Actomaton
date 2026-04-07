@@ -59,7 +59,7 @@ extension Effect
         run: @escaping @Sendable (EffectContext) async throws -> Action?
     ) where Queue: EffectQueueProtocol
     {
-        self.init(kinds: [.single(Single(id: nil, queue: queue.map(AnyEffectQueue.init), run: run))])
+        self.init(kinds: [.single(Single(id: nil, queue: queue, run: run))])
     }
 
     /// Single-`async` side-effect without `EffectContext`.
@@ -81,7 +81,7 @@ extension Effect
         run: @escaping @Sendable (EffectContext) async throws -> Action?
     ) where ID: EffectIDProtocol, Queue: EffectQueueProtocol
     {
-        self.init(kinds: [.single(Single(id: id.map(EffectID.init), queue: queue.map(AnyEffectQueue.init), run: run))])
+        self.init(kinds: [.single(Single(id: id.map(EffectID.init), queue: queue, run: run))])
     }
 
     /// Single-`async` side-effect without `EffectContext`.
@@ -161,7 +161,7 @@ extension Effect
             kinds: [.sequence(
                 _Sequence(
                     id: nil,
-                    queue: queue.map(AnyEffectQueue.init),
+                    queue: queue,
                     sequence: { context in try await sequence(context)?.eraseToAnyError() }
                 )
             )]
@@ -191,7 +191,7 @@ extension Effect
             kinds: [.sequence(
                 _Sequence(
                     id: id.map(EffectID.init),
-                    queue: queue.map(AnyEffectQueue.init),
+                    queue: queue,
                     sequence: { context in try await sequence(context)?.eraseToAnyError() }
                 )
             )]
@@ -420,10 +420,10 @@ extension Effect
         .init(kinds: self.kinds.map { kind in
             switch kind {
             case let .single(single):
-                return .single(single.map(queue: { f($0?.queue) }))
+                return .single(single.map(queue: { f($0.map(EffectQueue.init)) }))
 
             case let .sequence(sequence):
-                return .sequence(sequence.map(queue: { f($0?.queue) }))
+                return .sequence(sequence.map(queue: { f($0.map(EffectQueue.init)) }))
 
             case .next:
                 return kind
@@ -503,7 +503,7 @@ extension Effect
             }
         }
 
-        internal var queue: AnyEffectQueue?
+        internal var queue: (any EffectQueueProtocol)?
         {
             switch self {
             case let .single(single):
@@ -522,12 +522,12 @@ extension Effect
     package struct Single: Sendable
     {
         internal let id: EffectID?
-        internal let queue: AnyEffectQueue?
+        internal let queue: (any EffectQueueProtocol)?
         internal let run: @Sendable (EffectContext) async throws -> Action?
 
         internal init(
             id: EffectID? = nil,
-            queue: AnyEffectQueue? = nil,
+            queue: (any EffectQueueProtocol)? = nil,
             run: @escaping @Sendable (EffectContext) async throws -> Action?
         )
         {
@@ -549,10 +549,11 @@ extension Effect
             .init(id: f(id).map(EffectID.init), queue: queue, run: run)
         }
 
-        internal func map<Queue>(queue f: @escaping (AnyEffectQueue?) -> Queue?) -> Effect.Single
-            where Queue: EffectQueueProtocol
+        internal func map(
+            queue f: @escaping ((any EffectQueueProtocol)?) -> (any EffectQueueProtocol)?
+        ) -> Effect.Single
         {
-            .init(id: id, queue: f(queue).map(AnyEffectQueue.init), run: run)
+            .init(id: id, queue: f(queue), run: run)
         }
     }
 
@@ -560,13 +561,13 @@ extension Effect
     package struct _Sequence: Sendable
     {
         internal let id: EffectID?
-        internal let queue: AnyEffectQueue?
+        internal let queue: (any EffectQueueProtocol)?
         internal let sequence: @Sendable (EffectContext) async throws
             -> (any AsyncSequence<Action, any Error> & Sendable)?
 
         internal init(
             id: EffectID? = nil,
-            queue: AnyEffectQueue? = nil,
+            queue: (any EffectQueueProtocol)? = nil,
             sequence: @escaping @Sendable (EffectContext) async throws
                 -> (any AsyncSequence<Action, any Error> & Sendable)?
         )
@@ -598,10 +599,11 @@ extension Effect
             .init(id: f(id).map(EffectID.init), queue: queue, sequence: sequence)
         }
 
-        internal func map<Queue>(queue f: @escaping (AnyEffectQueue?) -> Queue?) -> Effect._Sequence
-            where Queue: EffectQueueProtocol
+        internal func map(
+            queue f: @escaping ((any EffectQueueProtocol)?) -> (any EffectQueueProtocol)?
+        ) -> Effect._Sequence
         {
-            .init(id: id, queue: f(queue).map(AnyEffectQueue.init), sequence: sequence)
+            .init(id: id, queue: f(queue), sequence: sequence)
         }
     }
 }
