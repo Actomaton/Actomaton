@@ -12,7 +12,7 @@ final class TimerTests: MainTestCase
 
     override func setUp() async throws
     {
-        struct TimerID: EffectIDProtocol {}
+        struct TimerID: EffectID {}
 
         let timerEffect = Effect(id: TimerID(), sequence: { context in
             AsyncStream<()> { continuation in

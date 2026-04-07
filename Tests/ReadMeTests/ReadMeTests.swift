@@ -55,7 +55,7 @@ private func readMe1_4() async throws
         let fetch: @Sendable (_ id: String) async throws -> Data
     }
 
-    struct DelayedEffectQueue: EffectQueueProtocol {
+    struct DelayedEffectQueue: EffectQueue {
         // First 3 effects will run concurrently, and other sent effects will be suspended.
         var effectQueuePolicy: EffectQueuePolicy {
             .runOldest(maxCount: 3, .suspendNew)

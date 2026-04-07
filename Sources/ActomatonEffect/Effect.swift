@@ -37,7 +37,7 @@ extension Effect
         id: ID? = nil,
         run: @escaping @Sendable (EffectContext) async throws -> Action?
     )
-        where ID: EffectIDProtocol
+        where ID: EffectID
     {
         self.init(kinds: [.single(Single(id: id.map(_EffectID.init), queue: nil, run: run))])
     }
@@ -45,7 +45,7 @@ extension Effect
     /// Single-`async` side-effect without `EffectContext`.
     /// - Parameter id: Cancellation identifier.
     public init<ID>(id: ID? = nil, run: @escaping @Sendable () async throws -> Action?)
-        where ID: EffectIDProtocol
+        where ID: EffectID
     {
         self.init(id: id, run: { _ in
             try await run()
@@ -57,7 +57,7 @@ extension Effect
     public init<Queue>(
         queue: Queue? = nil,
         run: @escaping @Sendable (EffectContext) async throws -> Action?
-    ) where Queue: EffectQueueProtocol
+    ) where Queue: EffectQueue
     {
         self.init(kinds: [.single(Single(id: nil, queue: queue, run: run))])
     }
@@ -65,7 +65,7 @@ extension Effect
     /// Single-`async` side-effect without `EffectContext`.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
     public init<Queue>(queue: Queue? = nil, run: @escaping @Sendable () async throws -> Action?)
-        where Queue: EffectQueueProtocol
+        where Queue: EffectQueue
     {
         self.init(queue: queue, run: { _ in
             try await run()
@@ -79,7 +79,7 @@ extension Effect
         id: ID? = nil,
         queue: Queue? = nil,
         run: @escaping @Sendable (EffectContext) async throws -> Action?
-    ) where ID: EffectIDProtocol, Queue: EffectQueueProtocol
+    ) where ID: EffectID, Queue: EffectQueue
     {
         self.init(kinds: [.single(Single(id: id.map(_EffectID.init), queue: queue, run: run))])
     }
@@ -88,7 +88,7 @@ extension Effect
     /// - Parameter id: Cancellation identifier.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
     public init<ID, Queue>(id: ID? = nil, queue: Queue? = nil, run: @escaping @Sendable () async throws -> Action?)
-        where ID: EffectIDProtocol, Queue: EffectQueueProtocol
+        where ID: EffectID, Queue: EffectQueue
     {
         self.init(id: id, queue: queue, run: { _ in
             try await run()
@@ -127,7 +127,7 @@ extension Effect
     public init<ID, S, E: Error>(
         id: ID? = nil,
         sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where ID: EffectIDProtocol, S: AsyncSequence<Action, E> & Sendable
+    ) where ID: EffectID, S: AsyncSequence<Action, E> & Sendable
     {
         self.init(
             kinds: [.sequence(
@@ -143,7 +143,7 @@ extension Effect
     /// `AsyncSequence` side-effect without `EffectContext`.
     /// - Parameter id: Cancellation identifier.
     public init<ID, S, E: Error>(id: ID? = nil, sequence: @escaping @Sendable () async throws -> S?)
-        where ID: EffectIDProtocol, S: AsyncSequence<Action, E> & Sendable
+        where ID: EffectID, S: AsyncSequence<Action, E> & Sendable
     {
         self.init(id: id, sequence: { _ in
             try await sequence()
@@ -155,7 +155,7 @@ extension Effect
     public init<S, E: Error, Queue>(
         queue: Queue? = nil,
         sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueueProtocol
+    ) where S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
     {
         self.init(
             kinds: [.sequence(
@@ -171,7 +171,7 @@ extension Effect
     /// `AsyncSequence` side-effect without `EffectContext`.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
     public init<S, E: Error, Queue>(queue: Queue? = nil, sequence: @escaping @Sendable () async throws -> S?)
-        where S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueueProtocol
+        where S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
     {
         self.init(queue: queue, sequence: { _ in
             try await sequence()
@@ -185,7 +185,7 @@ extension Effect
         id: ID? = nil,
         queue: Queue? = nil,
         sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where ID: EffectIDProtocol, S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueueProtocol
+    ) where ID: EffectID, S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
     {
         self.init(
             kinds: [.sequence(
@@ -205,7 +205,7 @@ extension Effect
         id: ID? = nil,
         queue: Queue? = nil,
         sequence: @escaping @Sendable () async throws -> S?
-    ) where ID: EffectIDProtocol, S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueueProtocol
+    ) where ID: EffectID, S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
     {
         self.init(id: id, queue: queue, sequence: { _ in
             try await sequence()
@@ -239,7 +239,7 @@ extension Effect
         id: ID? = nil,
         run: @escaping @Sendable (EffectContext) async throws -> ()
     ) -> Effect<Action>
-        where ID: EffectIDProtocol
+        where ID: EffectID
     {
         self.init(id: id, run: { context in
             try await run(context)
@@ -253,7 +253,7 @@ extension Effect
         id: ID? = nil,
         run: @escaping @Sendable () async throws -> ()
     ) -> Effect<Action>
-        where ID: EffectIDProtocol
+        where ID: EffectID
     {
         self.fireAndForget(id: id, run: { _ in
             try await run()
@@ -266,7 +266,7 @@ extension Effect
         queue: Queue? = nil,
         run: @escaping @Sendable (EffectContext) async throws -> ()
     ) -> Effect<Action>
-        where Queue: EffectQueueProtocol
+        where Queue: EffectQueue
     {
         self.init(queue: queue, run: { context in
             try await run(context)
@@ -280,7 +280,7 @@ extension Effect
         queue: Queue? = nil,
         run: @escaping @Sendable () async throws -> ()
     ) -> Effect<Action>
-        where Queue: EffectQueueProtocol
+        where Queue: EffectQueue
     {
         self.fireAndForget(queue: queue, run: { _ in
             try await run()
@@ -295,7 +295,7 @@ extension Effect
         queue: Queue? = nil,
         run: @escaping @Sendable (EffectContext) async throws -> ()
     ) -> Effect<Action>
-        where ID: EffectIDProtocol, Queue: EffectQueueProtocol
+        where ID: EffectID, Queue: EffectQueue
     {
         self.init(id: id, queue: queue, run: { context in
             try await run(context)
@@ -311,7 +311,7 @@ extension Effect
         queue: Queue? = nil,
         run: @escaping @Sendable () async throws -> ()
     ) -> Effect<Action>
-        where ID: EffectIDProtocol, Queue: EffectQueueProtocol
+        where ID: EffectID, Queue: EffectQueue
     {
         self.fireAndForget(id: id, queue: queue, run: { _ in
             try await run()
@@ -330,14 +330,14 @@ extension Effect
     // MARK: - cancel
 
     /// Cancels running `async`s by specifying `ids`.
-    public static func cancel(ids: @escaping @Sendable (any EffectIDProtocol) -> Bool) -> Effect<Action>
+    public static func cancel(ids: @escaping @Sendable (any EffectID) -> Bool) -> Effect<Action>
     {
         Effect(kinds: [.cancel(ids)])
     }
 
     /// Cancels running `async`s by specifying `identifier`.
     public static func cancel<ID>(id: ID) -> Effect<Action>
-        where ID: EffectIDProtocol
+        where ID: EffectID
     {
         Effect(kinds: [.cancel { AnyHashable($0) == AnyHashable(id) }])
     }
@@ -393,8 +393,8 @@ extension Effect
     }
 
     /// Changes `_EffectID`.
-    public func map<ID>(id f: @escaping ((any EffectIDProtocol)?) -> ID?) -> Effect
-        where ID: EffectIDProtocol
+    public func map<ID>(id f: @escaping ((any EffectID)?) -> ID?) -> Effect
+        where ID: EffectID
     {
         .init(kinds: self.kinds.map { kind in
             switch kind {
@@ -414,8 +414,8 @@ extension Effect
     }
 
     /// Changes `EffectQueue`.
-    public func map<Queue>(queue f: @escaping ((any EffectQueueProtocol)?) -> Queue?) -> Effect
-        where Queue: EffectQueueProtocol
+    public func map<Queue>(queue f: @escaping ((any EffectQueue)?) -> Queue?) -> Effect
+        where Queue: EffectQueue
     {
         .init(kinds: self.kinds.map { kind in
             switch kind {
@@ -449,7 +449,7 @@ extension Effect
         self.kinds.compactMap { $0.sequence }
     }
 
-    internal var cancels: [(any EffectIDProtocol) -> Bool]
+    internal var cancels: [(any EffectID) -> Bool]
     {
         self.kinds.compactMap { $0.cancel }
     }
@@ -469,7 +469,7 @@ extension Effect
         case next(Action)
 
         /// Cancellation effect with filtering effect IDs by a predicate.
-        case cancel(@Sendable (any EffectIDProtocol) -> Bool)
+        case cancel(@Sendable (any EffectID) -> Bool)
 
         internal var single: Single?
         {
@@ -483,7 +483,7 @@ extension Effect
             return value
         }
 
-        internal var cancel: ((any EffectIDProtocol) -> Bool)?
+        internal var cancel: ((any EffectID) -> Bool)?
         {
             guard case let .cancel(value) = self else { return nil }
             return value
@@ -503,7 +503,7 @@ extension Effect
             }
         }
 
-        internal var queue: (any EffectQueueProtocol)?
+        internal var queue: (any EffectQueue)?
         {
             switch self {
             case let .single(single):
@@ -522,12 +522,12 @@ extension Effect
     package struct Single: Sendable
     {
         internal let id: _EffectID?
-        internal let queue: (any EffectQueueProtocol)?
+        internal let queue: (any EffectQueue)?
         internal let run: @Sendable (EffectContext) async throws -> Action?
 
         internal init(
             id: _EffectID? = nil,
-            queue: (any EffectQueueProtocol)? = nil,
+            queue: (any EffectQueue)? = nil,
             run: @escaping @Sendable (EffectContext) async throws -> Action?
         )
         {
@@ -543,14 +543,14 @@ extension Effect
             }
         }
 
-        internal func map<ID>(id f: @escaping ((any EffectIDProtocol)?) -> ID?) -> Effect.Single
-            where ID: EffectIDProtocol
+        internal func map<ID>(id f: @escaping ((any EffectID)?) -> ID?) -> Effect.Single
+            where ID: EffectID
         {
             .init(id: f(id?.value).map(_EffectID.init), queue: queue, run: run)
         }
 
         internal func map(
-            queue f: @escaping ((any EffectQueueProtocol)?) -> (any EffectQueueProtocol)?
+            queue f: @escaping ((any EffectQueue)?) -> (any EffectQueue)?
         ) -> Effect.Single
         {
             .init(id: id, queue: f(queue), run: run)
@@ -561,13 +561,13 @@ extension Effect
     package struct _Sequence: Sendable
     {
         internal let id: _EffectID?
-        internal let queue: (any EffectQueueProtocol)?
+        internal let queue: (any EffectQueue)?
         internal let sequence: @Sendable (EffectContext) async throws
             -> (any AsyncSequence<Action, any Error> & Sendable)?
 
         internal init(
             id: _EffectID? = nil,
-            queue: (any EffectQueueProtocol)? = nil,
+            queue: (any EffectQueue)? = nil,
             sequence: @escaping @Sendable (EffectContext) async throws
                 -> (any AsyncSequence<Action, any Error> & Sendable)?
         )
@@ -593,14 +593,14 @@ extension Effect
             })
         }
 
-        internal func map<ID>(id f: @escaping ((any EffectIDProtocol)?) -> ID?) -> Effect._Sequence
-            where ID: EffectIDProtocol
+        internal func map<ID>(id f: @escaping ((any EffectID)?) -> ID?) -> Effect._Sequence
+            where ID: EffectID
         {
             .init(id: f(id?.value).map(_EffectID.init), queue: queue, sequence: sequence)
         }
 
         internal func map(
-            queue f: @escaping ((any EffectQueueProtocol)?) -> (any EffectQueueProtocol)?
+            queue f: @escaping ((any EffectQueue)?) -> (any EffectQueue)?
         ) -> Effect._Sequence
         {
             .init(id: id, queue: f(queue), sequence: sequence)

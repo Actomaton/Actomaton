@@ -5,7 +5,7 @@ import XCTest
 import Combine
 #endif
 
-/// Tests for `Newest1EffectQueueProtocol` where previous effect will be automatically cancelled by the next effect.
+/// Tests for `Newest1EffectQueue` where previous effect will be automatically cancelled by the next effect.
 final class EffectIDAutoCancellationTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
@@ -35,7 +35,7 @@ final class EffectIDAutoCancellationTests: MainTestCase
     {
         flags = Flags()
 
-        struct Newest1EffectQueue: Newest1EffectQueueProtocol {}
+        struct TestNewest1EffectQueue: Newest1EffectQueue {}
 
         let actomaton = Actomaton<Action, State>(
             state: ._1,
@@ -45,7 +45,7 @@ final class EffectIDAutoCancellationTests: MainTestCase
                     guard state == ._1 else { return .empty }
 
                     state = ._2
-                    return Effect(queue: Newest1EffectQueue()) { context in
+                    return Effect(queue: TestNewest1EffectQueue()) { context in
                         return try await context.clock.sleep(for: .ticks(1)) {
                             return ._2To3
                         } ifCancelled: {
@@ -59,7 +59,7 @@ final class EffectIDAutoCancellationTests: MainTestCase
                     guard state == ._2 else { return .empty }
 
                     state = ._3
-                    return Effect(queue: Newest1EffectQueue()) { context in
+                    return Effect(queue: TestNewest1EffectQueue()) { context in
                         return try await context.clock.sleep(for: .ticks(1)) {
                             return ._3To4
                         } ifCancelled: {
@@ -77,7 +77,7 @@ final class EffectIDAutoCancellationTests: MainTestCase
 
                 case ._toEnd:
                     state = ._end
-                    return Effect(queue: Newest1EffectQueue()) { context in
+                    return Effect(queue: TestNewest1EffectQueue()) { context in
                         try await context.clock.sleep(for: .ticks(1))
                         return nil
                     }

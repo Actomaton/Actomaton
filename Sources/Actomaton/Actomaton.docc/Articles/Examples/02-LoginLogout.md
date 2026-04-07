@@ -22,11 +22,11 @@ enum State: Sendable {
 // NOTE:
 // By attaching this EffectQueue to multiple `Effect`s,
 // they will incorporate with each other under the same `EffectQueuePolicy`,
-// in this case: `Newest1EffectQueueProtocol`.
+// in this case: `Newest1EffectQueue`.
 // 
 // This policy will only allow at most newest 1 effect to survive,
 // and rest of the queued running effects will be automatically cancelled.
-struct LoginFlowEffectQueue: Newest1EffectQueueProtocol {}
+struct LoginFlowEffectQueue: Newest1EffectQueue {}
 
 struct Environment: Sendable {
     let loginEffect: @Sendable (userId: String) -> Effect<Action>
@@ -133,7 +133,7 @@ enum Main {
 Here we see the notions of `EffectQueue`, `Environment`, and `let task: Task<(), Error> = actomaton.send(...)`
 
 - `EffectQueue` is for automatic cancellation or suspension of effects. 
-  In this example, `Newest1EffectQueueProtocol` is used so that only the newest 1 effect (`forceLogout`) will survive,
+  In this example, `Newest1EffectQueue` is used so that only the newest 1 effect (`forceLogout`) will survive,
   and rest of old queued effects (e.g. previous `login`) will be automatically cancelled.
 - `Environment` is useful for injecting effects to be called inside `Reducer` so that they become replaceable. 
   **`Environment` is known as Dependency Injection Container** (using Reader monad).

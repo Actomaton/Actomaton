@@ -3,7 +3,7 @@ import ActomatonEffect
 import CustomDump
 import XCTest
 
-/// A testing utility that wraps `MealyMachine` + `EffectManager` to provide
+/// A testing utility that wraps `MealyMachine` + `EffectQueueManager` to provide
 /// TCA-like `send` / `receive` assertions with readable diff output.
 ///
 /// ```swift
@@ -73,7 +73,7 @@ public actor TestMachine<Action, State, Environment>
         self.machine = MealyMachine(
             state: .init(current: state),
             reducer: reducer,
-            effectManager: EffectManager(effectContext: effectContext)
+            effectManager: EffectQueueManager(effectContext: effectContext)
         )
     }
 

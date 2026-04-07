@@ -35,8 +35,8 @@ final class EffectCancellationTests: MainTestCase
     {
         flags = Flags()
 
-        struct EffectID1To2: EffectIDProtocol {}
-        struct EffectID2To3: EffectIDProtocol {}
+        struct EffectID1To2: EffectID {}
+        struct EffectID2To3: EffectID {}
 
         let actomaton = Actomaton<Action, State>(
             state: ._1,

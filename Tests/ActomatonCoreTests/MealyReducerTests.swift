@@ -138,7 +138,7 @@ private struct WrapperAction: Sendable
 }
 
 /// Minimal effect manager for `String` output, used only in `test_map_output`.
-private final class StringEffectManager<Action: Sendable, State>: EffectManagerProtocol
+private final class StringEffectManager<Action: Sendable, State>: EffectManager
 {
     typealias Output = String
 

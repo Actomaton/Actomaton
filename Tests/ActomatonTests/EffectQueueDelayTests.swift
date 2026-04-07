@@ -8,7 +8,7 @@ import Combine
 /// Tests for `EffectQueueDelay`.
 final class EffectQueueDelayTests: MainTestCase
 {
-    private func makeActomaton<Queue: EffectQueueProtocol>(
+    private func makeActomaton<Queue: EffectQueue>(
         queue: Queue,
         effectTime: TestDuration
     ) -> (Actomaton<Action, State>, startedIDs: ResultsCollector<String>, cancelledIDs: ResultsCollector<String>)
@@ -21,7 +21,7 @@ final class EffectQueueDelayTests: MainTestCase
             reducer: Reducer { action, state, _ in
                 switch action {
                 case let .fetch(id):
-                    return Effect(id: EffectID(name: "running \(id)"), queue: queue) { context in
+                    return Effect(id: DelayEffectID(name: "running \(id)"), queue: queue) { context in
                         // NOTE: Due to `queue`'s delay, this scope may run at delayed schedule time.
 
                         print("Start: \(id), Task.isCancelled = \(Task.isCancelled)")
@@ -247,12 +247,12 @@ private struct State: Equatable
     var finishedIDs: Set<String> = []
 }
 
-private struct EffectID: EffectIDProtocol
+private struct DelayEffectID: EffectID
 {
     var name: String
 }
 
-private struct DelayedEffectQueue: EffectQueueProtocol
+private struct DelayedEffectQueue: EffectQueue
 {
     let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {
@@ -264,7 +264,7 @@ private struct DelayedEffectQueue: EffectQueueProtocol
     }
 }
 
-private struct DelayedNewest2EffectQueue: EffectQueueProtocol
+private struct DelayedNewest2EffectQueue: EffectQueue
 {
     let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {
@@ -276,7 +276,7 @@ private struct DelayedNewest2EffectQueue: EffectQueueProtocol
     }
 }
 
-private struct DelayedOldest2SuspendNewEffectQueue: EffectQueueProtocol
+private struct DelayedOldest2SuspendNewEffectQueue: EffectQueue
 {
     let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {
@@ -288,7 +288,7 @@ private struct DelayedOldest2SuspendNewEffectQueue: EffectQueueProtocol
     }
 }
 
-private struct DelayedOldest2DiscardNewEffectQueue: EffectQueueProtocol
+private struct DelayedOldest2DiscardNewEffectQueue: EffectQueue
 {
     let delay: TestDuration
     var effectQueuePolicy: EffectQueuePolicy {

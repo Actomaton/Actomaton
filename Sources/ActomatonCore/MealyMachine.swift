@@ -2,7 +2,7 @@ import Foundation
 
 /// Deterministic finite state machine that receives "action" and with "current state" transform to "next state" &
 /// additional "output",
-/// which then generates Swift Concurrency side-effects via ``EffectManagerProtocol``.
+/// which then generates Swift Concurrency side-effects via ``EffectManager``.
 public actor MealyMachine<Action, State, Output>
 {
 #if !DISABLE_COMBINE && canImport(Combine)
@@ -26,7 +26,7 @@ public actor MealyMachine<Action, State, Output>
 
     /// Core manages effect lifecycle: task creation, queue policies, and cancellation.
     /// Agnostic about reducer and state mutation.
-    package let effectManager: any EffectManagerProtocol<Action, State, Output>
+    package let effectManager: any EffectManager<Action, State, Output>
 
 #if os(WASI) || ACTOMATON_ISOLATED_DEINIT_WORKAROUND
     /// Mirrors `effectManager` so `deinit` can shut it down without relying on
@@ -35,7 +35,7 @@ public actor MealyMachine<Action, State, Output>
     /// `ACTOMATON_ISOLATED_DEINIT_WORKAROUND` exists for non-WASI builds that
     /// are compiled by the Swift.org 6.2.4 toolchain, where `isolated deinit`
     /// also crashes during SIL lowering.
-    private nonisolated(unsafe) let unsafeEffectManager: any EffectManagerProtocol<Action, State, Output>
+    private nonisolated(unsafe) let unsafeEffectManager: any EffectManager<Action, State, Output>
 #endif
 
     /// Underlying actor that replaces `MealyMachine`'s `unownedExecutor`.
@@ -48,7 +48,7 @@ public actor MealyMachine<Action, State, Output>
     public init(
         state: State,
         reducer: MealyReducer<Action, State, (), Output>,
-        effectManager: some EffectManagerProtocol<Action, State, Output>
+        effectManager: some EffectManager<Action, State, Output>
     ) where Action: Sendable
     {
         self.init(
@@ -64,7 +64,7 @@ public actor MealyMachine<Action, State, Output>
         state: State,
         reducer: MealyReducer<Action, State, Environment, Output>,
         environment: Environment,
-        effectManager: some EffectManagerProtocol<Action, State, Output>
+        effectManager: some EffectManager<Action, State, Output>
     ) where Action: Sendable, Environment: Sendable
     {
         self.init(
@@ -87,7 +87,7 @@ public actor MealyMachine<Action, State, Output>
         willChangeState: @escaping (
             _ isolation: isolated MealyMachine, _ old: State, _ new: State
         ) -> Void = { _, _, _ in }
-    ) where Action: Sendable, EffM: EffectManagerProtocol<Action, State, Output>
+    ) where Action: Sendable, EffM: EffectManager<Action, State, Output>
     {
 #if !DISABLE_COMBINE && canImport(Combine)
         self._state = Published(initialValue: state)
@@ -170,10 +170,10 @@ public actor MealyMachine<Action, State, Output>
     /// Runs a block within `self`'s isolation with `EffM` force-casting.
     /// This method is a proof that `effectManager` is owned and protected by `self`.
     ///
-    /// Used by ``EffectManagerProtocol`` conformers to re-enter actor isolation from detached tasks.
+    /// Used by ``EffectManager`` conformers to re-enter actor isolation from detached tasks.
     private func performIsolated<EffM>(
         _ f: @Sendable (isolated any Actor, EffM) -> Void
-    ) where EffM: EffectManagerProtocol<Action, State, Output>
+    ) where EffM: EffectManager<Action, State, Output>
     {
         f(self, self.effectManager as! EffM)
     }

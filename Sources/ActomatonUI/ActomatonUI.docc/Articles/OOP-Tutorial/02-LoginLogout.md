@@ -71,7 +71,7 @@ let reducer = Reducer { action, state, environment in
 > Important:
 これらの副作用は `return` されているだけで、まだ実行されていません！ なので、この `Reducer` は **純粋関数** です。実際には `Reducer` を純粋関数として実行した後、得られた `Effect` について Actomaton の内部で遅延評価されます（このとき初めて「現実世界における副作用」が発生します）。副作用を常に `Effect` の中に宣言することが、副作用を適切に管理・設計する上で "とてもとても" 大切です。
 
-`Effect` の実装方法は5種類があります。特に重要なのが 3. 4. 5. です（3. は 1. と 2. を兼ねます）。
+`Effect` の実装方法は 5 種類があります。特に重要なのが 3. 4. 5. です（3. は 1. と 2. を兼ねます）。
 
 1. 副作用を発生せず、次のアクションのみを転送する
     - `Effect.nextAction()`
@@ -134,7 +134,7 @@ let mockEnvironment = Environment(
 
 前述の `environment` 実装で API 通信として定義した `login` と `logout` ですが、例えば今回の例における `forceLogout` のように、 **ログイン途中でも強制的にキャンセルしてログアウト処理に移行したい** 場合などが考えられます。
 
-このようなシナリオでは、次の2つのキャンセル処理のアプローチを検討することができます。
+このようなシナリオでは、次の 2 つのキャンセル処理のアプローチを検討することができます。
 
 1. `EffectID` による手動キャンセル
 2. `EffectQueue` による自動キャンセル
@@ -142,10 +142,10 @@ let mockEnvironment = Environment(
 ### 1. EffectID による手動キャンセル
 
 `Effect` の初期化時に識別子として `EffectID` を付与し、 `Effect.cancel(id:)` を手動で呼ぶ方法です。
-具体的には `protocol EffectIDProtocol` を使い、 `Hashable` な識別子を `Effect` の初期化時に渡します。
+具体的には `protocol EffectID` を使い、 `Hashable` な識別子を `Effect` の初期化時に渡します。
 
 ```swift
-struct LoginEffectID: EffectIDProtocol {} // 空実装でOK
+struct LoginFlowEffectID: EffectID {} // 空実装で OK
 
 let environment = Environment(
     login: { userId in
@@ -169,12 +169,12 @@ let environment = Environment(
 `EffectID` による手動キャンセルは、毎回直前に `Effect.cancel(id:)` を書く必要性があるため、時として面倒に感じることもあります。
 その場合は Actomaton の `EffectQueue` を使った、より高度な副作用管理システムを試してみて下さい。
 
-`EffectID` と同様、`EffectQueue` もまた Hashable ベースの識別子として、 `protocol EffectQueueProtocol` を採用することで作成できます。
-今回の例では、その中でも最も利用頻度の高い `Newest1EffectQueueProtocol` サブプロトコルを使います。
-これは **最新1件の副作用のみを実行し、直前までに同じキューで登録されていた副作用をすべてキャンセルする** というキューです。
+`EffectID` と同様、`EffectQueue` もまた Hashable ベースの識別子として、 `protocol EffectQueue` を採用することで作成できます。
+今回の例では、その中でも最も利用頻度の高い `Newest1EffectQueue` サブプロトコルを使います。
+これは **最新 1 件の副作用のみを実行し、直前までに同じキューで登録されていた副作用をすべてキャンセルする** というキューです。
 
 ```swift
-struct LoginFlowEffectQueue: Newest1EffectQueueProtocol {} // 空実装でOK
+struct LoginFlowEffectQueue: Newest1EffectQueue {} // 空実装で OK
 
 let environment = Environment(
     login: { userId in
@@ -197,9 +197,9 @@ let environment = Environment(
 > Important:
 > `EffectQueue` の種類には：
 > 
-> - `Newest1EffectQueueProtocol` (Rx.flatMapLatest)
-> - `Oldest1DiscardNewEffectQueueProtocol` (Rx.flatMapFirst)
-> - `Oldest1SuspendNewEffectQueueProtocol` (Rx.concat)
+> - `Newest1EffectQueue` (Rx.flatMapLatest)
+> - `Oldest1DiscardNewEffectQueue` (Rx.flatMapFirst)
+> - `Oldest1SuspendNewEffectQueue` (Rx.concat)
 > 
 > などがビルトインで定義されており、カスタムで最大同時実行数の設定もできます。
 

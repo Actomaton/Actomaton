@@ -23,14 +23,14 @@ This repository consists of 6 modules:
 
 In addition, the following lower-level modules are available for advanced use cases:
 
-5. **`ActomatonCore`**: Generic Mealy machine (`MealyMachine`) and composable `MealyReducer`, independent of any effect system. Pair it with a pluggable `EffectManagerProtocol` conformer to choose what "output" means — `Void` (no effects), `Action?` (synchronous feedback), or your own custom type.
-6. **`ActomatonEffect`**: The `Effect<Action>` type and its default `EffectManager` — queue-based async task lifecycle (creation, cancellation, suspension, delay).
+5. **`ActomatonCore`**: Generic Mealy machine (`MealyMachine`) and composable `MealyReducer`, independent of any effect system. Pair it with a pluggable `EffectManager` conformer to choose what "output" means — `Void` (no effects), `Action?` (synchronous feedback), or your own custom type.
+6. **`ActomatonEffect`**: The `Effect<Action>` type and its default `EffectManager` conformer (`EffectQueueManager`) — queue-based async task lifecycle (creation, cancellation, suspension, delay).
 
 ### Module dependency graph
 
 ```
-ActomatonCore          -- generic MealyMachine + MealyReducer + EffectManagerProtocol
-  └─ ActomatonEffect   -- Effect<Action>, EffectManager, EffectQueue, EffectID
+ActomatonCore          -- generic MealyMachine + MealyReducer + EffectManager
+  └─ ActomatonEffect   -- Effect<Action>, EffectQueueManager, EffectQueue, EffectID
        ├─ Actomaton    -- Actomaton typealias, Reducer typealias, CasePath integration
        │    ├─ ActomatonUI         -- Store, RouteStore (SwiftUI / UIKit)
        │    └─ ActomatonDebugging  -- debug / log reducers
@@ -41,11 +41,11 @@ ActomatonCore          -- generic MealyMachine + MealyReducer + EffectManagerPro
 
 `ActomatonCore` is intentionally free of `Effect` and async task management.
 This makes `MealyMachine` usable in contexts where full effect infrastructure is overkill — for example, purely synchronous state machines, game logic, or protocol parsers.
-Built-in `EffectManagerProtocol` conformers cover common cases:
+Built-in `EffectManager` conformers cover common cases:
 
 | Conformer | Output type | Use case |
 |---|---|---|
-| `EffectManager` | `Effect<Action>` | Full async effect lifecycle (in `ActomatonEffect`) |
+| `EffectQueueManager` (internal) | `Effect<Action>` | Full async effect lifecycle (in `ActomatonEffect`) |
 | `NoOpEffectManager` | `Void` | Pure state transitions, no side-effects |
 | `ActionEffectManager` | `[Action]` | Synchronous action feedback loops |
 
@@ -185,7 +185,7 @@ enum Action: Sendable {
 // next effect with same `EffectID` will automatically cancel the previous one.
 //
 // Note that `EffectID` is also useful for manual cancellation via `Effect.cancel`.
-struct LoginFlowEffectID: EffectIDProtocol {}
+struct LoginFlowEffectID: EffectID {}
 
 struct Environment: Sendable {
     let loginEffect: (userId: String) -> Effect<Action>
@@ -305,7 +305,7 @@ enum Action: Sendable {
     case start, tick, stop
 }
 
-struct TimerID: EffectIDProtocol {}
+struct TimerID: EffectID {}
 
 struct Environment {
     let timerEffect: Effect<Action>
@@ -391,7 +391,7 @@ struct Environment: Sendable {
     let fetch: @Sendable (_ id: String) async throws -> Data
 }
 
-struct DelayedEffectQueue: EffectQueueProtocol {
+struct DelayedEffectQueue: EffectQueue {
     // First 3 effects will run concurrently, and other sent effects will be suspended.
     var effectQueuePolicy: EffectQueuePolicy {
         .runOldest(maxCount: 3, .suspendNew)
@@ -428,12 +428,12 @@ await actomaton.send(.fetch(id: "item3")) // min delay of 0.1 (after item2 actua
 await actomaton.send(.fetch(id: "item4")) // starts when item1 or 2 or 3 finishes
 ```
 
-Above code uses a custom `DelayedEffectQueue` that conforms to `EffectQueueProtocol` with suspendable `EffectQueuePolicy` and delays between each effect by `EffectQueueDelay`.
+Above code uses a custom `DelayedEffectQueue` that conforms to `EffectQueue` with suspendable `EffectQueuePolicy` and delays between each effect by `EffectQueueDelay`.
 
 See [EffectQueuePolicy](https://github.com/Actomaton/Actomaton/blob/main/Sources/Actomaton/EffectQueuePolicy.swift) for how each policy takes different queueing strategy for effects.
 
 ```swift
-/// `EffectQueueProtocol`'s buffering policy.
+/// `EffectQueue`'s buffering policy.
 public enum EffectQueuePolicy: Hashable, Sendable
 {
     /// Runs `maxCount` newest effects, cancelling old running effects.
@@ -453,20 +453,20 @@ public enum EffectQueuePolicy: Hashable, Sendable
 }
 ```
 
-For convenient `EffectQueueProtocol` protocol conformance, there are built-in sub-protocols:
+For convenient `EffectQueue` protocol conformance, there are built-in sub-protocols:
 
 ```swift
 /// A helper protocol where `effectQueuePolicy` is set to `.runNewest(maxCount: 1)`.
-public protocol Newest1EffectQueueProtocol: EffectQueueProtocol {}
+public protocol Newest1EffectQueue: EffectQueue {}
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .discardNew)`.
-public protocol Oldest1DiscardNewEffectQueueProtocol: EffectQueueProtocol {}
+public protocol Oldest1DiscardNewEffectQueue: EffectQueue {}
 
 /// A helper protocol where `effectQueuePolicy` is set to `.runOldest(maxCount: 1, .suspendNew)`.
-public protocol Oldest1SuspendNewEffectQueueProtocol: EffectQueueProtocol {}
+public protocol Oldest1SuspendNewEffectQueue: EffectQueue {}
 ```
 
-so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueueProtocol {}`
+so that we can write in one-liner: `struct MyEffectQueue: Newest1EffectQueue {}`
 
 ### Example 1-5. Reducer composition
 
