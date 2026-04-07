@@ -85,7 +85,7 @@ final class PendingEffectCancellationTests: MainTestCase
                     return Effect.fireAndForget { await flags.mark(result2: .completed) }
 
                 case .cancelAll:
-                    return Effect.cancel(ids: { $0.value is EffectID })
+                    return Effect.cancel(ids: { $0 is EffectID })
                 }
             },
             effectContext: effectContext

@@ -16,17 +16,17 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     // MARK: - Task tracking
 
     /// Effect-identified running tasks for manual cancellation or on-deinit cancellation.
-    /// - Note: Multiple effects can have same ``EffectID``.
-    private var runningTasks: [EffectID: Set<Task<(), any Error>>] = [:]
+    /// - Note: Multiple effects can have same ``_EffectID``.
+    private var runningTasks: [_EffectID: Set<Task<(), any Error>>] = [:]
 
     /// Effect-queue-designated running tasks for automatic cancellation & suspension.
-    private var queuedRunningTasks: [EffectQueue: [Task<(), any Error>]] = [:]
+    private var queuedRunningTasks: [_EffectQueue: [Task<(), any Error>]] = [:]
 
     /// Suspended effects.
-    private var pendingEffectKinds: [EffectQueue: [Effect<Action>.Kind]] = [:]
+    private var pendingEffectKinds: [_EffectQueue: [Effect<Action>.Kind]] = [:]
 
     /// Tracked latest effect start time for delayed effects calculation.
-    private var latestEffectTime: [EffectQueue: AnyClock<Duration>.Instant] = [:]
+    private var latestEffectTime: [_EffectQueue: AnyClock<Duration>.Instant] = [:]
 
     // MARK: - Callbacks (set via setUp)
 
@@ -119,7 +119,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     }
 
     private func handleTaskCompleted(
-        id: EffectID,
+        id: _EffectID,
         task: Task<(), any Error>,
         queue: (any EffectQueueProtocol)?,
         priority: TaskPriority?,
@@ -130,7 +130,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         runningTasks[id]?.remove(task)
 
         if let queue {
-            let effectQueue = EffectQueue(queue)
+            let effectQueue = _EffectQueue(queue)
 
             if let removingIndex = queuedRunningTasks[effectQueue]?.firstIndex(where: { $0 == task }) {
                 Debug.print("[handleTaskCompleted] Remove completed queue-task: \(queue) \(removingIndex)")
@@ -212,7 +212,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     {
         guard let queue = effectKind.queue else { return true }
 
-        let effectQueue = EffectQueue(queue)
+        let effectQueue = _EffectQueue(queue)
 
         switch queue.effectQueuePolicy {
         case let .runNewest(maxCount):
@@ -334,13 +334,13 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     /// for safe bookkeeping updates, avoiding strong capture of the actor.
     private func enqueueTask(
         _ task: Task<(), any Error>,
-        id: EffectID?,
+        id: _EffectID?,
         queue: (any EffectQueueProtocol)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     )
     {
-        let effectID = id ?? EffectID(DefaultEffectID())
+        let effectID = id ?? _EffectID(DefaultEffectID())
 
         // Register task.
         Debug.print("[enqueueTask] Append id-task: \(effectID)")
@@ -348,7 +348,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
 
         if let queue {
             Debug.print("[enqueueTask] Append queue-task: \(queue)")
-            self.queuedRunningTasks[EffectQueue(queue), default: []].append(task)
+            self.queuedRunningTasks[_EffectQueue(queue), default: []].append(task)
         }
 
         // Clean up after `task` is completed.
@@ -375,12 +375,12 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
 
     /// Cancels running and pending effects matching the predicate.
     private func cancelEffects(
-        predicate: @escaping @Sendable (EffectID) -> Bool
+        predicate: @escaping @Sendable (any EffectIDProtocol) -> Bool
     )
     {
         // Cancel running tasks.
         for id in runningTasks.keys {
-            if predicate(id), let previousTasks = runningTasks.removeValue(forKey: id) {
+            if predicate(id.value), let previousTasks = runningTasks.removeValue(forKey: id) {
                 for previousTask in previousTasks {
                     previousTask.cancel()
                 }
@@ -390,7 +390,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         // Cancel pending effects.
         for (effectQueue, effectKinds) in pendingEffectKinds {
             for (i, effectKind) in effectKinds.enumerated().reversed() {
-                if let effectID = effectKind.id, predicate(effectID) {
+                if let effectID = effectKind.id, predicate(effectID.value) {
                     if let kind = pendingEffectKinds[effectQueue]?.remove(at: i) {
                         cancelEffectKind(kind)
                     }
@@ -406,7 +406,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
     {
         guard let queue else { return nil }
 
-        let effectQueue = EffectQueue(queue)
+        let effectQueue = _EffectQueue(queue)
         let now = self.effectContext.clock.now
 
         guard let latestTime = self.latestEffectTime[effectQueue] else {
@@ -436,7 +436,7 @@ package final class EffectManager<Action, State>: EffectManagerProtocol
         tracksFeedbacks: Bool
     ) -> Task<(), any Error>?
     {
-        let effectQueue = EffectQueue(queue)
+        let effectQueue = _EffectQueue(queue)
 
         guard pendingEffectKinds[effectQueue]?.isEmpty == false else { return nil }
 

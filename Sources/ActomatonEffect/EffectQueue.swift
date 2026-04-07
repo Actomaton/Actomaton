@@ -1,30 +1,3 @@
-/// Effect queue for automatic cancellation of existing tasks or suspending of new effects.
-public struct EffectQueue: Hashable, Sendable
-{
-    /// Raw value that conforms to `EffectQueueProtocol`.
-    public let value: any EffectQueueProtocol
-
-    internal init(_ value: some EffectQueueProtocol)
-    {
-        self.value = value
-    }
-
-    internal init(_ value: any EffectQueueProtocol)
-    {
-        self.value = value
-    }
-
-    public static func == (lhs: Self, rhs: Self) -> Bool
-    {
-        AnyHashable(lhs.value) == AnyHashable(rhs.value)
-    }
-
-    public func hash(into hasher: inout Hasher)
-    {
-        AnyHashable(value).hash(into: &hasher)
-    }
-}
-
 /// A protocol that every effect queue should conform to, for automatic cancellation of existing tasks or suspending of
 /// new effects.
 public protocol EffectQueueProtocol: Hashable, Sendable
