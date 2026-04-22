@@ -387,9 +387,9 @@ package final class EffectQueueManager<Action, State>: EffectManager
             self.queuedRunningTasks[_EffectQueue(queue), default: []].append(task)
         }
 
-        // Clean up after `task` is completed.
         let performIsolated = self.performIsolated
 
+        // Clean up after `task` is completed.
         Task<(), any Error>.detached(priority: priority) {
             // Wait for `task` to complete.
             _ = await task.result
