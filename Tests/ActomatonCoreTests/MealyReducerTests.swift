@@ -154,7 +154,7 @@ private final class StringEffectManager<Action: Sendable, State>: EffectManager
 
     func preprocessOutput(
         _ output: String,
-        sendReducer: (Action) -> String
+        runReducer: (Action) -> String
     ) -> String
     {
         output

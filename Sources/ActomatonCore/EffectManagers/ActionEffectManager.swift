@@ -25,12 +25,12 @@ public struct ActionEffectManager<Action, State>: EffectManager
 
     public func preprocessOutput(
         _ output: Output,
-        sendReducer: (Action) -> Output
+        runReducer: (Action) -> Output
     ) -> Output
     {
         var remaining: [Action] = []
         for action in output {
-            let nested = preprocessOutput(sendReducer(action), sendReducer: sendReducer)
+            let nested = preprocessOutput(runReducer(action), runReducer: runReducer)
             remaining.append(contentsOf: nested)
         }
         return remaining

@@ -31,14 +31,14 @@ public protocol EffectManager<Action, State, Output>
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
 
-    /// Recursively resolves synchronous output by running the reducer via `sendReducer`,
+    /// Recursively resolves synchronous output by running the reducer via `runReducer`,
     /// returning the preprocessed output with only async effects remaining.
     ///
     /// Called by ``MealyMachine/send(_:priority:tracksFeedbacks:)`` before
     /// ``processOutput(_:priority:tracksFeedbacks:)``.
     func preprocessOutput(
         _ output: Output,
-        sendReducer: (Action) -> Output
+        runReducer: (Action) -> Output
     ) -> Output
 
     /// Process reducer output, creating and managing tasks as needed.

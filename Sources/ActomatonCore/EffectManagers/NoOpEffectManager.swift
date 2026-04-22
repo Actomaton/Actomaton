@@ -20,7 +20,7 @@ public struct NoOpEffectManager<Action, State>: EffectManager
 
     public func preprocessOutput(
         _ output: Output,
-        sendReducer: (Action) -> Output
+        runReducer: (Action) -> Output
     )
     {}
 

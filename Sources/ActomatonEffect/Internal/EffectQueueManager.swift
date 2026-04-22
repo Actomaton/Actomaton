@@ -65,7 +65,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     package func preprocessOutput(
         _ output: Effect<Action>,
-        sendReducer: (Action) -> Effect<Action>
+        runReducer: (Action) -> Effect<Action>
     ) -> Effect<Action>
     {
         var syncActions: [Action] = []
@@ -81,7 +81,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
         }
 
         for syncAction in syncActions {
-            let nestedOutput = preprocessOutput(sendReducer(syncAction), sendReducer: sendReducer)
+            let nestedOutput = preprocessOutput(runReducer(syncAction), runReducer: runReducer)
             remainingKinds.append(contentsOf: nestedOutput.kinds)
         }
 
