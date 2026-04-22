@@ -6,7 +6,7 @@ import Foundation
 ///
 /// The conformer does NOT own the reducer or state — those are managed by ``MealyMachine``.
 /// It only receives the reducer's output and processes it (e.g., creating tasks, managing queues).
-public protocol EffectManager<Action, State, Output>: AnyObject
+public protocol EffectManager<Action, State, Output>
 {
     associatedtype Action
     associatedtype State

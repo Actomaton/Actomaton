@@ -1,7 +1,7 @@
 import Foundation
 
 /// Effectless, Actionless (feedbackless) Effect Manager where `Output` is `Void`.
-public final class NoOpEffectManager<Action, State>: EffectManager
+public struct NoOpEffectManager<Action, State>: EffectManager
     where Action: Sendable
 {
     public typealias Output = Void
