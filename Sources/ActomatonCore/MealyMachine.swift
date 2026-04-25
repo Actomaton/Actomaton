@@ -30,7 +30,7 @@ public actor MealyMachine<Action, State, Output>
     ///
     /// `ACTOMATON_ISOLATED_DEINIT_WORKAROUND` exists for non-WASI builds compiled by the
     /// Swift.org 6.2.4 toolchain, where `isolated deinit` also crashes during SIL lowering.
-    package nonisolated(unsafe) private(set) var effectManager: any EffectManager<Action, State, Output>
+    package private(set) nonisolated(unsafe) var effectManager: any EffectManager<Action, State, Output>
 #else
     /// Core manages effect lifecycle: task creation, queue policies, and cancellation.
     /// Agnostic about reducer and state mutation.
