@@ -102,27 +102,10 @@ public actor MealyMachine<Action, State, Output>
         self.executingActor = executingActor
         self.willChangeState = willChangeState
 
-        typealias NonSendablePerformIsolated = (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffM) -> Void
-        ) async -> Void
-
-        // swiftformat:disable:next wrapAttributes
-        typealias SendablePerformIsolated = @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffM) -> Void
-        ) async -> Void
-
-        // Create as non-`@Sendable` closure to avoid too conservative `SendableMetatype` check of `EffM`,
-        // then `unsafeBitCast` to `@Sendable` for passing to `effectManager.setUp()`.
-        // This is considered as a safe operation because the only capture is `[weak self]` which is `Sendable`.
-        let performIsolated: SendablePerformIsolated = unsafeBitCast(
-            { [weak self] f in
-                await self?.performIsolated(f)
-            } as NonSendablePerformIsolated,
-            to: SendablePerformIsolated.self
-        )
-
         effectManager.setUp(
-            performIsolated: performIsolated,
+            performIsolated: { [weak self] f in
+                await self?.performIsolated(f)
+            },
             sendAction: { [weak self] action, priority, tracksFeedbacks in
                 await self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
             }
