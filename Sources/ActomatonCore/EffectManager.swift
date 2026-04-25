@@ -6,7 +6,7 @@ import Foundation
 ///
 /// The conformer does NOT own the reducer or state — those are managed by ``MealyMachine``.
 /// It only receives the reducer's output and processes it (e.g., creating tasks, managing queues).
-public protocol EffectManager<Action, State, Output>: ~Copyable, SendableMetatype
+public protocol EffectManager<Action, State, Output>: SendableMetatype
 {
     associatedtype Action
     associatedtype State
@@ -24,9 +24,9 @@ public protocol EffectManager<Action, State, Output>: ~Copyable, SendableMetatyp
     /// class.
     ///   - sendAction:
     ///     Closure to send feedback actions back to the owning actor.
-    mutating func setUp(
+    func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, inout Self) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, Self) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
@@ -36,7 +36,7 @@ public protocol EffectManager<Action, State, Output>: ~Copyable, SendableMetatyp
     ///
     /// Called by ``MealyMachine/send(_:priority:tracksFeedbacks:)`` before
     /// ``processOutput(_:priority:tracksFeedbacks:)``.
-    mutating func preprocessOutput(
+    func preprocessOutput(
         _ output: Output,
         runReducer: (Action) -> Output
     ) -> Output
@@ -44,12 +44,12 @@ public protocol EffectManager<Action, State, Output>: ~Copyable, SendableMetatyp
     /// Process reducer output, creating and managing tasks as needed.
     ///
     /// Called by ``MealyMachine`` after running the reducer and resolving synchronous actions.
-    mutating func processOutput(
+    func processOutput(
         _ output: Output,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     ) -> Task<(), any Error>?
 
     /// Cancel all running tasks and drain pending effects.
-    mutating func shutDown()
+    func shutDown()
 }

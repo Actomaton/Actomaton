@@ -138,21 +138,21 @@ private struct WrapperAction: Sendable
 }
 
 /// Minimal effect manager for `String` output, used only in `test_map_output`.
-private struct StringEffectManager<Action: Sendable, State>: EffectManager
+private final class StringEffectManager<Action: Sendable, State>: EffectManager
 {
     typealias Output = String
 
     init() {}
 
-    mutating func setUp(
+    func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, inout StringEffectManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, StringEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
     {}
 
-    mutating func preprocessOutput(
+    func preprocessOutput(
         _ output: String,
         runReducer: (Action) -> String
     ) -> String
@@ -160,7 +160,7 @@ private struct StringEffectManager<Action: Sendable, State>: EffectManager
         output
     }
 
-    mutating func processOutput(
+    func processOutput(
         _ output: String,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
@@ -169,5 +169,5 @@ private struct StringEffectManager<Action: Sendable, State>: EffectManager
         nil
     }
 
-    mutating func shutDown() {}
+    func shutDown() {}
 }
