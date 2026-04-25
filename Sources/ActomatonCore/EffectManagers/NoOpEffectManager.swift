@@ -10,21 +10,21 @@ public struct NoOpEffectManager<Action, State>: EffectManager
 
     // MARK: - EffectManager
 
-    public func setUp(
+    public mutating func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, NoOpEffectManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, inout NoOpEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
     {}
 
-    public func preprocessOutput(
+    public mutating func preprocessOutput(
         _ output: Output,
         runReducer: (Action) -> Output
     )
     {}
 
-    public func processOutput(
+    public mutating func processOutput(
         _ output: Output,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
@@ -33,6 +33,6 @@ public struct NoOpEffectManager<Action, State>: EffectManager
         return nil
     }
 
-    public func shutDown()
+    public mutating func shutDown()
     {}
 }

@@ -6,7 +6,7 @@ import Foundation
 ///
 /// Handles task creation, queue policies (newest/oldest), effect delays, and pending effect suspension.
 /// Does NOT own the reducer or state — those are managed by ``MealyMachine``.
-package final class EffectQueueManager<Action, State>: EffectManager
+package struct EffectQueueManager<Action, State>: EffectManager
     where Action: Sendable
 {
     package typealias Output = Effect<Action>
@@ -39,7 +39,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// Closure to run a block within the owning actor's isolation for safe bookkeeping updates.
     private var performIsolated: (
         @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, inout EffectQueueManager<Action, State>) -> Void
         ) async -> Void
     )?
 
@@ -52,9 +52,9 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     // MARK: - EffectManager
 
-    package func setUp(
+    package mutating func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, inout EffectQueueManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
@@ -88,7 +88,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
         return Effect(kinds: remainingKinds)
     }
 
-    package func processOutput(
+    package mutating func processOutput(
         _ output: Effect<Action>,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
@@ -122,7 +122,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
         }
     }
 
-    private func handleTaskCompleted(
+    private mutating func handleTaskCompleted(
         id: _EffectID,
         task: Task<(), any Error>,
         queue: (any EffectQueue)?,
@@ -155,7 +155,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
         }
     }
 
-    package func shutDown()
+    package mutating func shutDown()
     {
         // Cancel all running tasks.
         for (_, tasks) in runningTasks {
@@ -176,7 +176,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     // MARK: - Private
 
-    private func processEffectKind(
+    private mutating func processEffectKind(
         _ kind: Effect<Action>.Kind,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
@@ -222,7 +222,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     }
 
     /// Checks queue policy and performs any needed task drops/suspensions.
-    private func checkQueuePolicy(
+    private mutating func checkQueuePolicy(
         effectKind: Effect<Action>.Kind,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
@@ -293,7 +293,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     }
 
     /// Creates a detached task for the given effect kind.
-    private func makeTask(
+    private mutating func makeTask(
         effectKind: Effect<Action>.Kind,
         time: AnyClock<Duration>.Instant?,
         priority: TaskPriority?,
@@ -368,7 +368,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     ///
     /// The cleanup task uses `performIsolated` to re-enter actor isolation
     /// for safe bookkeeping updates, avoiding strong capture of the actor.
-    private func enqueueTask(
+    private mutating func enqueueTask(
         _ task: Task<(), any Error>,
         id: _EffectID?,
         queue: (any EffectQueue)?,
@@ -410,7 +410,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     }
 
     /// Cancels running and pending effects matching the predicate.
-    private func cancelEffects(
+    private mutating func cancelEffects(
         predicate: @escaping @Sendable (any EffectID) -> Bool
     )
     {
@@ -439,7 +439,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// Calculates absolute effect start time for queue-based delay scheduling.
     ///
     /// Returns `nil` when the effect should run immediately without additional sleeping.
-    private func calculateEffectTime(queue: (any EffectQueue)?) -> AnyClock<Duration>.Instant?
+    private mutating func calculateEffectTime(queue: (any EffectQueue)?) -> AnyClock<Duration>.Instant?
     {
         guard let queue else { return nil }
 
@@ -471,7 +471,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// are reflected immediately, rather than draining one-at-a-time.
     /// Each dequeued effect uses its original `priority` and `tracksFeedbacks` from the `send` call,
     /// and signals `onComplete` when the task finishes so that the original `send`'s Task completes.
-    private func dequeuePendingIfPossible(
+    private mutating func dequeuePendingIfPossible(
         queue: any EffectQueue
     )
     {
