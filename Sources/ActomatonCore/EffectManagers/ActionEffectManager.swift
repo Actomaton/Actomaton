@@ -15,9 +15,9 @@ public struct ActionEffectManager<Action, State>: EffectManager
 
     // MARK: - EffectManager
 
-    public func setUp(
+    public mutating func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, ActionEffectManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (isolated any Actor, inout ActionEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
@@ -36,7 +36,7 @@ public struct ActionEffectManager<Action, State>: EffectManager
         return remaining
     }
 
-    public func processOutput(
+    public mutating func processOutput(
         _ output: Output,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
@@ -45,6 +45,6 @@ public struct ActionEffectManager<Action, State>: EffectManager
         return nil
     }
 
-    public func shutDown()
+    public mutating func shutDown()
     {}
 }

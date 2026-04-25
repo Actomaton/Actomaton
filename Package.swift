@@ -47,7 +47,10 @@ let package = Package(
     targets: [
         .target(
             name: "ActomatonCore",
-            dependencies: []
+            dependencies: [],
+            swiftSettings: [
+                // .define("ACTOMATON_ISOLATED_DEINIT_WORKAROUND"),
+            ]
         ),
         .target(
             name: "ActomatonEffect",
