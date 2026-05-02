@@ -34,24 +34,4 @@ extension MealyMachine where Output == Effect<Action>
             effectManager: EffectQueueManager<Action, State>(effectContext: effectContext)
         )
     }
-
-    /// Initializer with `environment` and custom `executingActor`.
-    /// Used for ``MainActomaton`` construction.
-    package init<Environment>(
-        state: State,
-        reducer: Reducer<Action, State, Environment>,
-        environment: Environment,
-        effectContext: EffectContext,
-        executingActor: any Actor
-    ) where Action: Sendable, Environment: Sendable
-    {
-        self.init(
-            state: state,
-            reducer: Reducer<Action, State, ()> { action, state, _ in
-                reducer.run(action, &state, environment)
-            },
-            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext),
-            executingActor: executingActor
-        )
-    }
 }

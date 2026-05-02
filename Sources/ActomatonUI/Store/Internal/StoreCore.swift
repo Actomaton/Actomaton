@@ -35,7 +35,7 @@ internal final class StoreCore<Action, State, Environment>
             effectContext: effectContext
         )
 
-        self.actomaton.statePublisher
+        self.actomaton.$state
             .sink(receiveValue: { [weak self] state in
                 self?.updateState(state)
             })

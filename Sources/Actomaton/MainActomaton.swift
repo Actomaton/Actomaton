@@ -11,10 +11,6 @@ package final class MainActomaton<Action, State>
 #if !DISABLE_COMBINE && canImport(Combine)
     @Published
     package private(set) var state: State
-
-    package var statePublisher: AnyPublisher<State, Never> {
-        self.$state.eraseToAnyPublisher()
-    }
 #else
     package var state: State
     {
@@ -27,7 +23,7 @@ package final class MainActomaton<Action, State>
     private let actomaton: Actomaton<Action, State>
 
     /// Initializer without `environment`.
-    package init(
+    private init(
         state: State,
         reducer: Reducer<Action, State, ()>,
         effectContext: EffectContext = .init(clock: ContinuousClock())
