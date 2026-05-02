@@ -2,11 +2,6 @@
 public struct Effect<Action>: Sendable where Action: Sendable
 {
     internal let kinds: [Kind]
-
-    internal init(kinds: [Kind])
-    {
-        self.kinds = kinds
-    }
 }
 
 // MARK: - Public Initializers
