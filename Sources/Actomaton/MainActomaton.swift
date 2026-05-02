@@ -5,14 +5,14 @@ import Combine
 
 /// ``Actomaton`` wrapper that uses `MainActor`'s executor as its custom executor.
 @MainActor
-package final class MainActomaton<Action, State>
+public final class MainActomaton<Action, State>
     where Action: Sendable, State: Sendable
 {
 #if !DISABLE_COMBINE && canImport(Combine)
     @Published
-    package private(set) var state: State
+    public private(set) var state: State
 #else
-    package var state: State
+    public var state: State
     {
         self.actomaton.assumeIsolated { actomaton in
             actomaton.state
@@ -23,7 +23,7 @@ package final class MainActomaton<Action, State>
     private let actomaton: Actomaton<Action, State>
 
     /// Initializer without `environment`.
-    private init(
+    public init(
         state: State,
         reducer: Reducer<Action, State, ()>,
         effectContext: EffectContext = .init(clock: ContinuousClock())
@@ -55,7 +55,7 @@ package final class MainActomaton<Action, State>
     }
 
     /// Initializer with `environment`.
-    package convenience init<Environment>(
+    public convenience init<Environment>(
         state: State,
         reducer: Reducer<Action, State, Environment>,
         environment: Environment,
@@ -73,7 +73,7 @@ package final class MainActomaton<Action, State>
 
     /// Sends `action` to `Actomaton`.
     @discardableResult
-    package func send(
+    public func send(
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false

@@ -1,4 +1,4 @@
-@testable import Actomaton
+import Actomaton
 import XCTest
 
 /// Tests that `send`'s returned Task tracks effects that were initially suspended

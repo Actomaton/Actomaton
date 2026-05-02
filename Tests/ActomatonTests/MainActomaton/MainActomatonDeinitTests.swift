@@ -1,4 +1,4 @@
-@testable import Actomaton
+import Actomaton
 import XCTest
 
 /// Tests for `MainActomaton.deinit` to run successfully with cancelling running tasks.

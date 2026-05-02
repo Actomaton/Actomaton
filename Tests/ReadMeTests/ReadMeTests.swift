@@ -1,4 +1,4 @@
-@testable import Actomaton
+import Actomaton
 import Foundation
 import XCTest
 

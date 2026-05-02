@@ -1,6 +1,6 @@
 #if !DISABLE_COMBINE && canImport(Combine)
 
-@testable import ActomatonUI
+import ActomatonUI
 import XCTest
 
 /// Tests for `Actomaton.deinit` to run successfully with cancelling running tasks.

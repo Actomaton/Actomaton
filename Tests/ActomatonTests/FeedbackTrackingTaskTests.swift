@@ -1,4 +1,4 @@
-@testable import Actomaton
+import Actomaton
 import XCTest
 
 #if !DISABLE_COMBINE && canImport(Combine)

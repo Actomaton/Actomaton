@@ -1,4 +1,4 @@
-@testable import Actomaton
+import Actomaton
 import XCTest
 
 final class CounterTests: MainTestCase
