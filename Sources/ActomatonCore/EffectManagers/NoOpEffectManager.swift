@@ -12,7 +12,7 @@ public struct NoOpEffectManager<Action, State>: EffectManager
 
     public func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, NoOpEffectManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (NoOpEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )

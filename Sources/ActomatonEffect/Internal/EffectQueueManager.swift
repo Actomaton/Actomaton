@@ -39,7 +39,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// Closure to run a block within the owning actor's isolation for safe bookkeeping updates.
     private var performIsolated: (
         @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
         ) async -> Void
     )?
 
@@ -54,7 +54,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     package func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
@@ -397,7 +397,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
             Debug.print("[enqueueTask] Task completed, removing id-task: \(effectID)")
 
             // Re-enter actor isolation for safe bookkeeping updates.
-            await performIsolated? { _, self_ in
+            await performIsolated? { self_ in
                 self_.handleTaskCompleted(
                     id: effectID,
                     task: task,
