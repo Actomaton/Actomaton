@@ -151,10 +151,10 @@ public actor MealyMachine<Action, State, Output>
     ///
     /// Used by ``EffectManager`` conformers to re-enter actor isolation from detached tasks.
     private func performIsolated<EffM>(
-        _ f: @Sendable (isolated any Actor, EffM) -> Void
+        _ f: @Sendable (EffM) -> Void
     ) where EffM: EffectManager<Action, State, Output>
     {
-        f(self, self.effectManager as! EffM)
+        f(self.effectManager as! EffM)
     }
 }
 

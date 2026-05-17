@@ -26,7 +26,7 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
     ///     Closure to send feedback actions back to the owning actor.
     func setUp(
         performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (isolated any Actor, Self) -> Void
+            _ runEffM: @escaping @Sendable (Self) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
