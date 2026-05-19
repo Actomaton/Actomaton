@@ -7,7 +7,7 @@ import XCTest
 /// TCA-like `send` / `receive` assertions with readable diff output.
 ///
 /// ```swift
-/// let tm = TestMachine(
+/// let tm = TestActomaton(
 ///     state: MyState(),
 ///     reducer: myReducer,
 ///     environment: ()
@@ -21,18 +21,18 @@ import XCTest
 ///     state.isLoading = false
 /// }
 /// ```
-public actor TestMachine<Action, State, Environment>
+public actor TestActomaton<Action, State, Environment>
     where Action: Sendable, State: Sendable & Equatable, Environment: Sendable
 {
-    private typealias InternalAction = TestMachineAction<Action>
-    private typealias RuntimeState = TestMachineRuntimeState<Action, State>
+    private typealias InternalAction = TestActomatonAction<Action>
+    private typealias RuntimeState = TestActomatonRuntimeState<Action, State>
 
     private let machine: MealyMachine<InternalAction, RuntimeState, Effect<InternalAction>>
     private let effectManager: EffectQueueManager<InternalAction, RuntimeState>
     private let receivedActionSignal: AsyncStream<Void>
     private var consumedReceivedActionCount: Int = 0
 
-    /// Creates a `TestMachine` from an `Effect`-based reducer.
+    /// Creates a `TestActomaton` from an `Effect`-based reducer.
     ///
     /// Unlike the original implementation, async effects are preserved and can be asserted with
     /// ``receive(_:timeout:assert:fileID:file:line:)``.
@@ -123,7 +123,7 @@ public actor TestMachine<Action, State, Environment>
     /// If previously received feedback actions remain unhandled, this method fails immediately and
     /// does not dispatch `action`.
     ///
-    /// Returns a ``TestMachineTask`` that can be used to await completion of the triggered effect
+    /// Returns a ``TestActomatonTask`` that can be used to await completion of the triggered effect
     /// chain or cancel it explicitly.
     @discardableResult
     public func send(
@@ -133,7 +133,7 @@ public actor TestMachine<Action, State, Environment>
         fileID: StaticString = #fileID,
         file filePath: StaticString = #filePath,
         line: UInt = #line
-    ) async -> TestMachineTask
+    ) async -> TestActomatonTask
     {
         let runtimeState = self.machine.state
 
@@ -160,7 +160,7 @@ public actor TestMachine<Action, State, Environment>
                 line: line
             )
 
-            return TestMachineTask(task: nil, timeout: timeout)
+            return TestActomatonTask(task: nil, timeout: timeout)
         }
 
         let expected = runtimeState.current
@@ -223,7 +223,7 @@ public actor TestMachine<Action, State, Environment>
     }
 }
 
-extension TestMachine where Action: Equatable
+extension TestActomaton where Action: Equatable
 {
     /// Asserts the next received action matches `expectedAction`, then verifies the resulting state
     /// change.
@@ -258,7 +258,7 @@ extension TestMachine where Action: Equatable
     }
 }
 
-extension TestMachine
+extension TestActomaton
 {
     private func _receive(
         matching isMatching: @escaping (Action) -> Bool,
@@ -468,7 +468,7 @@ extension TestMachine
     }
 }
 
-private enum TestMachineAction<Action>: Sendable
+private enum TestActomatonAction<Action>: Sendable
     where Action: Sendable
 {
     case send(Action)
@@ -483,7 +483,7 @@ private enum TestMachineAction<Action>: Sendable
     }
 }
 
-private struct TestMachineRuntimeState<Action, State>: Sendable
+private struct TestActomatonRuntimeState<Action, State>: Sendable
     where Action: Sendable, State: Sendable
 {
     var current: State

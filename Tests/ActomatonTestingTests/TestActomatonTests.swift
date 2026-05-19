@@ -4,11 +4,11 @@ import ActomatonTesting
 import TestFixtures
 import XCTest
 
-final class TestMachineTests: MainTestCase
+final class TestActomatonTests: MainTestCase
 {
     func test_sendTask_finish_success() async throws
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
                 switch action {
@@ -42,7 +42,7 @@ final class TestMachineTests: MainTestCase
 
     func test_sendTask_finish_timeout() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
                 switch action {
@@ -87,7 +87,7 @@ final class TestMachineTests: MainTestCase
 
     func test_singleSend() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: counterReducer,
             environment: ()
@@ -102,7 +102,7 @@ final class TestMachineTests: MainTestCase
 
     func test_chainedSends() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: counterReducer,
             environment: ()
@@ -128,7 +128,7 @@ final class TestMachineTests: MainTestCase
 #else
         let recorder = ResultsCollector<CounterAction>()
 
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: MealyReducer<CounterAction, CounterState, ResultsCollector<CounterAction>, Effect<CounterAction>> {
                 action, state, recorder in
@@ -168,7 +168,7 @@ final class TestMachineTests: MainTestCase
 
     func test_noAssertionSend_stateUnchanged() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: counterReducer,
             environment: ()
@@ -182,7 +182,7 @@ final class TestMachineTests: MainTestCase
 
     func test_actionFeedbackChain() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: ChainState(steps: []),
             reducer: chainReducer,
             environment: ()
@@ -205,7 +205,7 @@ final class TestMachineTests: MainTestCase
 
     func test_effectBasedReducer_asyncNextAction() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
                 switch action {
@@ -236,7 +236,7 @@ final class TestMachineTests: MainTestCase
 
     func test_effectBasedReducer_syncNextAction() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
                 switch action {
@@ -265,7 +265,7 @@ final class TestMachineTests: MainTestCase
 
     func test_asyncEffectReceive() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: CounterState(count: 0),
             reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
                 switch action {
@@ -299,7 +299,7 @@ final class TestMachineTests: MainTestCase
 
     func test_multipleFieldChanges() async
     {
-        let tm = TestMachine(
+        let tm = TestActomaton(
             state: UserState(name: "", loggedIn: false),
             reducer: userReducer,
             environment: ()
