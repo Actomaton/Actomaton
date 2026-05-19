@@ -15,23 +15,23 @@ final class MealyMachineNoOpTests: XCTestCase
                 case .decrement:
                     state -= 1
                 }
-            },
-            effectManager: NoOpEffectManager()
+            }
         )
+        machine.setUp(effectManager: NoOpEffectManager())
 
-        var s = await machine.state
+        var s = machine.state
         XCTAssertEqual(s, 0)
 
-        await machine.send(.increment)
-        s = await machine.state
+        machine.send(.increment)
+        s = machine.state
         XCTAssertEqual(s, 1)
 
-        await machine.send(.increment)
-        s = await machine.state
+        machine.send(.increment)
+        s = machine.state
         XCTAssertEqual(s, 2)
 
-        await machine.send(.decrement)
-        s = await machine.state
+        machine.send(.decrement)
+        s = machine.state
         XCTAssertEqual(s, 1)
     }
 
@@ -46,12 +46,12 @@ final class MealyMachineNoOpTests: XCTestCase
                 case .decrement:
                     state -= 1
                 }
-            },
-            effectManager: NoOpEffectManager()
+            }
         )
+        machine.setUp(effectManager: NoOpEffectManager())
 
         // send returns nil since NoOpEffectManager never produces tasks.
-        let task = await machine.send(.increment)
+        let task = machine.send(.increment)
         XCTAssertNil(task)
     }
 }

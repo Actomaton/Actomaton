@@ -16,8 +16,8 @@ public struct ActionEffectManager<Action, State>: EffectManager
     // MARK: - EffectManager
 
     public func setUp(
-        performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (ActionEffectManager<Action, State>) -> Void
+        withSendability: @escaping @Sendable (
+            _ runEffM: sending @escaping (ActionEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )

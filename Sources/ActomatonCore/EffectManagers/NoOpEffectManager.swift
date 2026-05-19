@@ -11,8 +11,8 @@ public struct NoOpEffectManager<Action, State>: EffectManager
     // MARK: - EffectManager
 
     public func setUp(
-        performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (NoOpEffectManager<Action, State>) -> Void
+        withSendability: @escaping @Sendable (
+            _ runEffM: sending @escaping (NoOpEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )

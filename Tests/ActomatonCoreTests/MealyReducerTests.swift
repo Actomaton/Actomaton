@@ -19,12 +19,12 @@ final class MealyReducerTests: XCTestCase
 
         let machine = MealyMachine<CounterAction, OuterCounterState, Void>(
             state: OuterCounterState(name: "test", count: 10),
-            reducer: outerReducer,
-            effectManager: NoOpEffectManager()
+            reducer: outerReducer
         )
+        machine.setUp(effectManager: NoOpEffectManager())
 
-        await machine.send(.increment)
-        let s = await machine.state
+        machine.send(.increment)
+        let s = machine.state
         XCTAssertEqual(s.count, 11)
         XCTAssertEqual(s.name, "test")
     }
@@ -46,16 +46,16 @@ final class MealyReducerTests: XCTestCase
 
         let machine = MealyMachine<WrapperAction, Int, Void>(
             state: 0,
-            reducer: outerReducer,
-            effectManager: NoOpEffectManager()
+            reducer: outerReducer
         )
+        machine.setUp(effectManager: NoOpEffectManager())
 
-        await machine.send(WrapperAction(inner: .increment))
-        var s = await machine.state
+        machine.send(WrapperAction(inner: .increment))
+        var s = machine.state
         XCTAssertEqual(s, 1)
 
-        await machine.send(WrapperAction(inner: .decrement))
-        s = await machine.state
+        machine.send(WrapperAction(inner: .decrement))
+        s = machine.state
         XCTAssertEqual(s, 0)
     }
 
@@ -78,16 +78,16 @@ final class MealyReducerTests: XCTestCase
             state: 0,
             reducer: MealyReducer { action, state, _ in
                 adapted.run(action, &state, "5")
-            },
-            effectManager: NoOpEffectManager()
+            }
         )
+        machine.setUp(effectManager: NoOpEffectManager())
 
-        await machine.send(.increment)
-        var s = await machine.state
+        machine.send(.increment)
+        var s = machine.state
         XCTAssertEqual(s, 5)
 
-        await machine.send(.decrement)
-        s = await machine.state
+        machine.send(.decrement)
+        s = machine.state
         XCTAssertEqual(s, 0)
     }
 
@@ -108,12 +108,12 @@ final class MealyReducerTests: XCTestCase
 
         let machine = MealyMachine<CounterAction, Int, String>(
             state: 0,
-            reducer: mapped,
-            effectManager: StringEffectManager()
+            reducer: mapped
         )
+        machine.setUp(effectManager: StringEffectManager())
 
-        await machine.send(.increment)
-        let s = await machine.state
+        machine.send(.increment)
+        let s = machine.state
         XCTAssertEqual(s, 1)
     }
 }
@@ -145,8 +145,8 @@ private final class StringEffectManager<Action: Sendable, State>: EffectManager
     init() {}
 
     func setUp(
-        performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (StringEffectManager<Action, State>) -> Void
+        withSendability: @escaping @Sendable (
+            _ runEffM: sending @escaping (StringEffectManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )

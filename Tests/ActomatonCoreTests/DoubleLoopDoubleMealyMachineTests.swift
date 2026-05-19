@@ -11,9 +11,9 @@ final class DoubleLoopDoubleMealyMachineTests: XCTestCase
         let m = 4
 
         let machine = makeOuterMachine(n: n, m: m)
-        await machine.send(.start)
+        machine.send(.start)
 
-        let state = await machine.state
+        let state = machine.state
         XCTAssertEqual(state.results.count, n * m)
         XCTAssertEqual(state.results, makeExpectedPairs(n: n, m: m))
     }
@@ -21,18 +21,18 @@ final class DoubleLoopDoubleMealyMachineTests: XCTestCase
     func test_doubleLoop_zeroN() async
     {
         let machine = makeOuterMachine(n: 0, m: 3)
-        await machine.send(.start)
+        machine.send(.start)
 
-        let results = await machine.state.results
+        let results = machine.state.results
         XCTAssertEqual(results, [])
     }
 
     func test_doubleLoop_zeroM() async
     {
         let machine = makeOuterMachine(n: 3, m: 0)
-        await machine.send(.start)
+        machine.send(.start)
 
-        let results = await machine.state.results
+        let results = machine.state.results
         XCTAssertEqual(results, [])
     }
 }
@@ -87,7 +87,7 @@ private struct Pair: Equatable, Sendable
 /// the next iteration — or returns `nil` when all rows are complete.
 private func makeOuterMachine(n: Int, m: Int) -> MealyMachine<OuterAction, OuterState, [OuterAction]>
 {
-    MealyMachine(
+    let machine = MealyMachine<OuterAction, OuterState, [OuterAction]>(
         state: OuterState(),
         reducer: MealyReducer { action, state, _ in
             switch action {
@@ -108,9 +108,11 @@ private func makeOuterMachine(n: Int, m: Int) -> MealyMachine<OuterAction, Outer
                     return []
                 }
             }
-        },
-        effectManager: ActionEffectManager()
+        }
     )
+    machine.setUp(effectManager: ActionEffectManager())
+
+    return machine
 }
 
 private func makePairsForRow(i: Int, m: Int) -> [Pair]

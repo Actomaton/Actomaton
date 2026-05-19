@@ -1,13 +1,18 @@
 #if !DISABLE_COMBINE && canImport(Combine)
 import Combine
 
-/// `MainActomaton` wrapper that handles both `Action` as indirect messaging
-/// and `State` that can directly replace `actomaton.state` via SwiftUI 2-way binding.
+/// Internal core that drives a ``MealyMachine`` from the MainActor and exposes its state through a
+/// Combine `CurrentValueSubject` for SwiftUI / UIKit consumers.
+///
+/// Handles both `Action` as indirect messaging and `State` that can directly replace
+/// state via SwiftUI 2-way binding (through ``BindableAction``).
 @MainActor
 internal final class StoreCore<Action, State, Environment>
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
-    private let actomaton: MainActomaton<BindableAction<Action, State>, State>
+    private typealias Machine = MealyMachine<BindableAction<Action, State>, State, Effect<BindableAction<Action, State>>>
+
+    private let machine: Machine
 
     private let _state: CurrentValueSubject<State, Never>
 
@@ -24,31 +29,31 @@ internal final class StoreCore<Action, State, Environment>
         configuration: StoreConfiguration
     )
     {
-        self._state = CurrentValueSubject(initialState)
+        let _state = CurrentValueSubject<State, Never>(initialState)
+        self._state = _state
         self.environment = environment
 
-        self.actomaton = MainActomaton(
+        let machine = Machine(
             state: initialState,
             reducer: lift(reducer: reducer)
                 .log(format: configuration.logFormat),
             environment: environment,
-            effectContext: effectContext
+            willChangeState: { _, new in
+                _state.value = new
+            }
         )
 
-        self.actomaton.$state
-            .sink(receiveValue: { [weak self] state in
-                self?.updateState(state)
-            })
-            .store(in: &cancellables)
+        self.machine = machine
 
-        // Comment-Out: Using `for await` causes SwiftUI animation not working correctly.
-//        self.task = Task { [weak self] in
-//            guard let stream = self?.actomaton.$state.toAsyncStream() else { return }
-//
-//            for await newState in stream {
-//                self?.updateState(newState)
-//            }
-//        }
+        machine.setUp(
+            effectManager: EffectQueueManager<BindableAction<Action, State>, State>(effectContext: effectContext),
+            withSendability: { [weak self] runMachine in
+                await self?.runIsolatedMachine(runMachine)
+            },
+            sendAction: { [weak self] action, priority, tracksFeedbacks in
+                await self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            }
+        )
     }
 
     deinit
@@ -80,18 +85,15 @@ internal final class StoreCore<Action, State, Environment>
         tracksFeedbacks: Bool = false
     ) -> Task<(), any Error>?
     {
-        switch action {
-        case let .action(action):
-            return self.actomaton.send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
-
-        case let .state(state):
-            return self.actomaton.send(.state(state), priority: priority, tracksFeedbacks: tracksFeedbacks)
-        }
+        self.machine.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
 
-    private func updateState(_ newState: State)
+    /// Runs `runMachine` on the MainActor, supplying the underlying ``MealyMachine`` so that
+    /// the inner ``EffectManager`` can mutate its own bookkeeping safely from detached tasks
+    /// without capturing `self` itself.
+    private func runIsolatedMachine(_ runMachine: (Machine) -> Void)
     {
-        self._state.value = newState
+        runMachine(machine)
     }
 }
 

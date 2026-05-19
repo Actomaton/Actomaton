@@ -2,10 +2,6 @@ import Actomaton
 import Foundation
 import XCTest
 
-#if !DISABLE_COMBINE && canImport(Combine)
-import Combine
-#endif
-
 /// Compile-only test for README.
 private func readMe1_1_effectContext() async throws
 {

@@ -70,11 +70,41 @@ public actor TestMachine<Action, State, Environment>
             }
         }
 
-        self.machine = MealyMachine(
+        self.machine = MealyMachine<InternalAction, RuntimeState, Effect<InternalAction>>(
             state: .init(current: state),
-            reducer: reducer,
-            effectManager: EffectQueueManager(effectContext: effectContext)
+            reducer: reducer
         )
+
+        self.machine.setUp(
+            effectManager: EffectQueueManager(effectContext: effectContext),
+            withSendability: { [weak self] runMachine in
+                await self?.runIsolatedMachine(runMachine)
+            },
+            sendAction: { [weak self] action, priority, tracksFeedbacks in
+                await self?.sendFromEffect(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            }
+        )
+    }
+
+    /// Runs `runMachine` within this actor's isolation, supplying the underlying ``MealyMachine`` so
+    /// that conformers of ``EffectManager`` (reached via ``MealyMachine``) can mutate their own
+    /// bookkeeping safely from detached tasks without capturing `self` themselves.
+    private func runIsolatedMachine(
+        _ runMachine: (MealyMachine<InternalAction, RuntimeState, Effect<InternalAction>>) -> Void
+    )
+    {
+        runMachine(machine)
+    }
+
+    /// Re-enters this actor's isolation to dispatch an effect-originated feedback action.
+    /// Bridges the `sendAction` callback handed to ``EffectQueueManager``.
+    private func sendFromEffect(
+        _ action: InternalAction,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool
+    ) -> Task<(), any Error>?
+    {
+        machine.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
 
     /// Sends an action and asserts how state changes before any feedback action is received.
@@ -96,7 +126,7 @@ public actor TestMachine<Action, State, Environment>
         line: UInt = #line
     ) async -> TestMachineTask
     {
-        let runtimeState = await self.machine.state
+        let runtimeState = self.machine.state
 
         let unhandledActions = runtimeState.receivedActions
             .dropFirst(self.consumedReceivedActionCount)
@@ -126,9 +156,9 @@ public actor TestMachine<Action, State, Environment>
 
         let expected = runtimeState.current
 
-        let task = await self.machine.send(.send(action), tracksFeedbacks: true)
+        let task = self.machine.send(.send(action), tracksFeedbacks: true)
 
-        guard let actual = (await self.machine.state).latestSentState else {
+        guard let actual = (self.machine.state).latestSentState else {
             XCTFail(
                 """
                 Internal error: failed to capture state after sending \(action).
@@ -353,7 +383,7 @@ extension TestMachine
     private var unconsumedReceivedActionsCount: Int
     {
         get async {
-            let runtimeState = await self.machine.state
+            let runtimeState = self.machine.state
             return runtimeState.receivedActions.count - self.consumedReceivedActionCount
         }
     }
@@ -361,7 +391,7 @@ extension TestMachine
     private func nextReceivedAction() async
         -> (action: Action, stateBefore: State, stateAfter: State)?
     {
-        let runtimeState = await self.machine.state
+        let runtimeState = self.machine.state
 
         guard runtimeState.receivedActions.indices.contains(self.consumedReceivedActionCount) else { return nil }
 
@@ -378,7 +408,7 @@ extension TestMachine
         matching predicate: (Action) -> Bool
     ) async -> Bool
     {
-        let runtimeState = await self.machine.state
+        let runtimeState = self.machine.state
 
         return runtimeState.receivedActions
             .dropFirst(self.consumedReceivedActionCount)

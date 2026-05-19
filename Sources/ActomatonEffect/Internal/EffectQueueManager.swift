@@ -6,6 +6,11 @@ import Foundation
 ///
 /// Handles task creation, queue policies (newest/oldest), effect delays, and pending effect suspension.
 /// Does NOT own the reducer or state — those are managed by ``MealyMachine``.
+///
+/// `EffectQueueManager` is a plain non-`Sendable` class. Cleanup work spawned from detached tasks
+/// re-enters the parent safe container that wraps this manager through the `withSendability`
+/// callback supplied at `setUp(...)`-time, which hands `self` back as a parameter — so no
+/// `[weak self]` capture of the (non-Sendable) `self` is needed in the detached task.
 package final class EffectQueueManager<Action, State>: EffectManager
     where Action: Sendable
 {
@@ -36,10 +41,13 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     private var sendAction: (@Sendable (Action, TaskPriority?, Bool) async -> Task<(), any Error>?)?
 
-    /// Closure to run a block within the owning actor's isolation for safe bookkeeping updates.
-    private var performIsolated: (
+    /// `@Sendable` closure with **inherited sendability** from the parent safe container that
+    /// wraps this manager. Hands `self` back to the supplied callback under that sendability,
+    /// so the detached cleanup task in ``enqueueTask`` can mutate bookkeeping safely without
+    /// capturing (non-Sendable) `self`.
+    private var withSendability: (
         @Sendable (
-            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
+            _ runEffM: sending @escaping (EffectQueueManager<Action, State>) -> Void
         ) async -> Void
     )?
 
@@ -53,13 +61,13 @@ package final class EffectQueueManager<Action, State>: EffectManager
     // MARK: - EffectManager
 
     package func setUp(
-        performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
+        withSendability: @escaping @Sendable (
+            _ runEffM: sending @escaping (EffectQueueManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
     {
-        self.performIsolated = performIsolated
+        self.withSendability = withSendability
         self.sendAction = sendAction
     }
 
@@ -366,8 +374,10 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     /// Enqueues running `task` and sets up a detached cleanup task.
     ///
-    /// The cleanup task uses `performIsolated` to re-enter actor isolation
-    /// for safe bookkeeping updates, avoiding strong capture of the actor.
+    /// The cleanup task snapshots `self.withSendability` (a Sendable closure value) and uses
+    /// it to re-enter the parent safe container under inherited sendability. `self` is handed
+    /// back as a parameter to the inner callback, so the detached task does NOT need to capture
+    /// `self` — letting `EffectQueueManager` remain non-Sendable.
     private func enqueueTask(
         _ task: Task<(), any Error>,
         id: _EffectID?,
@@ -387,7 +397,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
             self.queuedRunningTasks[_EffectQueue(queue), default: []].append(task)
         }
 
-        let performIsolated = self.performIsolated
+        let withSendability = self.withSendability
 
         // Clean up after `task` is completed.
         Task<(), any Error>.detached(priority: priority) {
@@ -396,8 +406,10 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
             Debug.print("[enqueueTask] Task completed, removing id-task: \(effectID)")
 
-            // Re-enter actor isolation for safe bookkeeping updates.
-            await performIsolated? { self_ in
+            // Re-enter the parent safe container. `self_` is the same `EffectQueueManager`
+            // instance (handed back by the wrapper's `withSendability`); accessing it under the
+            // wrapper's inherited sendability is safe without `self` being Sendable.
+            await withSendability? { self_ in
                 self_.handleTaskCompleted(
                     id: effectID,
                     task: task,

@@ -1,10 +1,6 @@
 import Actomaton
 import XCTest
 
-#if !DISABLE_COMBINE && canImport(Combine)
-import Combine
-#endif
-
 /// Tests for `EffectQueueDelay`.
 final class EffectQueueDelayTests: MainTestCase
 {

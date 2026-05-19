@@ -1,6 +1,6 @@
 #if !DISABLE_COMBINE && canImport(Combine)
 
-/// `MainActomaton`-erased wrapper which can ``map(state:)`` into sub-store.
+/// Type-erased wrapper around a `MealyMachine`-driven core, which can ``map(state:)`` into sub-store.
 ///
 /// - Important: ``Store`` is NOT `ObservableObject` thus its state can't be observed by SwiftUI views.
 ///
@@ -58,10 +58,9 @@ public class Store<Action, State, Environment>
     /// For example, `AVPlayer` may be needed in both `Reducer` and `AVKit.VideoPlayer`.
     public let environment: Environment
 
-    private let _send: @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<
-        (),
-        any Error
-    >?
+    private let _send: @MainActor (
+        BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool
+    ) -> Task<(), any Error>?
 
     /// Initializer with `environment`.
     public convenience init(
@@ -108,10 +107,9 @@ public class Store<Action, State, Environment>
     internal init(
         state: CurrentValuePublisher<State>,
         environment: Environment,
-        send: @escaping @MainActor (BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool) -> Task<
-            (),
-            any Error
-        >?
+        send: @escaping @MainActor (
+            BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool
+        ) -> Task<(), any Error>?
     )
     {
         self._state = state

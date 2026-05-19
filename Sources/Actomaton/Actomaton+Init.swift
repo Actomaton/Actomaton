@@ -2,14 +2,14 @@ import ActomatonCore
 import ActomatonEffect
 
 /// Convenience initializers that default to ``EffectQueueManager``.
-extension MealyMachine where Output == Effect<Action>
+extension Actomaton
 {
     /// Initializer without `environment`.
     public init(
         state: State,
         reducer: Reducer<Action, State, ()>,
         effectContext: EffectContext = .init(clock: ContinuousClock())
-    ) where Action: Sendable
+    )
     {
         self.init(
             state: state,
@@ -24,7 +24,7 @@ extension MealyMachine where Output == Effect<Action>
         reducer: Reducer<Action, State, Environment>,
         environment: Environment,
         effectContext: EffectContext = .init(clock: ContinuousClock())
-    ) where Action: Sendable, Environment: Sendable
+    ) where Environment: Sendable
     {
         self.init(
             state: state,
