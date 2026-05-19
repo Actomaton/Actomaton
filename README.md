@@ -19,7 +19,7 @@ This repository consists of 6 modules:
 3. **`ActomatonDebugging`**: Helper module to print `Action` and `State` (with diffing) per `Reducer` call.
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatondebugging/)
 
-4. **`ActomatonTesting`**: `TestMachine` — exhaustive state-transition testing utility. Wraps `MealyMachine` + `EffectManager` to assert TCA-like `send` / `receive` flows with `customDump` diffs.
+4. **`ActomatonTesting`**: `TestActomaton` — exhaustive state-transition testing utility. Wraps `MealyMachine` + `EffectManager` to assert TCA-like `send` / `receive` flows with `customDump` diffs.
 
 In addition, the following lower-level modules are available for advanced use cases:
 
@@ -34,7 +34,7 @@ ActomatonCore          -- generic MealyMachine + MealyReducer + EffectManager
        ├─ Actomaton    -- Actomaton typealias, Reducer typealias, CasePath integration
        │    ├─ ActomatonUI         -- Store, RouteStore (SwiftUI / UIKit)
        │    └─ ActomatonDebugging  -- debug / log reducers
-       └─ ActomatonTesting         -- TestMachine (exhaustive state-transition testing)
+       └─ ActomatonTesting         -- TestActomaton (exhaustive state-transition testing)
 ```
 
 ### Why the split?

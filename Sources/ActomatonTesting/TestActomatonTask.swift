@@ -1,8 +1,8 @@
-/// A test task returned from ``TestMachine/send(_:assert:fileID:file:line:)``.
+/// A test task returned from ``TestActomaton/send(_:assert:fileID:file:line:)``.
 ///
 /// Use this value to wait for all effects triggered by the sent action to finish, or to cancel
 /// them explicitly.
-public struct TestMachineTask: Sendable
+public struct TestActomatonTask: Sendable
 {
     private let task: Task<(), any Error>?
     private let timeout: Duration
