@@ -1,10 +1,6 @@
 import Actomaton
 import XCTest
 
-#if !DISABLE_COMBINE && canImport(Combine)
-import Combine
-#endif
-
 final class LoginLogoutTests: MainTestCase
 {
     fileprivate var actomaton: Actomaton<Action, State>!
@@ -75,16 +71,6 @@ final class LoginLogoutTests: MainTestCase
             effectContext: effectContext
         )
         self.actomaton = actomaton
-
-#if !DISABLE_COMBINE && canImport(Combine)
-        var cancellables: [AnyCancellable] = []
-
-        await actomaton.$state
-            .sink(receiveValue: { state in
-                Debug.print("publisher: state = \(state)")
-            })
-            .store(in: &cancellables)
-#endif
     }
 
     func test_noChange_wrongAction() async throws

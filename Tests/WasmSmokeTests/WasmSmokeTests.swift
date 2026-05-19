@@ -18,13 +18,13 @@ func `mealy machine transitions on wasm`() async
 
     let machine = MealyMachine(
         state: CounterState(),
-        reducer: reducer,
-        effectManager: NoOpEffectManager<CounterAction, CounterState>()
+        reducer: reducer
     )
+    machine.setUp(effectManager: NoOpEffectManager<CounterAction, CounterState>())
 
-    _ = await machine.send(.increment)
+    _ = machine.send(.increment)
 
-    #expect(await machine.state == CounterState(count: 1))
+    #expect(machine.state == CounterState(count: 1))
 }
 
 @Test

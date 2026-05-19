@@ -12,21 +12,27 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
     associatedtype State
     associatedtype Output
 
-    /// Set up communication callbacks with the owning actor.
+    /// Set up communication callbacks bridging the conformer to the parent safe container.
     ///
-    /// Called once by ``MealyMachine`` after initialization.
+    /// Called once by ``MealyMachine`` from inside its `setUp(...)`.
     ///
     /// - Parameters:
-    ///   - performIsolated:
-    ///     Closure to run a block within the owning actor's isolation.
-    ///     This method is a proof that `self` (the conformer) is owned and protected by `isolated any Actor`,
-    ///     which guarantees e.g. safe clean up work inside `Task` closure while `self` is usually a non-`Sendable`
-    /// class.
+    ///   - withSendability:
+    ///     `@Sendable` closure that runs work against the (otherwise non-`Sendable`) conformer (`Self`)
+    ///     with **inherited sendability** from the parent safe container that wraps the conformer
+    ///     and is itself `Sendable` — e.g. `actor Actomaton`, or a `nonisolated final class`
+    ///     marked `@unchecked Sendable`.
+    ///     With this sendability, the conformer's private mutable state becomes accessible with
+    ///     `@Sendable` protection, which allows robust cross-isolation Swift Concurrency handling
+    ///     such as effect clean-ups via unstructured `Task.detached` — without requiring the
+    ///     conformer itself to be `Sendable`. `self` is received as the callback's `Self`
+    ///     parameter rather than captured, so detached cleanup tasks do not need an unsafe `[weak self]`.
     ///   - sendAction:
-    ///     Closure to send feedback actions back to the owning actor.
+    ///     `@Sendable` closure that sends feedback actions back through the reducer pipeline.
+    ///     This closure also derives its sendability from the parent wrapper.
     func setUp(
-        performIsolated: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (Self) -> Void
+        withSendability: @escaping @Sendable (
+            _ runEffM: sending @escaping (Self) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )

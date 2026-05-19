@@ -17,14 +17,14 @@ final class MealyMachineActionFeedbackTests: XCTestCase
                     state = "finished"
                     return []
                 }
-            },
-            effectManager: ActionEffectManager()
+            }
         )
+        machine.setUp(effectManager: ActionEffectManager())
 
-        await machine.send(.start)
+        machine.send(.start)
 
         // Both .start and .finish should have been processed synchronously.
-        let s = await machine.state
+        let s = machine.state
         XCTAssertEqual(s, "finished")
     }
 
@@ -44,12 +44,12 @@ final class MealyMachineActionFeedbackTests: XCTestCase
                     state.append("step3")
                     return []
                 }
-            },
-            effectManager: ActionEffectManager()
+            }
         )
+        machine.setUp(effectManager: ActionEffectManager())
 
-        await machine.send(.step1)
-        let s = await machine.state
+        machine.send(.step1)
+        let s = machine.state
         XCTAssertEqual(s, ["step1", "step2", "step3"])
     }
 
@@ -60,16 +60,16 @@ final class MealyMachineActionFeedbackTests: XCTestCase
             reducer: MealyReducer { action, state, _ in
                 state.append("\(action)")
                 return []
-            },
-            effectManager: ActionEffectManager()
+            }
         )
+        machine.setUp(effectManager: ActionEffectManager())
 
-        await machine.send(.step1)
-        var s = await machine.state
+        machine.send(.step1)
+        var s = machine.state
         XCTAssertEqual(s, ["step1"])
 
-        await machine.send(.step2)
-        s = await machine.state
+        machine.send(.step2)
+        s = machine.state
         XCTAssertEqual(s, ["step1", "step2"])
     }
 }

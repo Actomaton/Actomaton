@@ -1,10 +1,6 @@
 import Actomaton
 import XCTest
 
-#if !DISABLE_COMBINE && canImport(Combine)
-import Combine
-#endif
-
 /// Tests for `EffectQueue` with `EffectQueuePolicy.runOldest(maxCount: n, .suspendNew)`.
 final class RunOldestSuspendNewTests: MainTestCase
 {
