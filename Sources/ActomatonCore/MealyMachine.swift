@@ -1,18 +1,23 @@
-import Foundation
-
-/// Deterministic finite state machine that receives "action" and with "current state" transform to "next state" &
-/// additional "output", which then generates Swift Concurrency side-effects via ``EffectManager``.
+/// Deterministic finite state machine that, given an `Action` and the current `State`, transitions
+/// to the next `State` and produces an `Output`.
 ///
-/// `MealyMachine` is a plain `final class` and does NOT provide its own isolation.
-/// Wrap it inside a safe container — e.g. `actor Actomaton`, a `@MainActor`-isolated class
-/// (like `Store` in `ActomatonUI`), or a `nonisolated final class` marked `@unchecked Sendable` —
-/// that serializes access to `send(_:)` and `state`.
+/// `MealyMachine` is side-effect-less: `send(_:)` runs the reducer (recursively, when the output
+/// reports synchronous feedback actions via ``MealyOutput``) and returns the resulting `Output`.
+/// It never spawns Swift Concurrency tasks itself. Wrappers that need async effects (e.g.
+/// `actor Actomaton`, or `Store` in `ActomatonUI`) hand the returned `Output` to their own
+/// effect manager.
+///
+/// `MealyMachine` is a plain `final class` and does NOT provide its own isolation. Wrap it
+/// inside a safe container — e.g. `actor Actomaton`, a `@MainActor`-isolated class, or a
+/// `nonisolated final class` marked `@unchecked Sendable` — that serializes access to `send(_:)`
+/// and `state`.
 ///
 /// Instances of `MealyMachine` are intentionally non-`Sendable`; the wrapper enforces the
 /// serial-access invariant. The ``Swift/SendableMetatype`` conformance only marks
 /// `MealyMachine.Type` itself as `Sendable` so it can appear in `@Sendable` closure signatures —
 /// it makes no claim about instance sendability.
 public final class MealyMachine<Action, State, Output>: SendableMetatype
+    where Output: MealyOutput<Action>
 {
     public private(set) var state: State
     {
@@ -20,14 +25,6 @@ public final class MealyMachine<Action, State, Output>: SendableMetatype
             willChangeState(state, newValue)
         }
     }
-
-    /// Core manages effect lifecycle: task creation, queue policies, and cancellation.
-    /// Agnostic about reducer and state mutation.
-    ///
-    /// The surrounding wrapper (e.g. `actor Actomaton`, or a `@MainActor`-isolated class like
-    /// `Store`'s `StoreCore`) can hand this back to the conformer via its `runIsolatedMachine`
-    /// callback.
-    private var effectManager: (any EffectManager<Action, State, Output>)?
 
     private let reducer: MealyReducer<Action, State, (), Output>
 
@@ -69,79 +66,22 @@ public final class MealyMachine<Action, State, Output>: SendableMetatype
         )
     }
 
-    deinit
-    {
-        effectManager?.shutDown()
-    }
-
-    /// Sets up ``EffectManager``.
+    /// Sends `action` to the state machine, running the reducer and recursively resolving any
+    /// synchronous feedback actions reported by ``MealyOutput/synchronousActions()`` until the
+    /// returned `Output` contains only asynchronous remainders.
     ///
-    /// This method should normally be called right after `MealyMachine.init` is complete,
-    /// so that its wrapper `Sendable` reference types (e.g. `actor Actomaton`) can enter
-    /// this method's `@Sendable` closure arguments.
-    ///
-    /// - Parameters:
-    ///   - withSendability:
-    ///     `@Sendable` closure that runs work against the (otherwise `nonisolated`) ``MealyMachine``
-    ///     with **inherited sendability** from the parent safe container that wraps ``MealyMachine``
-    ///     and is itself `Sendable` — e.g. `actor Actomaton`, or a `nonisolated final class`
-    ///     marked `@unchecked Sendable`.
-    ///     With this sendability, the private non-sendable ``EffectManager`` inside ``MealyMachine``
-    ///     becomes accessible with `@Sendable` protection, which allows robust cross-isolation
-    ///     Swift Concurrency handling such as effect clean-ups via unstructured `Task.detached`.
-    ///   - sendAction:
-    ///     ``MealyMachine`` effect-feedback loop handler that is triggered by ``EffectManager``.
-    ///     This closure is also `@Sendable`, deriving its sendability from the parent wrapper.
-    public func setUp<EffM>(
-        effectManager: EffM,
-        withSendability: @escaping @Sendable (
-            _ runMachine: sending @escaping (MealyMachine<Action, State, Output>) -> Void
-        ) async -> Void = { _ in },
-        sendAction: @escaping @Sendable (
-            Action, TaskPriority?, _ tracksFeedbacks: Bool
-        ) async -> Task<(), any Error>? = { _, _, _ in nil }
-    ) where EffM: EffectManager<Action, State, Output>
-    {
-        self.effectManager = effectManager
-
-        effectManager.setUp(
-            withSendability: { runEffM in
-                await withSendability { machine in
-                    // Safe downcast from type-erased `any EffectManager` storage to satisfy `Self` in the protocol
-                    // callback.
-                    runEffM(machine.effectManager as! EffM)
-                }
-            },
-            sendAction: sendAction
-        )
-    }
-
-    /// Sends `action` to `MealyMachine`.
-    ///
-    /// - Parameters:
-    ///   - priority:
-    ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
-    ///   - tracksFeedbacks:
-    ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
-    ///     so that their wait-for-all and cancellations are possible.
-    ///     Default is `false`.
-    ///
-    /// - Returns:
-    ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
+    /// - Returns: The combined asynchronous-remainder output. Wrappers hand this to their effect manager.
     @discardableResult
-    public func send(
-        _ action: Action,
-        priority: TaskPriority? = nil,
-        tracksFeedbacks: Bool = false
-    ) -> Task<(), any Error>?
+    public func send(_ action: Action) -> Output
     {
-        let output = reducer.run(action, &state, ())
+        let initial = reducer.run(action, &state, ())
+        let (syncActions, remainder) = initial.splitSynchronousActions()
+        var remainingOutputs = remainder
 
-        guard let effectManager else { return nil }
-
-        let output_ = effectManager.preprocessOutput(output) { action in
-            reducer.run(action, &state, ())
+        for syncAction in syncActions {
+            let nestedRemainder = send(syncAction)
+            remainingOutputs = remainingOutputs + nestedRemainder
         }
-        return effectManager.processOutput(output_, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        return remainingOutputs
     }
 }

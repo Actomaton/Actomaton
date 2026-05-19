@@ -1,12 +1,12 @@
 import ActomatonCore
 import XCTest
 
-/// Tests for `MealyMachine` with `NoOpEffectManager` (pure state transitions, no feedback).
+/// Tests for `MealyMachine` with no feedback actions (`Output == [Action]` always empty).
 final class MealyMachineNoOpTests: XCTestCase
 {
     func test_counter() async
     {
-        let machine = MealyMachine<CounterAction, Int, Void>(
+        let machine = MealyMachine<CounterAction, Int, [CounterAction]>(
             state: 0,
             reducer: MealyReducer { action, state, _ in
                 switch action {
@@ -15,9 +15,9 @@ final class MealyMachineNoOpTests: XCTestCase
                 case .decrement:
                     state -= 1
                 }
+                return []
             }
         )
-        machine.setUp(effectManager: NoOpEffectManager())
 
         var s = machine.state
         XCTAssertEqual(s, 0)
@@ -35,9 +35,9 @@ final class MealyMachineNoOpTests: XCTestCase
         XCTAssertEqual(s, 1)
     }
 
-    func test_noTask() async
+    func test_emptyOutput() async
     {
-        let machine = MealyMachine<CounterAction, Int, Void>(
+        let machine = MealyMachine<CounterAction, Int, [CounterAction]>(
             state: 0,
             reducer: MealyReducer { action, state, _ in
                 switch action {
@@ -46,13 +46,14 @@ final class MealyMachineNoOpTests: XCTestCase
                 case .decrement:
                     state -= 1
                 }
+                return []
             }
         )
-        machine.setUp(effectManager: NoOpEffectManager())
 
-        // send returns nil since NoOpEffectManager never produces tasks.
-        let task = machine.send(.increment)
-        XCTAssertNil(task)
+        // `send(_:)` returns the asynchronous-remainder output, which here is always `[]`
+        // because the reducer never produces synchronous feedback.
+        let output = machine.send(.increment)
+        XCTAssertEqual(output, [])
     }
 }
 

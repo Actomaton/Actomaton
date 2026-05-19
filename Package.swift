@@ -98,7 +98,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ActomatonCoreTests",
-            dependencies: ["ActomatonCore"]
+            dependencies: ["ActomatonCore", "TestFixtures"]
         ),
         .testTarget(
             name: "ActomatonTests",
@@ -119,6 +119,7 @@ let package = Package(
                 "ActomatonCore",
                 "ActomatonDebugging",
                 "ActomatonTesting",
+                "TestFixtures",
             ]
         ),
         .testTarget(

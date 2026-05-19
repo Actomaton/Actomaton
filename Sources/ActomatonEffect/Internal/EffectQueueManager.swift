@@ -71,31 +71,6 @@ package final class EffectQueueManager<Action, State>: EffectManager
         self.sendAction = sendAction
     }
 
-    package func preprocessOutput(
-        _ output: Effect<Action>,
-        runReducer: (Action) -> Effect<Action>
-    ) -> Effect<Action>
-    {
-        var syncActions: [Action] = []
-        var remainingKinds: [Effect<Action>.Kind] = []
-
-        for kind in output.kinds {
-            if case let .next(nextAction) = kind {
-                syncActions.append(nextAction)
-            }
-            else {
-                remainingKinds.append(kind)
-            }
-        }
-
-        for syncAction in syncActions {
-            let nestedOutput = preprocessOutput(runReducer(syncAction), runReducer: runReducer)
-            remainingKinds.append(contentsOf: nestedOutput.kinds)
-        }
-
-        return Effect(kinds: remainingKinds)
-    }
-
     package func processOutput(
         _ output: Effect<Action>,
         priority: TaskPriority?,
