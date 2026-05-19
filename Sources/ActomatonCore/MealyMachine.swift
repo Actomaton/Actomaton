@@ -107,7 +107,8 @@ public final class MealyMachine<Action, State, Output>: SendableMetatype
         effectManager.setUp(
             withSendability: { runEffM in
                 await withSendability { machine in
-                    // Safe downcast from type-erased `any EffectManager` storage to satisfy `Self` in the protocol callback.
+                    // Safe downcast from type-erased `any EffectManager` storage to satisfy `Self` in the protocol
+                    // callback.
                     runEffM(machine.effectManager as! EffM)
                 }
             },

@@ -10,7 +10,11 @@ import Combine
 internal final class StoreCore<Action, State, Environment>
     where Action: Sendable, State: Sendable, Environment: Sendable
 {
-    private typealias Machine = MealyMachine<BindableAction<Action, State>, State, Effect<BindableAction<Action, State>>>
+    private typealias Machine = MealyMachine<
+        BindableAction<Action, State>,
+        State,
+        Effect<BindableAction<Action, State>>
+    >
 
     private let machine: Machine
 
