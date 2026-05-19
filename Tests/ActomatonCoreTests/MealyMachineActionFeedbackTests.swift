@@ -1,7 +1,7 @@
 import ActomatonCore
 import XCTest
 
-/// Tests for `MealyMachine` with `ActionEffectManager` (synchronous action feedback loop).
+/// Tests for `MealyMachine`'s built-in synchronous action feedback loop (driven by `MealyOutput`).
 final class MealyMachineActionFeedbackTests: XCTestCase
 {
     func test_singleFeedback() async
@@ -19,7 +19,6 @@ final class MealyMachineActionFeedbackTests: XCTestCase
                 }
             }
         )
-        machine.setUp(effectManager: ActionEffectManager())
 
         machine.send(.start)
 
@@ -46,7 +45,6 @@ final class MealyMachineActionFeedbackTests: XCTestCase
                 }
             }
         )
-        machine.setUp(effectManager: ActionEffectManager())
 
         machine.send(.step1)
         let s = machine.state
@@ -62,7 +60,6 @@ final class MealyMachineActionFeedbackTests: XCTestCase
                 return []
             }
         )
-        machine.setUp(effectManager: ActionEffectManager())
 
         machine.send(.step1)
         var s = machine.state

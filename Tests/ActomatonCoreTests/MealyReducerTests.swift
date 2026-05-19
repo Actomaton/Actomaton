@@ -6,22 +6,22 @@ final class MealyReducerTests: XCTestCase
 {
     func test_contramap_state() async
     {
-        let innerReducer = MealyReducer<CounterAction, Int, (), Void> { action, state, _ in
+        let innerReducer = MealyReducer<CounterAction, Int, (), [CounterAction]> { action, state, _ in
             switch action {
             case .increment:
                 state += 1
             case .decrement:
                 state -= 1
             }
+            return []
         }
 
         let outerReducer = innerReducer.contramap(state: \OuterCounterState.count)
 
-        let machine = MealyMachine<CounterAction, OuterCounterState, Void>(
+        let machine = MealyMachine<CounterAction, OuterCounterState, [CounterAction]>(
             state: OuterCounterState(name: "test", count: 10),
             reducer: outerReducer
         )
-        machine.setUp(effectManager: NoOpEffectManager())
 
         machine.send(.increment)
         let s = machine.state
@@ -31,24 +31,24 @@ final class MealyReducerTests: XCTestCase
 
     func test_contramap_action() async
     {
-        let innerReducer = MealyReducer<CounterAction, Int, (), Void> { action, state, _ in
+        let innerReducer = MealyReducer<CounterAction, Int, (), [WrapperAction]> { action, state, _ in
             switch action {
             case .increment:
                 state += 1
             case .decrement:
                 state -= 1
             }
+            return []
         }
 
         let outerReducer = innerReducer.contramap(action: { (wrapper: WrapperAction) in
             wrapper.inner
         })
 
-        let machine = MealyMachine<WrapperAction, Int, Void>(
+        let machine = MealyMachine<WrapperAction, Int, [WrapperAction]>(
             state: 0,
             reducer: outerReducer
         )
-        machine.setUp(effectManager: NoOpEffectManager())
 
         machine.send(WrapperAction(inner: .increment))
         var s = machine.state
@@ -61,26 +61,26 @@ final class MealyReducerTests: XCTestCase
 
     func test_contramap_environment() async
     {
-        let reducer = MealyReducer<CounterAction, Int, Int, Void> { action, state, step in
+        let reducer = MealyReducer<CounterAction, Int, Int, [CounterAction]> { action, state, step in
             switch action {
             case .increment:
                 state += step
             case .decrement:
                 state -= step
             }
+            return []
         }
 
         let adapted = reducer.contramap(environment: { (env: String) in
             Int(env) ?? 1
         })
 
-        let machine = MealyMachine<CounterAction, Int, Void>(
+        let machine = MealyMachine<CounterAction, Int, [CounterAction]>(
             state: 0,
             reducer: MealyReducer { action, state, _ in
                 adapted.run(action, &state, "5")
             }
         )
-        machine.setUp(effectManager: NoOpEffectManager())
 
         machine.send(.increment)
         var s = machine.state
@@ -104,13 +104,13 @@ final class MealyReducerTests: XCTestCase
             }
         }
 
-        let mapped = reducer.map(output: { "count=\($0)" })
+        let mapped: MealyReducer<CounterAction, Int, (), [CounterAction]> =
+            reducer.map(output: { _ in [] })
 
-        let machine = MealyMachine<CounterAction, Int, String>(
+        let machine = MealyMachine<CounterAction, Int, [CounterAction]>(
             state: 0,
             reducer: mapped
         )
-        machine.setUp(effectManager: StringEffectManager())
 
         machine.send(.increment)
         let s = machine.state
@@ -135,39 +135,4 @@ private struct OuterCounterState: Equatable, Sendable
 private struct WrapperAction: Sendable
 {
     var inner: CounterAction
-}
-
-/// Minimal effect manager for `String` output, used only in `test_map_output`.
-private final class StringEffectManager<Action: Sendable, State>: EffectManager
-{
-    typealias Output = String
-
-    init() {}
-
-    func setUp(
-        withSendability: @escaping @Sendable (
-            _ runEffM: sending @escaping (StringEffectManager<Action, State>) -> Void
-        ) async -> Void,
-        sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
-    )
-    {}
-
-    func preprocessOutput(
-        _ output: String,
-        runReducer: (Action) -> String
-    ) -> String
-    {
-        output
-    }
-
-    func processOutput(
-        _ output: String,
-        priority: TaskPriority?,
-        tracksFeedbacks: Bool
-    ) -> Task<(), any Error>?
-    {
-        nil
-    }
-
-    func shutDown() {}
 }

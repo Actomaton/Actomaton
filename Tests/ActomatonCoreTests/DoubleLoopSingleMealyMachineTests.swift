@@ -1,8 +1,10 @@
 import ActomatonCore
+import TestFixtures
 import XCTest
 
-/// Double-loop implemented with a **single** `MealyMachine` using `ActionEffectManager`.
-/// See ``makeDoubleLoopMachine()`` for the corresponding `MealyMachine` construction.
+/// Double-loop implemented with a **single** `MealyMachine` using its built-in synchronous
+/// feedback loop. See ``makeDoubleLoopMachine()`` for the corresponding `MealyMachine`
+/// construction.
 final class DoubleLoopSingleMealyMachineTests: XCTestCase
 {
     func test_doubleLoop() async
@@ -109,7 +111,6 @@ private func makeDoubleLoopMachine(n: Int, m: Int) -> MealyMachine<LoopAction, L
             }
         }
     )
-    machine.setUp(effectManager: ActionEffectManager())
 
     return machine
 }

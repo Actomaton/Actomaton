@@ -18,6 +18,8 @@ internal final class StoreCore<Action, State, Environment>
 
     private let machine: Machine
 
+    private let effectManager: EffectQueueManager<BindableAction<Action, State>, State>
+
     private let _state: CurrentValueSubject<State, Never>
 
     internal let environment: Environment
@@ -49,10 +51,12 @@ internal final class StoreCore<Action, State, Environment>
 
         self.machine = machine
 
-        machine.setUp(
-            effectManager: EffectQueueManager<BindableAction<Action, State>, State>(effectContext: effectContext),
-            withSendability: { [weak self] runMachine in
-                await self?.runIsolatedMachine(runMachine)
+        let effectManager = EffectQueueManager<BindableAction<Action, State>, State>(effectContext: effectContext)
+        self.effectManager = effectManager
+
+        effectManager.setUp(
+            withSendability: { [weak self] runEffM in
+                await self?.runIsolatedEffectManager(runEffM)
             },
             sendAction: { [weak self] action, priority, tracksFeedbacks in
                 await self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
@@ -60,9 +64,10 @@ internal final class StoreCore<Action, State, Environment>
         )
     }
 
-    deinit
+    isolated deinit
     {
         Debug.print("[deinit] StoreCore \(String(format: "%p", ObjectIdentifier(self).hashValue))")
+        effectManager.shutDown()
     }
 
     internal var state: CurrentValuePublisher<State>
@@ -89,15 +94,18 @@ internal final class StoreCore<Action, State, Environment>
         tracksFeedbacks: Bool = false
     ) -> Task<(), any Error>?
     {
-        self.machine.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        let output = machine.send(action)
+        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
 
-    /// Runs `runMachine` on the MainActor, supplying the underlying ``MealyMachine`` so that
-    /// the inner ``EffectManager`` can mutate its own bookkeeping safely from detached tasks
-    /// without capturing `self` itself.
-    private func runIsolatedMachine(_ runMachine: (Machine) -> Void)
+    /// Runs `runEffM` on the MainActor, supplying the underlying ``EffectManager`` so that
+    /// conformers can mutate their own bookkeeping safely from detached tasks without
+    /// capturing `self` itself.
+    private func runIsolatedEffectManager<EffM>(
+        _ runEffM: (EffM) -> Void
+    ) where EffM: EffectManager<BindableAction<Action, State>, State, Effect<BindableAction<Action, State>>>
     {
-        runMachine(machine)
+        runEffM(effectManager as! EffM)
     }
 }
 

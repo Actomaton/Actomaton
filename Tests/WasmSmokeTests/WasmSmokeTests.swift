@@ -2,25 +2,26 @@ import Actomaton
 import ActomatonCore
 import ActomatonDebugging
 import ActomatonTesting
+import TestFixtures
 import Testing
 
 @Test
 func `mealy machine transitions on wasm`() async
 {
-    let reducer = MealyReducer<CounterAction, CounterState, Void, Void> { action, state, _ in
+    let reducer = MealyReducer<CounterAction, CounterState, Void, [CounterAction]> { action, state, _ in
         switch action {
         case .increment:
             state.count += 1
         case .reset:
             state.count = 0
         }
+        return []
     }
 
     let machine = MealyMachine(
         state: CounterState(),
         reducer: reducer
     )
-    machine.setUp(effectManager: NoOpEffectManager<CounterAction, CounterState>())
 
     _ = machine.send(.increment)
 

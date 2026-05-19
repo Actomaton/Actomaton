@@ -3,12 +3,16 @@ import ActomatonEffect
 
 /// Actor + Automaton = Actomaton.
 ///
-/// `Actomaton` wraps a ``MealyMachine`` specialized with `Output == Effect<Action>`
-/// inside a Swift actor, providing serial isolation for `send(_:)` and `state` access.
+/// `Actomaton` wraps a ``MealyMachine`` specialized with `Output == Effect<Action>` inside a
+/// Swift actor, providing serial isolation for `send(_:)` and `state` access. It owns the
+/// ``EffectManager`` and turns the asynchronous-remainder output from ``MealyMachine`` into
+/// running Swift Concurrency tasks.
 public actor Actomaton<Action, State>
     where Action: Sendable, State: Sendable
 {
     private let machine: MealyMachine<Action, State, Effect<Action>>
+
+    private let effectManager: any EffectManager<Action, State, Effect<Action>>
 
     public var state: State
     {
@@ -26,11 +30,11 @@ public actor Actomaton<Action, State>
             state: state,
             reducer: reducer
         )
+        self.effectManager = effectManager
 
-        self.machine.setUp(
-            effectManager: effectManager,
-            withSendability: { [weak self] runMachine in
-                await self?.runIsolatedMachine(runMachine)
+        effectManager.setUp(
+            withSendability: { [weak self] runEffM in
+                await self?.runIsolatedEffectManager(runEffM)
             },
             sendAction: { [weak self] action, priority, tracksFeedbacks in
                 await self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
@@ -38,7 +42,8 @@ public actor Actomaton<Action, State>
         )
     }
 
-    /// Sends `action` to the underlying ``MealyMachine``.
+    /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
+    /// to ``EffectManager/processOutput(_:priority:tracksFeedbacks:)``.
     ///
     /// - Parameters:
     ///   - priority:
@@ -57,16 +62,23 @@ public actor Actomaton<Action, State>
         tracksFeedbacks: Bool = false
     ) -> Task<(), any Error>?
     {
-        machine.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        let output = machine.send(action)
+        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
 
-    /// Runs `runMachine` within this actor's isolation, supplying the underlying ``MealyMachine`` so
-    /// that conformers of ``EffectManager`` (reached via ``MealyMachine``) can mutate their own
-    /// bookkeeping safely from detached tasks without capturing `self` themselves.
-    fileprivate func runIsolatedMachine(
-        _ runMachine: (MealyMachine<Action, State, Effect<Action>>) -> Void
-    )
+    /// Runs `runEffM` within this actor's isolation, supplying the underlying ``EffectManager``
+    /// so that conformers can mutate their own bookkeeping safely from detached tasks without
+    /// capturing `self` themselves.
+    fileprivate func runIsolatedEffectManager<EffM>(
+        _ runEffM: (EffM) -> Void
+    ) where EffM: EffectManager<Action, State, Effect<Action>>
     {
-        runMachine(machine)
+        // Safe downcast from the existential storage to the conformer's concrete `Self`.
+        runEffM(effectManager as! EffM)
+    }
+
+    isolated deinit
+    {
+        effectManager.shutDown()
     }
 }

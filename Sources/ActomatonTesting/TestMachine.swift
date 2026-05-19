@@ -28,6 +28,7 @@ public actor TestMachine<Action, State, Environment>
     private typealias RuntimeState = TestMachineRuntimeState<Action, State>
 
     private let machine: MealyMachine<InternalAction, RuntimeState, Effect<InternalAction>>
+    private let effectManager: EffectQueueManager<InternalAction, RuntimeState>
     private let receivedActionSignal: AsyncStream<Void>
     private var consumedReceivedActionCount: Int = 0
 
@@ -75,10 +76,12 @@ public actor TestMachine<Action, State, Environment>
             reducer: reducer
         )
 
-        self.machine.setUp(
-            effectManager: EffectQueueManager(effectContext: effectContext),
-            withSendability: { [weak self] runMachine in
-                await self?.runIsolatedMachine(runMachine)
+        let effectManager = EffectQueueManager<InternalAction, RuntimeState>(effectContext: effectContext)
+        self.effectManager = effectManager
+
+        effectManager.setUp(
+            withSendability: { [weak self] runEffM in
+                await self?.runIsolatedEffectManager(runEffM)
             },
             sendAction: { [weak self] action, priority, tracksFeedbacks in
                 await self?.sendFromEffect(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
@@ -86,14 +89,14 @@ public actor TestMachine<Action, State, Environment>
         )
     }
 
-    /// Runs `runMachine` within this actor's isolation, supplying the underlying ``MealyMachine`` so
-    /// that conformers of ``EffectManager`` (reached via ``MealyMachine``) can mutate their own
-    /// bookkeeping safely from detached tasks without capturing `self` themselves.
-    private func runIsolatedMachine(
-        _ runMachine: (MealyMachine<InternalAction, RuntimeState, Effect<InternalAction>>) -> Void
-    )
+    /// Runs `runEffM` within this actor's isolation, supplying the underlying ``EffectManager``
+    /// so that conformers can mutate their own bookkeeping safely from detached tasks without
+    /// capturing `self` themselves.
+    private func runIsolatedEffectManager<EffM>(
+        _ runEffM: (EffM) -> Void
+    ) where EffM: EffectManager<InternalAction, RuntimeState, Effect<InternalAction>>
     {
-        runMachine(machine)
+        runEffM(effectManager as! EffM)
     }
 
     /// Re-enters this actor's isolation to dispatch an effect-originated feedback action.
@@ -104,7 +107,13 @@ public actor TestMachine<Action, State, Environment>
         tracksFeedbacks: Bool
     ) -> Task<(), any Error>?
     {
-        machine.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        let output = machine.send(action)
+        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
+    }
+
+    isolated deinit
+    {
+        effectManager.shutDown()
     }
 
     /// Sends an action and asserts how state changes before any feedback action is received.
@@ -156,7 +165,8 @@ public actor TestMachine<Action, State, Environment>
 
         let expected = runtimeState.current
 
-        let task = self.machine.send(.send(action), tracksFeedbacks: true)
+        let output = self.machine.send(.send(action))
+        let task = self.effectManager.processOutput(output, priority: nil, tracksFeedbacks: true)
 
         guard let actual = (self.machine.state).latestSentState else {
             XCTFail(
