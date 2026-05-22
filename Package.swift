@@ -28,6 +28,10 @@ let package = Package(
             name: "ActomatonTesting",
             targets: ["ActomatonTesting"]
         ),
+        .library(
+            name: "DistributedActomaton",
+            targets: ["DistributedActomaton"]
+        ),
     ],
     dependencies: {
         var deps: [Package.Dependency] = [
@@ -88,6 +92,14 @@ let package = Package(
             ]
         ),
         .target(
+            name: "DistributedActomaton",
+            dependencies: [
+                "ActomatonCore",
+                "ActomatonEffect",
+                "Actomaton",
+            ]
+        ),
+        .target(
             name: "TestFixtures",
             dependencies: [
                 "Actomaton",
@@ -111,6 +123,12 @@ let package = Package(
         .testTarget(
             name: "ActomatonTestingTests",
             dependencies: ["ActomatonTesting", "TestFixtures"]
+        ),
+        .testTarget(
+            name: "DistributedActomatonTests",
+            dependencies: [
+                "DistributedActomaton",
+            ]
         ),
         .testTarget(
             name: "WasmSmokeTests",
