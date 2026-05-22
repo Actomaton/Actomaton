@@ -32,7 +32,7 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
     ///     This closure also derives its sendability from the parent wrapper.
     func setUp(
         withSendability: @escaping @Sendable (
-            _ runEffM: sending @escaping (Self) -> Void
+            _ runEffM: @escaping @Sendable (Self) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )

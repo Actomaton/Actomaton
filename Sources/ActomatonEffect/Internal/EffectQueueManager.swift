@@ -47,7 +47,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// capturing (non-Sendable) `self`.
     private var withSendability: (
         @Sendable (
-            _ runEffM: sending @escaping (EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
         ) async -> Void
     )?
 
@@ -62,7 +62,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     package func setUp(
         withSendability: @escaping @Sendable (
-            _ runEffM: sending @escaping (EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
         ) async -> Void,
         sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
     )
