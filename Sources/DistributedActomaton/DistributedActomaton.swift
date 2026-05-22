@@ -50,7 +50,8 @@ public distributed actor DistributedActomaton<Action, State, ActorSystem>
     /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
     /// to ``EffectManager/processOutput(_:priority:tracksFeedbacks:)``.
     ///
-    /// The return type is `Void` (rather than `Task<(), any Error>?` like ``Actomaton/send(_:priority:tracksFeedbacks:)``)
+    /// The return type is `Void` (rather than `Task<(), any Error>?` like
+    /// ``Actomaton/send(_:priority:tracksFeedbacks:)``)
     /// because a `distributed func`'s return type must satisfy the actor system's
     /// `SerializationRequirement` (typically `Codable`), and `Task` is not `Codable`.
     /// For local-only access to the launched effect task, use ``sendLocal(_:priority:tracksFeedbacks:)``

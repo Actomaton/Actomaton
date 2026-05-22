@@ -1,7 +1,7 @@
 import Actomaton
 import ActomatonEffect
-import Foundation
 import Distributed
+import Foundation
 
 /// Convenience initializers that default to ``EffectQueueManager``.
 extension DistributedActomaton
