@@ -13,7 +13,7 @@ final class DistributedActomatonSmokeTests: XCTestCase
             reducer: Reducer { action, state, _ in
                 state += action
                 let snapshot = state
-                return Effect.fireAndForget {
+                return Effect.fireAndForget { _ in
                     await recorder.append(snapshot)
                 }
             },

@@ -71,7 +71,7 @@ public actor TestActomaton<Action, State>
                     )
                 )
 
-                return Effect.fireAndForget {
+                return Effect.fireAndForget { _ in
                     receivedActionSignal.continuation.yield()
                 } + mappedEffect
             }

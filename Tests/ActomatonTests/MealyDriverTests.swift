@@ -14,12 +14,12 @@ final class MealyDriverTests: MainTestCase
                 switch action {
                 case .increment:
                     state.count += 1
-                    return Effect.fireAndForget {
+                    return Effect.fireAndForget { _ in
                         print("increment")
                     }
                 case .decrement:
                     state.count -= 1
-                    return Effect.fireAndForget {
+                    return Effect.fireAndForget { _ in
                         print("decrement")
                     }
                 }

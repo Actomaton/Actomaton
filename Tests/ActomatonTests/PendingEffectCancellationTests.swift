@@ -75,10 +75,10 @@ final class PendingEffectCancellationTests: MainTestCase
                     }
 
                 case ._didFetch1:
-                    return Effect.fireAndForget { await flags.mark(result1: .completed) }
+                    return Effect.fireAndForget { _ in await flags.mark(result1: .completed) }
 
                 case ._didFetch2:
-                    return Effect.fireAndForget { await flags.mark(result2: .completed) }
+                    return Effect.fireAndForget { _ in await flags.mark(result2: .completed) }
 
                 case .cancelAll:
                     return Effect.cancel(ids: { $0 is CancelEffectID })

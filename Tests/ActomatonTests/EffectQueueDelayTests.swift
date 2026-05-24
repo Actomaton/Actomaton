@@ -58,7 +58,7 @@ final class EffectQueueDelayTests: MainTestCase
                 case let ._didFetch(id):
                     state.finishedIDs.insert(id)
 
-                    return Effect.fireAndForget {
+                    return Effect.fireAndForget { _ in
                         print("Finished: \(id)")
                     }
                 }
