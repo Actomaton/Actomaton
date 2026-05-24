@@ -8,7 +8,7 @@ import ActomatonEffect
 /// ``EffectManager`` and turns the asynchronous-remainder output from ``MealyMachine`` into
 /// running Swift Concurrency tasks.
 public actor Actomaton<Action, State>
-    where Action: Sendable, State: Sendable
+    where Action: Sendable
 {
     private let machine: MealyMachine<Action, State, Effect<Action>>
 

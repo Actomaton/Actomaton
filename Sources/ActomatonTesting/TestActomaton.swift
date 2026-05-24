@@ -21,8 +21,14 @@ import XCTest
 ///     state.isLoading = false
 /// }
 /// ```
-public actor TestActomaton<Action, State, Environment>
-    where Action: Sendable, State: Sendable & Equatable, Environment: Sendable
+///
+/// - Note:
+///   `State: SendableMetatype` is required (in addition to `Equatable`) so that the
+///   `State: Equatable` conformance witness can be sent across isolation when `self` is captured
+///   in `@Sendable` closures (e.g. `effectManager.setUp` callbacks, `TaskGroup.addTask`).
+///   `State` values themselves do NOT need to be `Sendable`.
+public actor TestActomaton<Action, State>
+    where Action: Sendable, State: Equatable & SendableMetatype
 {
     private typealias InternalAction = TestActomatonAction<Action>
     private typealias RuntimeState = TestActomatonRuntimeState<Action, State>
@@ -36,12 +42,12 @@ public actor TestActomaton<Action, State, Environment>
     ///
     /// Unlike the original implementation, async effects are preserved and can be asserted with
     /// ``receive(_:timeout:assert:fileID:file:line:)``.
-    public init(
+    public init<Environment>(
         state: State,
         reducer: MealyReducer<Action, State, Environment, Effect<Action>>,
         environment: Environment,
         effectContext: EffectContext = .init(clock: ContinuousClock())
-    )
+    ) where Environment: Sendable
     {
         let receivedActionSignal = AsyncStream.makeStream(of: Void.self)
         self.receivedActionSignal = receivedActionSignal.stream
@@ -483,8 +489,8 @@ private enum TestActomatonAction<Action>: Sendable
     }
 }
 
-private struct TestActomatonRuntimeState<Action, State>: Sendable
-    where Action: Sendable, State: Sendable
+private struct TestActomatonRuntimeState<Action, State>
+    where Action: Sendable
 {
     var current: State
     var latestSentState: State?

@@ -10,27 +10,26 @@ final class TimerTests: MainTestCase
     {
         struct TimerID: EffectID {}
 
-        let timerEffect = Effect(id: TimerID(), sequence: { context in
-            AsyncStream<()> { continuation in
-                let task = Task {
-                    while true {
-                        try await context.clock.sleep(for: .ticks(2))
-                        continuation.yield(())
-                    }
-                }
-
-                continuation.onTermination = { @Sendable _ in
-                    task.cancel()
-                }
-            }
-            .map { Action.tick }
-        })
-
         let actomaton = Actomaton<Action, State>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 switch action {
                 case .start:
+                    let timerEffect = Effect(id: TimerID(), sequence: { context in
+                        AsyncStream<()> { continuation in
+                            let task = Task {
+                                while true {
+                                    try await context.clock.sleep(for: .ticks(2))
+                                    continuation.yield(())
+                                }
+                            }
+
+                            continuation.onTermination = { @Sendable _ in
+                                task.cancel()
+                            }
+                        }
+                        .map { Action.tick }
+                    })
                     return timerEffect
                 case .tick:
                     state += 1

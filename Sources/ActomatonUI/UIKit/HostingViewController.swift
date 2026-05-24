@@ -7,7 +7,7 @@ import UIKit
 /// SwiftUI `View` & ``Store`` wrapper view controller that holds `UIHostingController`.
 @MainActor
 open class HostingViewController<Action, State, Environment, Content: SwiftUI.View>: UIViewController
-    where Action: Sendable, State: Sendable, Environment: Sendable
+    where Action: Sendable, State: Sendable
 {
     private let store: Any // `Store` or `RouteStore`.
     private let rootView: AnyView

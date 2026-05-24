@@ -12,7 +12,6 @@ import Foundation
 /// callback supplied at `setUp(...)`-time, which hands `self` back as a parameter — so no
 /// `[weak self]` capture of the (non-Sendable) `self` is needed in the detached task.
 package final class EffectQueueManager<Action, State>: EffectManager
-    where Action: Sendable
 {
     package typealias Output = Effect<Action>
 
@@ -524,7 +523,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
     // MARK: - Nested Types
 
     /// A suspended effect together with its original `send` context.
-    private struct PendingEffect: Sendable
+    private struct PendingEffect
     {
         let kind: Effect<Action>.Kind
         let priority: TaskPriority?

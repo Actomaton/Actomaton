@@ -1,5 +1,5 @@
 /// Effect type to run `async`, `AsyncSequence`, or cancellation.
-public struct Effect<Action>: Sendable where Action: Sendable
+public struct Effect<Action>
 {
     internal let kinds: [Kind]
 }
@@ -95,7 +95,7 @@ extension Effect
     /// `AsyncSequence` side-effect with `EffectContext`.
     public init<S, E: Error>(
         sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where S: AsyncSequence<Action, E> & Sendable
+    ) where S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(
             kinds: [.sequence(
@@ -110,7 +110,7 @@ extension Effect
 
     /// `AsyncSequence` side-effect without `EffectContext`.
     public init<S, E: Error>(sequence: @escaping @Sendable () async throws -> S?)
-        where S: AsyncSequence<Action, E> & Sendable
+        where S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(sequence: { _ in
             try await sequence()
@@ -122,7 +122,7 @@ extension Effect
     public init<ID, S, E: Error>(
         id: ID? = nil,
         sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where ID: EffectID, S: AsyncSequence<Action, E> & Sendable
+    ) where ID: EffectID, S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(
             kinds: [.sequence(
@@ -138,7 +138,7 @@ extension Effect
     /// `AsyncSequence` side-effect without `EffectContext`.
     /// - Parameter id: Cancellation identifier.
     public init<ID, S, E: Error>(id: ID? = nil, sequence: @escaping @Sendable () async throws -> S?)
-        where ID: EffectID, S: AsyncSequence<Action, E> & Sendable
+        where ID: EffectID, S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(id: id, sequence: { _ in
             try await sequence()
@@ -150,7 +150,7 @@ extension Effect
     public init<S, E: Error, Queue>(
         queue: Queue? = nil,
         sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
+    ) where S: AsyncSequence<Action, E> & SendableMetatype, Queue: EffectQueue
     {
         self.init(
             kinds: [.sequence(
@@ -166,7 +166,7 @@ extension Effect
     /// `AsyncSequence` side-effect without `EffectContext`.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
     public init<S, E: Error, Queue>(queue: Queue? = nil, sequence: @escaping @Sendable () async throws -> S?)
-        where S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
+        where S: AsyncSequence<Action, E> & SendableMetatype, Queue: EffectQueue
     {
         self.init(queue: queue, sequence: { _ in
             try await sequence()
@@ -180,7 +180,7 @@ extension Effect
         id: ID? = nil,
         queue: Queue? = nil,
         sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where ID: EffectID, S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
+    ) where ID: EffectID, S: AsyncSequence<Action, E> & SendableMetatype, Queue: EffectQueue
     {
         self.init(
             kinds: [.sequence(
@@ -200,7 +200,7 @@ extension Effect
         id: ID? = nil,
         queue: Queue? = nil,
         sequence: @escaping @Sendable () async throws -> S?
-    ) where ID: EffectID, S: AsyncSequence<Action, E> & Sendable, Queue: EffectQueue
+    ) where ID: EffectID, S: AsyncSequence<Action, E> & SendableMetatype, Queue: EffectQueue
     {
         self.init(id: id, queue: queue, sequence: { _ in
             try await sequence()
@@ -317,7 +317,6 @@ extension Effect
 
     /// No `async` side-effect, only returning next action.
     public static func nextAction(_ action: Action) -> Effect<Action>
-        where Action: Sendable
     {
         self.init(kinds: [.next(action)])
     }
@@ -481,7 +480,7 @@ extension Effect
 
 extension Effect
 {
-    internal enum Kind: Sendable
+    internal enum Kind
     {
         /// Single async func effect.
         case single(Single)
@@ -550,7 +549,7 @@ extension Effect
     }
 
     /// Wrapper of `async`.
-    internal struct Single: Sendable
+    internal struct Single
     {
         internal let id: _EffectID?
         internal let queue: (any EffectQueue)?
@@ -589,18 +588,24 @@ extension Effect
     }
 
     /// Wrapper of `AsyncSequence`.
-    internal struct _Sequence: Sendable
+    ///
+    /// The wrapped existential is constrained to `SendableMetatype` (not `Sendable`)
+    /// for the same reason as ``MealyMachine``: the produced `AsyncSequence` instance is not
+    /// required to be `Sendable`, but its metatype must be so that the existential can appear in
+    /// `@Sendable` closure signatures (here, the `sequence` factory and `Effect.map`'s open-existential
+    /// helper) — it makes no claim about instance sendability.
+    internal struct _Sequence
     {
         internal let id: _EffectID?
         internal let queue: (any EffectQueue)?
         internal let sequence: @Sendable (EffectContext) async throws
-            -> (any AsyncSequence<Action, any Error> & Sendable)?
+            -> (any AsyncSequence<Action, any Error> & SendableMetatype)?
 
         internal init(
             id: _EffectID? = nil,
             queue: (any EffectQueue)? = nil,
             sequence: @escaping @Sendable (EffectContext) async throws
-                -> (any AsyncSequence<Action, any Error> & Sendable)?
+                -> (any AsyncSequence<Action, any Error> & SendableMetatype)?
         )
         {
             self.id = id
@@ -613,8 +618,8 @@ extension Effect
             // Open Existential
             @Sendable
             func _mapAsyncSequence(
-                _ seq: some AsyncSequence<Action, any Error> & Sendable
-            ) -> any AsyncSequence<Action2, any Error> & Sendable {
+                _ seq: some AsyncSequence<Action, any Error> & SendableMetatype
+            ) -> any AsyncSequence<Action2, any Error> & SendableMetatype {
                 seq.map(f)
             }
 
