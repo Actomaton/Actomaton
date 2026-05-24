@@ -57,6 +57,11 @@ package final class EffectQueueManager<Action, State>: EffectManager
         self.effectContext = effectContext
     }
 
+    deinit
+    {
+        shutDown()
+    }
+
     // MARK: - EffectManager
 
     package func setUp(
@@ -137,7 +142,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
         }
     }
 
-    package func shutDown()
+    private func shutDown()
     {
         // Cancel all running tasks.
         for (_, tasks) in runningTasks {
