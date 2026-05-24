@@ -66,7 +66,7 @@ private func readMe1_4() async throws
     let reducer = Reducer<Action, State, Environment> { action, _, environment in
         switch action {
         case let .fetch(id):
-            return Effect(queue: DelayedEffectQueue()) {
+            return Effect(queue: DelayedEffectQueue()) { _ in
                 let data = try await environment.fetch(id)
                 return ._didFetch(data)
             }

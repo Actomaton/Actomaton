@@ -132,7 +132,7 @@ final class TestActomatonTests: MainTestCase
             state: CounterState(count: 0),
             reducer: MealyReducer<CounterAction, CounterState, ResultsCollector<CounterAction>, Effect<CounterAction>> {
                 action, state, recorder in
-                let recordEffect = Effect<CounterAction>.fireAndForget {
+                let recordEffect = Effect<CounterAction>.fireAndForget { _ in
                     await recorder.append(action)
                 }
 
@@ -211,7 +211,7 @@ final class TestActomatonTests: MainTestCase
                 switch action {
                 case .increment:
                     state.count += 1
-                    return Effect {
+                    return Effect { _ in
                         .reset
                     }
                 case .decrement:
@@ -271,7 +271,7 @@ final class TestActomatonTests: MainTestCase
                 switch action {
                 case .increment:
                     state.count = 1
-                    return Effect {
+                    return Effect { _ in
                         await Task.yield()
                         return .reset
                     }

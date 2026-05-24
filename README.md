@@ -139,7 +139,7 @@ reducer = Reducer { action, state, environment in
     switch action {
     case .increment:
         state.count += 1
-        return Effect.fireAndForget {
+        return Effect.fireAndForget { _ in
             print("increment")
         }
     case .decrement:
@@ -194,7 +194,7 @@ struct Environment: Sendable {
 
 let environment = Environment(
     loginEffect: { userId in
-        Effect(id: LoginFlowEffectID()) {
+        Effect(id: LoginFlowEffectID()) { _ in
             let loginRequest = ...
             let data = try? await URLSession.shared.data(for: loginRequest)
             if Task.isCancelled { return nil }
@@ -203,7 +203,7 @@ let environment = Environment(
         }
     },
     logoutEffect: {
-        Effect(id: LoginFlowEffectID()) {
+        Effect(id: LoginFlowEffectID()) { _ in
             let logoutRequest = ...
             let data = try? await URLSession.shared.data(for: logoutRequest)
             if Task.isCancelled { return nil }
@@ -234,7 +234,7 @@ let reducer = Reducer { action, state, environment in
         return .empty
 
     default:
-        return Effect.fireAndForget {
+        return Effect.fireAndForget { _ in
             print("State transition failed...")
         }
     }
@@ -313,7 +313,7 @@ struct Environment {
 
 let environment = Environment(
     timerEffect: { userId in
-        Effect(id: TimerID(), sequence: {
+        Effect(id: TimerID(), sequence: { _ in
             AsyncStream<()> { continuation in
                 let task = Task {
                     while true {
@@ -406,7 +406,7 @@ struct DelayedEffectQueue: EffectQueue {
 let reducer = Reducer<Action, State, Environment> { action, state, environment in
     switch action {
     case let .fetch(id):
-        return Effect(queue: DelayedEffectQueue()) {
+        return Effect(queue: DelayedEffectQueue()) { _ in
             let data = try await environment.fetch(id)
             return ._didFetch(data)
         }
