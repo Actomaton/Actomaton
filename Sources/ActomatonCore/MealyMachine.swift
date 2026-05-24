@@ -17,7 +17,6 @@
 /// `MealyMachine.Type` itself as `Sendable` so it can appear in `@Sendable` closure signatures —
 /// it makes no claim about instance sendability.
 public final class MealyMachine<Action, State, Output>: SendableMetatype
-    where Output: MealyOutput<Action>
 {
     public private(set) var state: State
     {
@@ -65,16 +64,41 @@ public final class MealyMachine<Action, State, Output>: SendableMetatype
             willChangeState: willChangeState
         )
     }
+}
 
+// MARK: - MealyMachine + run (Output)
+
+extension MealyMachine
+{
+    /// Runs the reducer once for `action` and returns the resulting `Output` as-is.
+    ///
+    /// This is the primitive single-step operation. It does NOT resolve synchronous feedback,
+    /// because `Output` is not constrained to ``MealyOutput`` here. If your `Output` conforms
+    /// to ``MealyOutput``, prefer ``send(_:)`` (defined in a constrained extension below),
+    /// which composes ``run(_:)`` with recursive feedback resolution.
+    @discardableResult
+    public func run(_ action: Action) -> Output
+    {
+        reducer.run(action, &state, ())
+    }
+}
+
+// MARK: - MealyMachine + send (MealyOutput)
+
+extension MealyMachine where Output: MealyOutput, Output.Action == Action
+{
     /// Sends `action` to the state machine, running the reducer and recursively resolving any
-    /// synchronous feedback actions reported by ``MealyOutput/synchronousActions()`` until the
-    /// returned `Output` contains only asynchronous remainders.
+    /// synchronous feedback actions reported by ``MealyOutput/splitSynchronousActions()``
+    /// until the returned `Output` contains only asynchronous remainders.
+    ///
+    /// Built on top of ``run(_:)``: runs the reducer once, then re-feeds each synchronous
+    /// action recursively through `send(_:)`, accumulating asynchronous remainders.
     ///
     /// - Returns: The combined asynchronous-remainder output. Wrappers hand this to their effect manager.
     @discardableResult
     public func send(_ action: Action) -> Output
     {
-        let initial = reducer.run(action, &state, ())
+        let initial = run(action)
         let (syncActions, remainder) = initial.splitSynchronousActions()
         var remainingOutputs = remainder
 

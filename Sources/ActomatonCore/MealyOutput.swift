@@ -20,19 +20,3 @@ public protocol MealyOutput<Action>: SendableMetatype
     /// Semigroup append: combines two outputs into one.
     static func + (lhs: Self, rhs: Self) -> Self
 }
-
-extension MealyOutput {
-    func splitSynchronousActions() -> (actions: [Action], remainder: Self) {
-        (actions: [], remainder: self) // No synchronous actions.
-    }
-
-    static func + (lhs: Self, rhs: Self) -> Self {
-        // Choose first output only, discarding consecutive nested output.
-        //
-        // NOTE:
-        // This default implementation should be harmless
-        // since default `splitSynchronousActions` assumes no consecutive actions
-        // to produce consecutive output.
-        lhs
-    }
-}
