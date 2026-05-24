@@ -98,9 +98,4 @@ public distributed actor DistributedActomaton<Action, State, ActorSystem>
         // Safe downcast from the existential storage to the conformer's concrete `Self`.
         runEffM(effectManager as! EffM)
     }
-
-    isolated deinit
-    {
-        effectManager.shutDown()
-    }
 }

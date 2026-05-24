@@ -67,7 +67,6 @@ internal final class StoreCore<Action, State, Environment>
     isolated deinit
     {
         Debug.print("[deinit] StoreCore \(String(format: "%p", ObjectIdentifier(self).hashValue))")
-        effectManager.shutDown()
     }
 
     internal var state: CurrentValuePublisher<State>

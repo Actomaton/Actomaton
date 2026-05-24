@@ -117,11 +117,6 @@ public actor TestActomaton<Action, State>
         return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
 
-    isolated deinit
-    {
-        effectManager.shutDown()
-    }
-
     /// Sends an action and asserts how state changes before any feedback action is received.
     ///
     /// Feedback actions emitted from `.next`, `async`, or `AsyncSequence` effects must be asserted

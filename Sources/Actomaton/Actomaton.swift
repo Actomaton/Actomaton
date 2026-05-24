@@ -76,9 +76,4 @@ public actor Actomaton<Action, State>
         // Safe downcast from the existential storage to the conformer's concrete `Self`.
         runEffM(effectManager as! EffM)
     }
-
-    isolated deinit
-    {
-        effectManager.shutDown()
-    }
 }

@@ -46,7 +46,4 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     ) -> Task<(), any Error>?
-
-    /// Cancel all running tasks and drain pending effects.
-    func shutDown()
 }
