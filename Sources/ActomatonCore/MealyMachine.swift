@@ -42,7 +42,7 @@ public final class MealyMachine<Action, State, Output>: SendableMetatype
         state: State,
         reducer: MealyReducer<Action, State, (), Output>,
         willChangeState: @escaping (_ old: State, _ new: State) -> Void = { _, _ in }
-    ) where Action: Sendable
+    )
     {
         self.state = state
         self.reducer = reducer
@@ -55,7 +55,7 @@ public final class MealyMachine<Action, State, Output>: SendableMetatype
         reducer: MealyReducer<Action, State, Environment, Output>,
         environment: Environment,
         willChangeState: @escaping (_ old: State, _ new: State) -> Void = { _, _ in }
-    ) where Action: Sendable, Environment: Sendable
+    ) where Environment: Sendable
     {
         self.init(
             state: state,
