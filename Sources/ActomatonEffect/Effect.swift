@@ -129,6 +129,143 @@ extension Effect
         )
     }
 
+    // MARK: - Finite/Infinite Stream
+
+    /// Stream-style side-effect that emits `Action`s via `send`, with `EffectContext`.
+    ///
+    /// - Parameter autoFinish: `false` (default) keeps the stream alive after the closure
+    ///   returns — for bridging long-lived observers (delegates, callbacks, notifications)
+    ///   where the closure stores `send` into an outer reference (e.g. captured by a
+    ///   handler) and keeps emitting until cancelled externally. `true` finishes the
+    ///   stream on closure return — for self-terminating producers driven entirely inline.
+    /// - Parameter bufferingPolicy: Buffering policy of the underlying
+    ///   `AsyncThrowingStream`. Defaults to `.unbounded`; pass `.bufferingNewest(n)` or
+    ///   `.bufferingOldest(n)` to apply backpressure for high-frequency producers.
+    public static func stream(
+        bufferingPolicy: AsyncThrowingStream<Action, any Error>.Continuation.BufferingPolicy = .unbounded,
+        autoFinish: Bool = false,
+        _ stream: @escaping @Sendable (
+            _ send: @escaping @Sendable (sending Action) -> Void,
+            EffectContext
+        ) async throws -> Void
+    ) -> Effect<Action>
+    {
+        .sequence {
+            _makeStream(stream, context: $0, bufferingPolicy: bufferingPolicy, autoFinish: autoFinish)
+        }
+    }
+
+    /// Stream-style side-effect that emits `Action`s via `send`, with `EffectContext`.
+    ///
+    /// - Parameter id: Cancellation identifier.
+    /// - Parameter autoFinish: `false` (default) keeps the stream alive after the closure
+    ///   returns — for bridging long-lived observers that hold `send` and keep emitting
+    ///   until cancelled externally. `true` finishes the stream on closure return —
+    ///   for self-terminating producers driven entirely inline.
+    /// - Parameter bufferingPolicy: Buffering policy of the underlying
+    ///   `AsyncThrowingStream`. Defaults to `.unbounded`; pass `.bufferingNewest(n)` or
+    ///   `.bufferingOldest(n)` to apply backpressure for high-frequency producers.
+    public static func stream<ID>(
+        id: ID? = nil,
+        bufferingPolicy: AsyncThrowingStream<Action, any Error>.Continuation.BufferingPolicy = .unbounded,
+        autoFinish: Bool = false,
+        _ stream: @escaping @Sendable (
+            _ send: @escaping @Sendable (sending Action) -> Void,
+            EffectContext
+        ) async throws -> Void
+    ) -> Effect<Action>
+        where ID: EffectID
+    {
+        .sequence(id: id) {
+            _makeStream(stream, context: $0, bufferingPolicy: bufferingPolicy, autoFinish: autoFinish)
+        }
+    }
+
+    /// Stream-style side-effect that emits `Action`s via `send`, with `EffectContext`.
+    ///
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    /// - Parameter autoFinish: `false` (default) keeps the stream alive after the closure
+    ///   returns — for bridging long-lived observers that hold `send` and keep emitting
+    ///   until cancelled externally. `true` finishes the stream on closure return —
+    ///   for self-terminating producers driven entirely inline.
+    /// - Parameter bufferingPolicy: Buffering policy of the underlying
+    ///   `AsyncThrowingStream`. Defaults to `.unbounded`; pass `.bufferingNewest(n)` or
+    ///   `.bufferingOldest(n)` to apply backpressure for high-frequency producers.
+    public static func stream<Queue>(
+        queue: Queue? = nil,
+        bufferingPolicy: AsyncThrowingStream<Action, any Error>.Continuation.BufferingPolicy = .unbounded,
+        autoFinish: Bool = false,
+        _ stream: @escaping @Sendable (
+            _ send: @escaping @Sendable (sending Action) -> Void,
+            EffectContext
+        ) async throws -> Void
+    ) -> Effect<Action>
+        where Queue: EffectQueue
+    {
+        .sequence(queue: queue) {
+            _makeStream(stream, context: $0, bufferingPolicy: bufferingPolicy, autoFinish: autoFinish)
+        }
+    }
+
+    /// Stream-style side-effect that emits `Action`s via `send`, with `EffectContext`.
+    ///
+    /// - Parameter id: Cancellation identifier.
+    /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
+    /// - Parameter autoFinish: `false` (default) keeps the stream alive after the closure
+    ///   returns — for bridging long-lived observers that hold `send` and keep emitting
+    ///   until cancelled externally. `true` finishes the stream on closure return —
+    ///   for self-terminating producers driven entirely inline.
+    /// - Parameter bufferingPolicy: Buffering policy of the underlying
+    ///   `AsyncThrowingStream`. Defaults to `.unbounded`; pass `.bufferingNewest(n)` or
+    ///   `.bufferingOldest(n)` to apply backpressure for high-frequency producers.
+    public static func stream<ID, Queue>(
+        id: ID? = nil,
+        queue: Queue? = nil,
+        bufferingPolicy: AsyncThrowingStream<Action, any Error>.Continuation.BufferingPolicy = .unbounded,
+        autoFinish: Bool = false,
+        _ stream: @escaping @Sendable (
+            _ send: @escaping @Sendable (sending Action) -> Void,
+            EffectContext
+        ) async throws -> Void
+    ) -> Effect<Action>
+        where ID: EffectID, Queue: EffectQueue
+    {
+        .sequence(id: id, queue: queue) {
+            _makeStream(stream, context: $0, bufferingPolicy: bufferingPolicy, autoFinish: autoFinish)
+        }
+    }
+
+    /// Bridges the user's `(send, context) async throws -> Void` closure into an
+    /// `AsyncThrowingStream` whose continuation is finished when the closure returns
+    /// or throws, and whose termination cancels the running task.
+    private static func _makeStream(
+        _ stream: @escaping @Sendable (
+            _ send: @escaping @Sendable (sending Action) -> Void,
+            EffectContext
+        ) async throws -> Void,
+        context: EffectContext,
+        bufferingPolicy: AsyncThrowingStream<Action, any Error>.Continuation.BufferingPolicy,
+        autoFinish: Bool
+    ) -> AsyncThrowingStream<Action, any Error>
+    {
+        AsyncThrowingStream<Action, any Error>(bufferingPolicy: bufferingPolicy) { continuation in
+            let task = Task<Void, any Error> {
+                do {
+                    try await stream({ continuation.yield($0) }, context)
+                    if autoFinish {
+                        continuation.finish()
+                    }
+                }
+                catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
     // MARK: - fireAndForget
 
     /// Single-`async` side-effect without returning next action, with `EffectContext`.
