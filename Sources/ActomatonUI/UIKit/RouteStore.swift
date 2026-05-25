@@ -223,7 +223,7 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
     /// ...
     ///
     /// // Inside `RouteStore`'s Reducer:
-    /// Effect(sequence: { _ in
+    /// Effect.sequence { _ in
     ///     /// Send `Route` and get `AsyncStream` from next screen.
     ///     let stream = environment.sendRouteAsyncStream { continuation in
     ///         return Route.showNextScreen(someArg, continuation)
@@ -237,7 +237,7 @@ public struct SendRouteEnvironment<Environment, Route>: Sendable
     ///             return Action._didFinishReceivingValues
     ///         }
     ///     }
-    /// })
+    /// }
     ///
     /// ...
     ///

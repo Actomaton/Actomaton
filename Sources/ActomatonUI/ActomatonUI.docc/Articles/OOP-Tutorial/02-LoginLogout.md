@@ -74,13 +74,13 @@ let reducer = Reducer { action, state, environment in
 `Effect` の実装方法は 5 種類があります。特に重要なのが 3. 4. 5. です（3. は 1. と 2. を兼ねます）。
 
 1. 副作用を発生せず、次のアクションのみを転送する
-    - `Effect.nextAction()`
+    - `Effect.next(action:)`
 2. `async` 関数で副作用を発生し、次のアクションは送らない
     - `Effect.fireAndForget(id:queue:run:)`
 3. `async` 関数で副作用を発生し、次のアクションを送る
-    - `Effect.init(id:queue:run:)`
+    - `Effect(id:queue:run:)`
 4. `AsyncSequence` で副作用を発生させつつ次のアクションを送る処理を「複数回」行う
-    - `Effect.init(id:queue:sequence:)`
+    - `Effect.sequence(id:queue:_:)`
 5. `EffectID` を使った手動キャンセル
     - `Effect.cancel(id:)`
     - `Effect.cancel(ids:)`
@@ -121,9 +121,9 @@ let environment = Environment(
 ```swift
 let mockEnvironment = Environment(
     login: { userId in
-        Effect.nextAction(.loginOK) // API 通信をせず、次のアクションだけ送る
+        Effect.next(action: .loginOK) // API 通信をせず、次のアクションだけ送る
     },
-    logout: Effect.nextAction(.logoutOK)
+    logout: Effect.next(action: .logoutOK)
 )
 ```
 

@@ -35,7 +35,7 @@ func `actomaton runs synchronous effects on wasm`() async
         switch action {
         case .increment:
             state.count += 1
-            return .nextAction(.reset)
+            return .next(action: .reset)
         case .reset:
             state.count = 0
             return .empty
