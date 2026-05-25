@@ -4,7 +4,7 @@
 
 ## Overview
 
-In this example, ``Effect``.``Effect/init(id:sequence:)`` is used for timer effect, which yields `Action.tick` multiple times.
+In this example, ``Effect``.``Effect/sequence(id:_:)`` is used for timer effect, which yields `Action.tick` multiple times.
 
 ```swift
 enum Action: Sendable {
@@ -21,7 +21,7 @@ struct Environment: Sendable {
 
 let environment = Environment(
     timerEffect: { userId in
-        Effect(id: TimerID(), sequence: {
+        Effect.sequence(id: TimerID()) {
             AsyncStream<()> { continuation in
                 let task = Task {
                     while true {
@@ -34,7 +34,7 @@ let environment = Environment(
                     task.cancel()
                 }
             }
-        })
+        }
     }
 )
 

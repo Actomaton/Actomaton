@@ -42,7 +42,7 @@ final class FeedbackTrackingTaskTests: MainTestCase
                     guard state == ._3 else { return .empty }
 
                     state = ._4(count: 0)
-                    return Effect(sequence: { context in
+                    return Effect.sequence { context in
                         AsyncStream<Action> { continuation in
                             let task = Task<(), any Error> {
                                 for _ in 1 ... 2 {
@@ -61,7 +61,7 @@ final class FeedbackTrackingTaskTests: MainTestCase
                                 task.cancel()
                             }
                         }
-                    })
+                    }
 
                 case ._increment:
                     guard case let ._4(count) = state else { return .empty }

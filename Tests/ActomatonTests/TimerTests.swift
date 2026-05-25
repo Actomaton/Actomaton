@@ -15,7 +15,7 @@ final class TimerTests: MainTestCase
             reducer: Reducer { action, state, _ in
                 switch action {
                 case .start:
-                    let timerEffect = Effect(id: TimerID(), sequence: { context in
+                    let timerEffect = Effect.sequence(id: TimerID()) { context in
                         AsyncStream<()> { continuation in
                             let task = Task {
                                 while true {
@@ -29,7 +29,7 @@ final class TimerTests: MainTestCase
                             }
                         }
                         .map { Action.tick }
-                    })
+                    }
                     return timerEffect
                 case .tick:
                     state += 1

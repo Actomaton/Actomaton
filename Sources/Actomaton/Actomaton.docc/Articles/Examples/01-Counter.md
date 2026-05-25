@@ -80,13 +80,13 @@ Keep API clients and other business dependencies in `Environment`.
 NOTE: There are 5 ways of creating ``Effect`` in Actomaton:
 
 1. No side-effects, but forwards next action only
-    - ``Effect/nextAction(_:)``
+    - ``Effect/next(action:)``
 2. Single `async` without next action
     - ``Effect/fireAndForget(id:queue:run:)``
 3. Single `async` with next action
     - ``Effect/init(id:queue:run:)``
 4. Multiple `async`s (i.e. `AsyncSequence`) with next actions
-    - ``Effect/init(id:queue:sequence:)``
+    - ``Effect/sequence(id:queue:_:)``
 5. Manual cancellation
     - ``Effect/cancel(id:)`` / ``Effect/cancel(ids:)``
 

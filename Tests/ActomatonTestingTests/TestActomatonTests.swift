@@ -139,7 +139,7 @@ final class TestActomatonTests: MainTestCase
                 switch action {
                 case .increment:
                     state.count += 1
-                    return recordEffect + .nextAction(.reset)
+                    return recordEffect + .next(action: .reset)
                 case .decrement:
                     state.count -= 1
                     return recordEffect
@@ -242,7 +242,7 @@ final class TestActomatonTests: MainTestCase
                 switch action {
                 case .increment:
                     state.count += 1
-                    return .nextAction(.reset)
+                    return .next(action: .reset)
                 case .decrement:
                     state.count -= 1
                     return .empty
@@ -363,10 +363,10 @@ private let chainReducer = MealyReducer<ChainAction, ChainState, Void, Effect<Ch
     switch action {
     case .step1:
         state.steps.append("step1")
-        return .nextAction(.step2)
+        return .next(action: .step2)
     case .step2:
         state.steps.append("step2")
-        return .nextAction(.step3)
+        return .next(action: .step3)
     case .step3:
         state.steps.append("step3")
         return .empty

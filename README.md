@@ -156,13 +156,13 @@ reducer = Reducer { action, state, environment in
 NOTE: There are 5 ways of creating `Effect` in Actomaton:
 
 1. No side-effects, but next action only
-    - `Effect.nextAction`
+    - `Effect.next(action:)`
 2. Single `async` without next action
     - `Effect.fireAndForget(id:run:)`
 3. Single `async` with next action
     - `Effect.init(id:run:)`
 4. Multiple `async`s (i.e. `AsyncSequence`) with next actions
-    - `Effect.init(id:sequence:)`
+    - `Effect.sequence(id:_:)`
 5. Manual cancellation
     - `Effect.cancel(id:)` / `.cancel(ids:)`
 
@@ -313,7 +313,7 @@ struct Environment {
 
 let environment = Environment(
     timerEffect: { userId in
-        Effect(id: TimerID(), sequence: { _ in
+        Effect.sequence(id: TimerID()) { _ in
             AsyncStream<()> { continuation in
                 let task = Task {
                     while true {
@@ -326,7 +326,7 @@ let environment = Environment(
                     task.cancel()
                 }
             }
-        })
+        }
     }
 )
 
@@ -375,7 +375,7 @@ enum Main {
 }
 ```
 
-In this example, `Effect(id:sequence:)` is used for timer effect, which yields `Action.tick` multiple times.
+In this example, `Effect.sequence(id:)` is used for timer effect, which yields `Action.tick` multiple times.
 
 ### Example 1-4. `EffectQueue`
 

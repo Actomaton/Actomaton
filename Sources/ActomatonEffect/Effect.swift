@@ -54,9 +54,10 @@ extension Effect
     // MARK: - AsyncSequence
 
     /// `AsyncSequence` side-effect with `EffectContext`.
-    public init<S, E: Error>(
-        sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where S: AsyncSequence<Action, E> & SendableMetatype
+    public static func sequence<S, E: Error>(
+        _ sequence: @escaping @Sendable (EffectContext) async throws -> S?
+    ) -> Effect<Action>
+        where S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(
             kinds: [.sequence(
@@ -71,10 +72,11 @@ extension Effect
 
     /// `AsyncSequence` side-effect with `EffectContext`.
     /// - Parameter id: Cancellation identifier.
-    public init<ID, S, E: Error>(
+    public static func sequence<ID, S, E: Error>(
         id: ID? = nil,
-        sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where ID: EffectID, S: AsyncSequence<Action, E> & SendableMetatype
+        _ sequence: @escaping @Sendable (EffectContext) async throws -> S?
+    ) -> Effect<Action>
+        where ID: EffectID, S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(
             kinds: [.sequence(
@@ -89,10 +91,11 @@ extension Effect
 
     /// `AsyncSequence` side-effect with `EffectContext`.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<S, E: Error, Queue>(
+    public static func sequence<S, E: Error, Queue>(
         queue: Queue? = nil,
-        sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where S: AsyncSequence<Action, E> & SendableMetatype, Queue: EffectQueue
+        _ sequence: @escaping @Sendable (EffectContext) async throws -> S?
+    ) -> Effect<Action>
+        where Queue: EffectQueue, S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(
             kinds: [.sequence(
@@ -108,11 +111,12 @@ extension Effect
     /// `AsyncSequence` side-effect with `EffectContext`.
     /// - Parameter id: Cancellation identifier.
     /// - Parameter queue: Effect management queue to discard or suspend existing or new tasks.
-    public init<ID, S, E: Error, Queue>(
+    public static func sequence<ID, S, E: Error, Queue>(
         id: ID? = nil,
         queue: Queue? = nil,
-        sequence: @escaping @Sendable (EffectContext) async throws -> S?
-    ) where ID: EffectID, S: AsyncSequence<Action, E> & SendableMetatype, Queue: EffectQueue
+        _ sequence: @escaping @Sendable (EffectContext) async throws -> S?
+    ) -> Effect<Action>
+        where ID: EffectID, Queue: EffectQueue, S: AsyncSequence<Action, E> & SendableMetatype
     {
         self.init(
             kinds: [.sequence(
@@ -182,10 +186,10 @@ extension Effect
         })
     }
 
-    // MARK: - nextAction
+    // MARK: - next
 
     /// No `async` side-effect, only returning next action.
-    public static func nextAction(_ action: Action) -> Effect<Action>
+    public static func next(action: Action) -> Effect<Action>
     {
         self.init(kinds: [.next(action)])
     }
