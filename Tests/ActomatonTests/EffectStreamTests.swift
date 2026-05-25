@@ -11,8 +11,13 @@ final class EffectStreamTests: MainTestCase
         var didCancel = false
         var didCancelPrevious = false
 
-        func markCancelled() { didCancel = true }
-        func markPreviousCancelled() { didCancelPrevious = true }
+        func markCancelled() {
+            didCancel = true
+        }
+
+        func markPreviousCancelled() {
+            didCancelPrevious = true
+        }
     }
 
     override func setUp() async throws

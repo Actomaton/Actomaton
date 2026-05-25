@@ -255,7 +255,8 @@ extension Effect
                     if autoFinish {
                         continuation.finish()
                     }
-                } catch {
+                }
+                catch {
                     continuation.finish(throwing: error)
                 }
             }
