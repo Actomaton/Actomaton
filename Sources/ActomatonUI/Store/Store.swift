@@ -30,7 +30,7 @@
 /// use Combine's `map`, `compactMap`, and `removeDuplicates`.
 ///
 /// ```swift
-/// let store: Store<State, Action, Environment>
+/// let store: Store<Action, State, Environment>
 /// ...
 /// func viewDidLoad() {
 ///     super.viewDidLoad()
@@ -363,8 +363,8 @@ extension Store
     ///     {
     ///         Screen1View(store: screen1Store) // Show Screen1 if `currentScreen = .screen1`.
     ///     }
-    ///     else if screen2Store = currentStore
-    ///         .caseMap(state: /Screen.screen1)
+    ///     else if let screen2Store = currentStore
+    ///         .caseMap(state: /Screen.screen2)
     ///         .optionalize()
     ///     {
     ///         Screen2View(store: screen2Store) // Show Screen2 if `currentScreen = .screen2`.

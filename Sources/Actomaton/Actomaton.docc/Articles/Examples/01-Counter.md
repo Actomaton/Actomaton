@@ -10,7 +10,7 @@ enum Action: Sendable {
     case decrement
 }
 
-enum State: Sendable {
+struct State: Sendable {
     var count: Int = 0
 }
 
@@ -60,7 +60,7 @@ reducer = Reducer { action, state, environment in
     switch action {
     case .increment:
         state.count += 1
-        return Effect.fireAndForget {
+        return Effect.fireAndForget { _ in
             print("increment")
         }
     case .decrement:
@@ -92,4 +92,4 @@ NOTE: There are 5 ways of creating ``Effect`` in Actomaton:
 
 ## Next Step
 
-<doc:02-LoginLogout>
+<doc:02-Timer>

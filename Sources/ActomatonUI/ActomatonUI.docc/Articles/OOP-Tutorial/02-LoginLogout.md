@@ -42,7 +42,10 @@ let reducer = Reducer { action, state, environment in
     switch (action, state) {
     case (.login, .loggedOut):
         state = .loggingIn
-        return login(state.userId) // ログイン処理（副作用）
+        return Effect { _ in // ログイン処理（副作用）
+            try await environment.login("user-123")
+            return Action.loginOK
+        }
 
     case (.loginOK, .loggingIn):
         state = .loggedIn
@@ -52,14 +55,17 @@ let reducer = Reducer { action, state, environment in
         (.forceLogout, .loggingIn),
         (.forceLogout, .loggedIn):
         state = .loggingOut
-        return logout() // ログアウト処理（副作用）
+        return Effect { _ in // ログアウト処理（副作用）
+            try await environment.logout()
+            return Action.logoutOK
+        }
 
     case (.logoutOK, .loggingOut):
         state = .loggedOut
         return .empty
 
     default:
-        return Effect.fireAndForget {
+        return Effect.fireAndForget { _ in
             print("State transition failed...")
         }
     }
@@ -93,41 +99,37 @@ let reducer = Reducer { action, state, environment in
 
 ```swift
 struct Environment: Sendable {
-    let login: @Sendable (userId: String) -> Effect<Action>
-    let logout: Effect<Action>
+    let login: @Sendable (_ userId: String) async throws -> Void
+    let logout: @Sendable () async throws -> Void
 }
 
 let environment = Environment(
     login: { userId in
-        Effect {
-            let loginRequest = ...
-            let data = try? await URLSession.shared.data(for: loginRequest) // API 通信
-            ...
-            return Action.loginOK // 次のアクション
-        }
-    },
-    logout: Effect {
-        let logoutRequest = ...
-        let data = try? await URLSession.shared.data(for: logoutRequest) // API 通信
+        let loginRequest = ...
+        _ = try? await URLSession.shared.data(for: loginRequest) // API 通信
         ...
-        return Action.logoutOK // 次のアクション
+    },
+    logout: {
+        let logoutRequest = ...
+        _ = try? await URLSession.shared.data(for: logoutRequest) // API 通信
+        ...
     }
 )
 ```
 
 ここで `struct Environment` がはじめて使われていますが、これは依存注入コンテナ (Dependency Injection Container) と考えるのが分かりやすいです。
+`Environment` には `Effect` ではなく、 API 通信などの **生の依存（async 関数や AsyncStream など）** を保持し、 `Effect` への組み立ては `Reducer` 側で行います。
+
 例えば、モックに差し替えたい場合は、
 
 ```swift
 let mockEnvironment = Environment(
-    login: { userId in
-        Effect.next(action: .loginOK) // API 通信をせず、次のアクションだけ送る
-    },
-    logout: Effect.next(action: .logoutOK)
+    login: { _ in /* API 通信をしない */ },
+    logout: { /* API 通信をしない */ }
 )
 ```
 
-のように、`Effect` 内部で API 通信などの副作用を実行せず次のアクションのみを送る処理に変更できます。
+のように、 API 通信を行わないダミー実装に置き換えるだけで済みます。
 この方法を使うことで、 **副作用を発生しないユニットテスト** が手軽に実行できます。
 
 ## EffectID と EffectQueue による副作用管理
@@ -142,22 +144,35 @@ let mockEnvironment = Environment(
 ### 1. EffectID による手動キャンセル
 
 `Effect` の初期化時に識別子として `EffectID` を付与し、 `Effect.cancel(id:)` を手動で呼ぶ方法です。
-具体的には `protocol EffectID` を使い、 `Hashable` な識別子を `Effect` の初期化時に渡します。
+具体的には `protocol EffectID` を使い、 `Hashable` な識別子を `Reducer` 側で `Effect` の初期化時に渡します。
 
 ```swift
 struct LoginFlowEffectID: EffectID {} // 空実装で OK
 
-let environment = Environment(
-    login: { userId in
-        Effect(id: LoginFlowEffectID()) { // EffectID 追加
-            ... // 実際のログイン処理
+let reducer = Reducer { action, state, environment in
+    switch (action, state) {
+    case (.login, .loggedOut):
+        state = .loggingIn
+        return Effect(id: LoginFlowEffectID()) { _ in // EffectID 追加
+            try await environment.login("user-123")
+            return Action.loginOK
         }
-    },
-    logout: Effect.cancel(id: LoginFlowEffectID()) // 事前にキャンセル処理
-        + Effect { // Effect の足し算
-            ... // 実際のログアウト処理
-        }
-)
+
+    case (.logout, .loggedIn),
+        (.forceLogout, .loggingIn),
+        (.forceLogout, .loggedIn):
+        state = .loggingOut
+        return Effect.cancel(id: LoginFlowEffectID()) // 事前にキャンセル処理
+            + Effect { _ in // Effect の足し算
+                try await environment.logout()
+                return Action.logoutOK
+            }
+
+    // ... 他の case は省略 ...
+    default:
+        return .empty
+    }
+}
 ```
 
 このように、「実際のログアウト処理」の前に「キャンセル」を呼ぶことができます。
@@ -176,16 +191,29 @@ let environment = Environment(
 ```swift
 struct LoginFlowEffectQueue: Newest1EffectQueue {} // 空実装で OK
 
-let environment = Environment(
-    login: { userId in
-        Effect(queue: LoginFlowEffectQueue()) { // EffectQueue に追加
-            ... // 実際のログイン処理
+let reducer = Reducer { action, state, environment in
+    switch (action, state) {
+    case (.login, .loggedOut):
+        state = .loggingIn
+        return Effect(queue: LoginFlowEffectQueue()) { _ in // EffectQueue に追加
+            try await environment.login("user-123")
+            return Action.loginOK
         }
-    },
-    logout: Effect(queue: LoginFlowEffectQueue()) { // EffectQueue に追加
-        ... // 実際のログアウト処理
+
+    case (.logout, .loggedIn),
+        (.forceLogout, .loggingIn),
+        (.forceLogout, .loggedIn):
+        state = .loggingOut
+        return Effect(queue: LoginFlowEffectQueue()) { _ in // EffectQueue に追加
+            try await environment.logout()
+            return Action.logoutOK
+        }
+
+    // ... 他の case は省略 ...
+    default:
+        return .empty
     }
-)
+}
 ```
 
 このように `login` と `logout` が同じキューに登録されることを明記することで、

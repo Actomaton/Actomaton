@@ -1,10 +1,10 @@
-# Example 3: Timer 
+# Example 2: Timer
 
 `AsyncStream`-based timer example.
 
 ## Overview
 
-In this example, ``Effect``.``Effect/sequence(id:_:)`` is used for timer effect, which yields `Action.tick` multiple times.
+In this example, ``Effect/sequence(id:_:)`` is used for timer effect, which yields `Action.tick` multiple times.
 
 ```swift
 enum Action: Sendable {
@@ -16,23 +16,21 @@ typealias State = Int
 struct TimerID: EffectID {}
 
 struct Environment: Sendable {
-    let timerEffect: Effect<Action>
+    let timer: @Sendable () -> AsyncStream<Void>
 }
 
 let environment = Environment(
-    timerEffect: { userId in
-        Effect.sequence(id: TimerID()) {
-            AsyncStream<()> { continuation in
-                let task = Task {
-                    while true {
-                        try await Task.sleep(/* 1 sec */)
-                        continuation.yield(())
-                    }
+    timer: {
+        AsyncStream<Void> { continuation in
+            let task = Task {
+                while true {
+                    try await Task.sleep(/* 1 sec */)
+                    continuation.yield(())
                 }
+            }
 
-                continuation.onTermination = { @Sendable _ in
-                    task.cancel()
-                }
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
             }
         }
     }
@@ -41,7 +39,10 @@ let environment = Environment(
 let reducer = Reducer { action, state, environment in
     switch action {
     case .start:
-        return environment.timerEffect
+        return Effect.sequence(id: TimerID()) { _ in
+            environment.timer()
+                .map { _ in Action.tick }
+        }
     case .tick:
         state += 1
         return .empty
@@ -85,4 +86,4 @@ enum Main {
 
 ## Next Step
 
-<doc:04-EffectQueue>
+<doc:03-LoginLogout>

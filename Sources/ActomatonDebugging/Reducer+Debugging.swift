@@ -75,7 +75,7 @@ extension Reducer where Output == Effect<Action>
         return Self { action, state, environment in
             let currentState = state // Needs copy to not carry `inout`.
 
-            /// Effect for  Action & State `.simple` or `.all` printing.
+            // Effect for Action & State `.simple` or `.all` printing.
             let preEffect = Effect<Action>.fireAndForget { _ in
                 let name = format.name.map { "[\($0)]" } ?? ""
 
