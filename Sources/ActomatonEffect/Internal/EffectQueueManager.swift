@@ -193,7 +193,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
             }
 
         case .next:
-            // Should not appear — Actomaton resolves .next before passing to EffectQueueManager.
+            // Should not appear — MealyMachine.send resolves .next before passing to EffectQueueManager.
             return []
 
         case let .cancel(predicate):

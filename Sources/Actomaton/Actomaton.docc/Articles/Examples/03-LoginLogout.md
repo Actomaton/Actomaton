@@ -1,11 +1,15 @@
-# Example 2: Auth state
+# Example 3: Auth state
 
-Auth screen (login, logout, and force-logout) example.
+Auth screen (login, logout, and force-logout) example, demonstrating `EffectQueue` for automatic cancellation.
 
 ## Overview
 
 This example illustrates Auth state management where `login`, `logout`, and `forceLogout` 
 will trigger side-effects (such as API requests) then sends `loginOK` or `logoutOK` on completion.
+
+``EffectID`` (introduced in <doc:02-Timer>) only supports *manual* cancellation via ``Effect/cancel(id:)``.
+When you instead want effects sharing the same identity to be cancelled (or suspended) automatically as new ones arrive,
+attach an ``EffectQueue``.
 
 ![login-diagram](login-logout.png)
 
@@ -20,37 +24,26 @@ enum State: Sendable {
 }
 
 // NOTE:
-// By attaching this EffectQueue to multiple `Effect`s,
-// they will incorporate with each other under the same `EffectQueuePolicy`,
-// in this case: `Newest1EffectQueue`.
-// 
-// This policy will only allow at most newest 1 effect to survive,
-// and rest of the queued running effects will be automatically cancelled.
+// By attaching this `EffectQueue` to multiple `Effect`s, they share the same
+// `EffectQueuePolicy` — here, `Newest1EffectQueue` lets only the newest
+// effect survive and automatically cancels older queued effects.
 struct LoginFlowEffectQueue: Newest1EffectQueue {}
 
 struct Environment: Sendable {
-    let loginEffect: @Sendable (userId: String) -> Effect<Action>
-    let logoutEffect: Effect<Action>
+    let login: @Sendable (_ userId: String) async throws -> Void
+    let logout: @Sendable () async throws -> Void
 }
 
 let environment = Environment(
-    loginEffect: { userId in
-        Effect(queue: LoginFlowEffectQueue()) {
-            let loginRequest = ...
-            let data = try? await URLSession.shared.data(for: loginRequest)
-            if Task.isCancelled { return nil }
-            ...
-            return Action.loginOK // next action
-        }
+    login: { userId in
+        let loginRequest = ...
+        _ = try? await URLSession.shared.data(for: loginRequest)
+        ...
     },
-    logoutEffect: {
-        Effect(queue: LoginFlowEffectQueue()) {
-            let logoutRequest = ...
-            let data = try? await URLSession.shared.data(for: logoutRequest)
-            if Task.isCancelled { return nil }
-            ...
-            return Action.logoutOK // next action
-        }
+    logout: {
+        let logoutRequest = ...
+        _ = try? await URLSession.shared.data(for: logoutRequest)
+        ...
     }
 )
 
@@ -58,7 +51,10 @@ let reducer = Reducer { action, state, environment in
     switch (action, state) {
     case (.login, .loggedOut):
         state = .loggingIn
-        return environment.login(state.userId)
+        return Effect(queue: LoginFlowEffectQueue()) { _ in
+            try await environment.login("user-123")
+            return Action.loginOK
+        }
 
     case (.loginOK, .loggingIn):
         state = .loggedIn
@@ -68,14 +64,17 @@ let reducer = Reducer { action, state, environment in
         (.forceLogout, .loggingIn),
         (.forceLogout, .loggedIn):
         state = .loggingOut
-        return environment.logout()
+        return Effect(queue: LoginFlowEffectQueue()) { _ in
+            try await environment.logout()
+            return Action.logoutOK
+        }
 
     case (.logoutOK, .loggingOut):
         state = .loggedOut
         return .empty
 
     default:
-        return Effect.fireAndForget {
+        return Effect.fireAndForget { _ in
             print("State transition failed...")
         }
     }
@@ -134,7 +133,7 @@ Here we see the notions of `EffectQueue`, `Environment`, and `let task: Task<(),
 
 - `EffectQueue` is for automatic cancellation or suspension of effects. 
   In this example, `Newest1EffectQueue` is used so that only the newest 1 effect (`forceLogout`) will survive,
-  and rest of old queued effects (e.g. previous `login`) will be automatically cancelled.
+  and the rest of older queued effects (e.g. an in-flight `login`) will be automatically cancelled.
 - `Environment` is useful for injecting effects to be called inside `Reducer` so that they become replaceable. 
   **`Environment` is known as Dependency Injection Container** (using Reader monad).
 - (Optional) `Task<(), Error>` returned from ``Actomaton/Actomaton/send(_:priority:tracksFeedbacks:)`` 
@@ -145,4 +144,4 @@ Here we see the notions of `EffectQueue`, `Environment`, and `let task: Task<(),
 
 ## Next Step
 
-<doc:03-Timer>
+<doc:04-EffectQueue>

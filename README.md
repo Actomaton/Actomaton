@@ -41,13 +41,13 @@ ActomatonCore          -- generic MealyMachine + MealyReducer + EffectManager
 
 `ActomatonCore` is intentionally free of `Effect` and async task management.
 This makes `MealyMachine` usable in contexts where full effect infrastructure is overkill — for example, purely synchronous state machines, game logic, or protocol parsers.
-Built-in `EffectManager` conformers cover common cases:
+The default `EffectManager` conformer ships in `ActomatonEffect`:
 
 | Conformer | Output type | Use case |
 |---|---|---|
-| `EffectQueueManager` (internal) | `Effect<Action>` | Full async effect lifecycle (in `ActomatonEffect`) |
-| `NoOpEffectManager` | `Void` | Pure state transitions, no side-effects |
-| `ActionEffectManager` | `[Action]` | Synchronous action feedback loops |
+| `EffectQueueManager` (package) | `Effect<Action>` | Full async effect lifecycle (in `ActomatonEffect`) |
+
+You can also provide your own `EffectManager` conformer to plug in a custom output type (e.g. `Void` for purely synchronous state machines, or `[Action]` for synchronous action feedback loops).
 
 ## Platform Support
 
@@ -166,9 +166,97 @@ NOTE: There are 5 ways of creating `Effect` in Actomaton:
 5. Manual cancellation
     - `Effect.cancel(id:)` / `.cancel(ids:)`
 
-### Example 1-2. Login-Logout (and ForceLogout)
+### Example 1-2. Timer (using `AsyncSequence`) and `EffectID` cancellation
+
+```swift
+typealias State = Int
+
+enum Action: Sendable {
+    case start, tick, stop
+}
+
+struct TimerID: EffectID {}
+
+struct Environment: Sendable {
+    let timer: @Sendable () -> AsyncStream<Void>
+}
+
+let environment = Environment(
+    timer: {
+        AsyncStream<Void> { continuation in
+            let task = Task {
+                while true {
+                    try await Task.sleep(/* 1 sec */)
+                    continuation.yield(())
+                }
+            }
+
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
+            }
+        }
+    }
+)
+
+let reducer = Reducer { action, state, environment in
+    switch action {
+    case .start:
+        return Effect.sequence(id: TimerID()) { _ in
+            environment.timer()
+                .map { _ in Action.tick }
+        }
+    case .tick:
+        state += 1
+        return .empty
+    case .stop:
+        return Effect.cancel(id: TimerID())
+    }
+}
+
+let actomaton = Actomaton<Action, State>(
+    state: 0,
+    reducer: reducer,
+    environment: environment
+)
+
+@main
+enum Main {
+    static func test_timer() async {
+        assertEqual(await actomaton.state, 0)
+
+        await actomaton.send(.start)
+
+        assertEqual(await actomaton.state, 0)
+
+        try await Task.sleep(/* 1 sec */)
+        assertEqual(await actomaton.state, 1)
+
+        try await Task.sleep(/* 1 sec */)
+        assertEqual(await actomaton.state, 2)
+
+        try await Task.sleep(/* 1 sec */)
+        assertEqual(await actomaton.state, 3)
+
+        await actomaton.send(.stop)
+
+        try await Task.sleep(/* long enough */)
+        assertEqual(await actomaton.state, 3,
+                    "Should not increment because timer is stopped.")
+    }
+}
+```
+
+Here we see the notions of `EffectID`, `Environment`, and `Effect.sequence`:
+
+- `EffectID` tags an effect with a `Hashable` identifier so it can be cancelled later via `Effect.cancel(id:)`. In this example, `TimerID` lets `.stop` cancel the running timer.
+- `Environment` holds the raw dependencies (here, an `AsyncStream`-producing closure). The `Reducer` is responsible for wrapping those dependencies in `Effect`. **`Environment` is known as Dependency Injection Container** (using Reader monad).
+- `Effect.sequence(id:_:)` turns an `AsyncSequence` into an `Effect`, yielding `Action.tick` multiple times until cancelled.
+
+### Example 1-3. Login-Logout (and ForceLogout) — `EffectQueue` for automatic cancellation
 
 ![login-diagram](https://user-images.githubusercontent.com/138476/132146518-686deb5f-ff01-489a-abf2-e2ef2a2adb03.png)
+
+`EffectID` (introduced in Example 1-2) only supports *manual* cancellation. When you instead want effects sharing the same identity to be cancelled (or suspended) automatically as new ones arrive, attach an ``EffectQueue``.
 
 ```swift
 enum State: Sendable {
@@ -181,35 +269,26 @@ enum Action: Sendable {
 }
 
 // NOTE:
-// Use same `EffectID` so that if previous effect is still running,
-// next effect with same `EffectID` will automatically cancel the previous one.
-//
-// Note that `EffectID` is also useful for manual cancellation via `Effect.cancel`.
-struct LoginFlowEffectID: EffectID {}
+// By attaching this `EffectQueue` to multiple `Effect`s, they share the same
+// `EffectQueuePolicy` — here, `Newest1EffectQueue` lets only the newest
+// effect survive and automatically cancels older queued effects.
+struct LoginFlowEffectQueue: Newest1EffectQueue {}
 
 struct Environment: Sendable {
-    let loginEffect: (userId: String) -> Effect<Action>
-    let logoutEffect: Effect<Action>
+    let login: @Sendable (_ userId: String) async throws -> Void
+    let logout: @Sendable () async throws -> Void
 }
 
 let environment = Environment(
-    loginEffect: { userId in
-        Effect(id: LoginFlowEffectID()) { _ in
-            let loginRequest = ...
-            let data = try? await URLSession.shared.data(for: loginRequest)
-            if Task.isCancelled { return nil }
-            ...
-            return Action.loginOK // next action
-        }
+    login: { userId in
+        let loginRequest = ...
+        _ = try? await URLSession.shared.data(for: loginRequest)
+        ...
     },
-    logoutEffect: {
-        Effect(id: LoginFlowEffectID()) { _ in
-            let logoutRequest = ...
-            let data = try? await URLSession.shared.data(for: logoutRequest)
-            if Task.isCancelled { return nil }
-            ...
-            return Action.logoutOK // next action
-        }
+    logout: {
+        let logoutRequest = ...
+        _ = try? await URLSession.shared.data(for: logoutRequest)
+        ...
     }
 )
 
@@ -217,7 +296,10 @@ let reducer = Reducer { action, state, environment in
     switch (action, state) {
     case (.login, .loggedOut):
         state = .loggingIn
-        return environment.login(state.userId)
+        return Effect(queue: LoginFlowEffectQueue()) { _ in
+            try await environment.login("user-123")
+            return Action.loginOK
+        }
 
     case (.loginOK, .loggingIn):
         state = .loggedIn
@@ -227,7 +309,10 @@ let reducer = Reducer { action, state, environment in
         (.forceLogout, .loggingIn),
         (.forceLogout, .loggedIn):
         state = .loggingOut
-        return environment.logout()
+        return Effect(queue: LoginFlowEffectQueue()) { _ in
+            try await environment.logout()
+            return Action.logoutOK
+        }
 
     case (.logoutOK, .loggingOut):
         state = .loggedOut
@@ -277,7 +362,7 @@ enum Main {
         assertEqual(await actomaton.state, .loggingIn)
 
         // Wait for a while and interrupt by `forceLogout`.
-        // Login's effect will be automatically cancelled because of same `EffectID.
+        // Login's effect will be automatically cancelled because of same `EffectQueue`.
         try await Task.sleep(/* 1 ms */)
         t = await actomaton.send(.forceLogout)
 
@@ -285,97 +370,16 @@ enum Main {
 
         await t?.value // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
-
     }
 }
 ```
 
-Here we see the notions of `EffectID`, `Environment`, and `let task: Task<(), Error> = actomaton.send(...)`
+Here we see the notions of `EffectQueue` and the `Task<(), Error>` returned from `actomaton.send(...)`:
 
-- `EffectID` is for both manual & automatic cancellation of previous running effects. In this example, `forceLogout` will cancel `login`'s networking effect.
-- `Environment` is useful for injecting effects to be called inside `Reducer` so that they become replaceable. **`Environment` is known as Dependency Injection** (using Reader monad).
+- `EffectQueue` is for automatic cancellation or suspension of effects.
+  In this example, `Newest1EffectQueue` is used so that only the newest 1 effect (`forceLogout`) will survive,
+  and the rest of older queued effects (e.g. an in-flight `login`) will be automatically cancelled.
 - (Optional) `Task<(), Error>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await task.value` to wait for all of them to be completed, or `task.cancel()` to cancel all. Note that `Actomaton` already manages such `task`s for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
-
-### Example 1-3. Timer (using `AsyncSequence`) and `EffectID` cancellation
-
-```swift
-typealias State = Int
-
-enum Action: Sendable {
-    case start, tick, stop
-}
-
-struct TimerID: EffectID {}
-
-struct Environment {
-    let timerEffect: Effect<Action>
-}
-
-let environment = Environment(
-    timerEffect: { userId in
-        Effect.sequence(id: TimerID()) { _ in
-            AsyncStream<()> { continuation in
-                let task = Task {
-                    while true {
-                        try await Task.sleep(/* 1 sec */)
-                        continuation.yield(())
-                    }
-                }
-
-                continuation.onTermination = { @Sendable _ in
-                    task.cancel()
-                }
-            }
-        }
-    }
-)
-
-let reducer = Reducer { action, state, environment in
-    switch action {
-    case .start:
-        return environment.timerEffect
-    case .tick:
-        state += 1
-        return .empty
-    case .stop:
-        return Effect.cancel(id: TimerID())
-    }
-}
-
-let actomaton = Actomaton<Action, State>(
-    state: 0,
-    reducer: reducer,
-    environment: environment
-)
-
-@main
-enum Main {
-    static func test_timer() async {
-        assertEqual(await actomaton.state, 0)
-
-        await actomaton.send(.start)
-
-        assertEqual(await actomaton.state, 0)
-
-        try await Task.sleep(/* 1 sec */)
-        assertEqual(await actomaton.state, 1)
-
-        try await Task.sleep(/* 1 sec */)
-        assertEqual(await actomaton.state, 2)
-
-        try await Task.sleep(/* 1 sec */)
-        assertEqual(await actomaton.state, 3)
-
-        await actomaton.send(.stop)
-
-        try await Task.sleep(/* long enough */)
-        assertEqual(await actomaton.state, 3,
-                    "Should not increment because timer is stopped.")
-    }
-}
-```
-
-In this example, `Effect.sequence(id:)` is used for timer effect, which yields `Action.tick` multiple times.
 
 ### Example 1-4. `EffectQueue`
 
@@ -397,7 +401,7 @@ struct DelayedEffectQueue: EffectQueue {
         .runOldest(maxCount: 3, .suspendNew)
     }
 
-    // Adds delay between effect start. (This is useful for throttling / deboucing)
+    // Adds delay between effect start. (This is useful for throttling / debouncing)
     var effectQueueDelay: EffectQueueDelay {
         .random(0.1 ... 0.3)
     }

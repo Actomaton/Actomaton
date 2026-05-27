@@ -57,7 +57,7 @@ private func readMe1_4() async throws
             .runOldest(maxCount: 3, .suspendNew)
         }
 
-        // Adds delay between effect start. (This is useful for throttling / deboucing)
+        // Adds delay between effect start. (This is useful for throttling / debouncing)
         var effectQueueDelay: EffectQueueDelay {
             .random(0.1 ... 0.3)
         }

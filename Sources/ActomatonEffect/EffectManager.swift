@@ -14,7 +14,8 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
 
     /// Set up communication callbacks bridging the conformer to the parent safe container.
     ///
-    /// Called once by ``MealyMachine`` from inside its `setUp(...)`.
+    /// Called once by the wrapping safe container (e.g. ``Actomaton``, `MealyDriver`, `Store`,
+    /// `TestActomaton`, `DistributedActomaton`) during its initialization.
     ///
     /// - Parameters:
     ///   - withSendability:

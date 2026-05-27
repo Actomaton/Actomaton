@@ -1,7 +1,7 @@
 import ActomatonCore
 import CasePaths
 
-/// `Effect`-specific `ActomatonCore.Reducer` extensions: monoid, contramap(action:), map(id:), map(queue:).
+/// `Effect`-specific `MealyReducer` extensions: monoid, contramap(action:), map(id:), map(queue:).
 extension MealyReducer where Output == Effect<Action>
 {
     // MARK: - Monoid
