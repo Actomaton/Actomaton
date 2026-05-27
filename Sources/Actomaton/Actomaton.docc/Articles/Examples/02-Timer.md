@@ -84,6 +84,12 @@ enum Main {
 }
 ```
 
+Here we see the notions of ``EffectID``, `Environment`, and ``Effect/sequence(id:_:)``:
+
+- ``EffectID`` tags an effect with a `Hashable` identifier so it can be cancelled later via ``Effect/cancel(id:)``. In this example, `TimerID` lets `.stop` cancel the running timer.
+- `Environment` holds the raw dependencies (here, an `AsyncStream`-producing closure). The ``Reducer`` is responsible for wrapping those dependencies in ``Effect``. **`Environment` is known as Dependency Injection Container** (using Reader monad).
+- ``Effect/sequence(id:_:)`` turns an `AsyncSequence` into an ``Effect``, yielding `Action.tick` multiple times until cancelled.
+
 ## Next Step
 
 <doc:03-LoginLogout>

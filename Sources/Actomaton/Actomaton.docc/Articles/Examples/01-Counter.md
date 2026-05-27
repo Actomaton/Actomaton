@@ -77,7 +77,7 @@ reducer = Reducer { action, state, environment in
 `EffectContext` is for runtime-owned capabilities such as clock-based sleeping and cancellation checks.
 Keep API clients and other business dependencies in `Environment`.
 
-NOTE: There are 5 ways of creating ``Effect`` in Actomaton:
+NOTE: There are 6 ways of creating ``Effect`` in Actomaton:
 
 1. No side-effects, but forwards next action only
     - ``Effect/next(action:)``
@@ -87,8 +87,12 @@ NOTE: There are 5 ways of creating ``Effect`` in Actomaton:
     - ``Effect/init(id:queue:run:)``
 4. Multiple `async`s (i.e. `AsyncSequence`) with next actions
     - ``Effect/sequence(id:queue:_:)``
-5. Manual cancellation
+5. Push-style stream that emits next actions via a `send` closure
+    - ``Effect/stream(id:queue:bufferingPolicy:autoFinish:_:)`` — useful for bridging long-lived observers (delegates, callbacks, `NotificationCenter`, etc.)
+6. Manual cancellation
     - ``Effect/cancel(id:)`` / ``Effect/cancel(ids:)``
+
+Effects can also be combined with `+`: ``Effect/cancel(id:)`` `+` ``Effect/init(id:queue:run:)`` runs them as a single effect.
 
 ## Next Step
 

@@ -20,8 +20,8 @@
 3. `EffectQueue` による副作用の自動キャンセル・自動サスペンド
 
 > Tip:
-今回の実装ではコアモジュールの `Actomaton` を状態機械として使用しますが、
-UI 開発向けの `Store` や `RouteStore` に置き換えることも可能です。
+今回の実装では UI 開発向けの `Store` を状態機械として使用します。
+コアモジュールの `Actomaton` (actor) や、画面遷移を扱う `RouteStore` に置き換えることも可能です。
 
 ## Action, State, Reducer, Effect
 
@@ -231,12 +231,14 @@ let reducer = Reducer { action, state, environment in
 > 
 > などがビルトインで定義されており、カスタムで最大同時実行数の設定もできます。
 
-## Actomaton の実装とテスト
+## Store の生成とテスト
 
-それでは最後に、上記の設計図から `Actomaton` を生成してテストを書いてみましょう。
+それでは最後に、上記の設計図から `Store` を生成してテストを書いてみましょう。
+`Store` は `@MainActor` で動作するため、 `state` 参照や `send` の呼び出しに `await` は不要です（`send` が返す `Task` を `await` するときだけ `async` コンテキストが必要です）。
 
 ```swift
-let actomaton = Actomaton<Action, State>(
+@MainActor
+let store = Store<Action, State, Environment>(
     state: .loggedOut,
     reducer: reducer,
     environment: environment // 依存注入コンテナを追加
@@ -245,53 +247,49 @@ let actomaton = Actomaton<Action, State>(
 @main
 enum Main {
     static func test_login_logout() async {
-        var t: Task<(), Error>?
-
         // ログアウト状態
-        assertEqual(await actomaton.state, .loggedOut)
+        assertEqual(store.state, .loggedOut)
 
         // ログイン
-        t = await actomaton.send(.login)
-        assertEqual(await actomaton.state, .loggingIn)
+        let t1 = store.send(.login)
+        assertEqual(store.state, .loggingIn)
 
-        await t?.value // 完了まで待機
+        await t1?.value // 完了まで待機
 
         // ログイン完了状態
-        assertEqual(await actomaton.state, .loggedIn)
+        assertEqual(store.state, .loggedIn)
 
         // ログアウト
-        t = await actomaton.send(.logout)
+        let t2 = store.send(.logout)
 
         // ログアウト中状態
-        assertEqual(await actomaton.state, .loggingOut)
+        assertEqual(store.state, .loggingOut)
 
-        await t?.value // 完了まで待機
+        await t2?.value // 完了まで待機
 
         // ログアウト完了状態
-        assertEqual(await actomaton.state, .loggedOut)
+        assertEqual(store.state, .loggedOut)
     }
 
     static func test_login_forceLogout() async throws {
-        var t: Task<(), Error>?
-
         // ログアウト状態
-        assertEqual(await actomaton.state, .loggedOut)
+        assertEqual(store.state, .loggedOut)
 
         // ログイン
-        await actomaton.send(.login)
-        assertEqual(await actomaton.state, .loggingIn)
+        store.send(.login)
+        assertEqual(store.state, .loggingIn)
 
         // 少し待機してから強制ログアウト
         try await Task.sleep(/* 1 ms */)
-        t = await actomaton.send(.forceLogout)
+        let t = store.send(.forceLogout)
 
         // ログアウト中状態
-        assertEqual(await actomaton.state, .loggingOut)
+        assertEqual(store.state, .loggingOut)
 
         await t?.value // 完了まで待機
 
         // ログアウト完了状態
-        assertEqual(await actomaton.state, .loggedOut)
+        assertEqual(store.state, .loggedOut)
     }
 }
 ```

@@ -20,6 +20,7 @@ This repository consists of 6 modules:
     - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatondebugging/)
 
 4. **`ActomatonTesting`**: `TestActomaton` — exhaustive state-transition testing utility. Wraps `MealyMachine` + `EffectManager` to assert TCA-like `send` / `receive` flows with `customDump` diffs.
+    - [Documentation](https://actomaton.github.io/Actomaton/documentation/actomatontesting/)
 
 In addition, the following lower-level modules are available for advanced use cases:
 
@@ -153,7 +154,7 @@ reducer = Reducer { action, state, environment in
 }
 ```
 
-NOTE: There are 5 ways of creating `Effect` in Actomaton:
+NOTE: There are 6 ways of creating `Effect` in Actomaton:
 
 1. No side-effects, but next action only
     - `Effect.next(action:)`
@@ -163,8 +164,12 @@ NOTE: There are 5 ways of creating `Effect` in Actomaton:
     - `Effect.init(id:run:)`
 4. Multiple `async`s (i.e. `AsyncSequence`) with next actions
     - `Effect.sequence(id:_:)`
-5. Manual cancellation
+5. Push-style stream that emits next actions via a `send` closure
+    - `Effect.stream(id:_:)` — useful for bridging long-lived observers (delegates, callbacks, `NotificationCenter`, etc.)
+6. Manual cancellation
     - `Effect.cancel(id:)` / `.cancel(ids:)`
+
+Effects can also be combined with `+`: `Effect.cancel(id: ...) + Effect { ... }` runs them as a single effect.
 
 ### Example 1-2. Timer (using `AsyncSequence`) and `EffectID` cancellation
 
