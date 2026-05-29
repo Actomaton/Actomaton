@@ -97,11 +97,22 @@ package final class EffectQueueManager<Action, State>: EffectManager
         let tasks_ = tasks
 
         // Make a detached task that waits for all `tasks`.
+        //
+        // The detached inner tasks are not children of this task group, so
+        // structured-cancellation propagation does NOT reach them automatically.
+        // Each child wraps its `try await task.value` with a per-task
+        // `withTaskCancellationHandler` that forwards an explicit `cancel()` to
+        // the awaited inner task — including the feedback-loop chain when
+        // `tracksFeedbacks` is `true`.
         return Task.detached {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 for task in tasks_ {
                     group.addTask {
-                        try await task.value
+                        try await withTaskCancellationHandler {
+                            try await task.value
+                        } onCancel: {
+                            task.cancel()
+                        }
                     }
                 }
                 try await group.waitForAll()
@@ -299,8 +310,16 @@ package final class EffectQueueManager<Action, State>: EffectManager
                 let nextAction = try await single.run(context)
                 if let nextAction {
                     let feedbackTask = await sendAction?(nextAction, priority, tracksFeedbacks)
-                    if tracksFeedbacks {
-                        try await feedbackTask?.value
+                    if tracksFeedbacks, let feedbackTask {
+                        // `feedbackTask` is a detached task spawned via `sendAction`,
+                        // so cancellation on this enclosing detached task does not
+                        // reach it through structured concurrency. Forward the
+                        // cancel explicitly so the in-flight feedback chain stops.
+                        try await withTaskCancellationHandler {
+                            try await feedbackTask.value
+                        } onCancel: {
+                            feedbackTask.cancel()
+                        }
                     }
                 }
             }
@@ -319,21 +338,35 @@ package final class EffectQueueManager<Action, State>: EffectManager
                     try? await context.clock.sleep(until: time, tolerance: nil)
                 }
                 guard let seq = try await sequence.sequence(context) else { return }
-                var feedbackTasks: [Task<(), any Error>] = []
-                for try await nextAction in seq {
-                    let feedbackTask = await sendAction?(nextAction, priority, tracksFeedbacks)
-                    if let feedbackTask {
-                        feedbackTasks.append(feedbackTask)
-                    }
-                }
+
                 if tracksFeedbacks {
+                    // Each feedback task lives inside its own child task scope
+                    // with its own cancellation handler, so no shared mutable
+                    // collection is needed. Structured cancellation in the
+                    // group propagates the outer task's cancel to every child;
+                    // each child's `onCancel` then cancels its `feedbackTask`.
+                    // `addTask` on an already-cancelled group still produces an
+                    // immediately-cancelled child, so feedback tasks spawned
+                    // during the cancel window are also cancelled.
                     try await withThrowingTaskGroup(of: Void.self) { group in
-                        for feedbackTask in feedbackTasks {
-                            group.addTask(priority: priority) {
-                                try await feedbackTask.value
+                        for try await nextAction in seq {
+                            let feedbackTask = await sendAction?(nextAction, priority, tracksFeedbacks)
+                            if let feedbackTask {
+                                group.addTask(priority: priority) {
+                                    try await withTaskCancellationHandler {
+                                        try await feedbackTask.value
+                                    } onCancel: {
+                                        feedbackTask.cancel()
+                                    }
+                                }
                             }
                         }
                         try await group.waitForAll()
+                    }
+                }
+                else {
+                    for try await nextAction in seq {
+                        _ = await sendAction?(nextAction, priority, tracksFeedbacks)
                     }
                 }
             }
