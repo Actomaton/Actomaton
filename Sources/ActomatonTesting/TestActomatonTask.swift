@@ -45,8 +45,14 @@ public struct TestActomatonTask<Emission>: Sendable
 
         guard let sendResult = self.sendResult else { return }
 
-        try await _withTimeout(duration) {
-            await sendResult.completion()
+        let results = try await _withTimeout(duration) {
+            await sendResult.allResults
+        }
+
+        for result in results {
+            if case let .failure(error) = result {
+                throw error
+            }
         }
     }
 

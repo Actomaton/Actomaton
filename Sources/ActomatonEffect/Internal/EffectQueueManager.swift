@@ -346,6 +346,11 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
     {
         let sendAction = self.sendAction
         let context = self.effectContext
+        let feedbackEmit: @Sendable (Result<Emission, any Error>) -> Void = { result in
+            if tracksFeedbacks {
+                emit(result)
+            }
+        }
 
         switch effectKind {
         case let .single(single):
@@ -361,7 +366,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                         emit(.success(emission))
                     }
                     if let action = outcome.action {
-                        let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, emit)
+                        let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, feedbackEmit)
                         if tracksFeedbacks, let feedbackTask {
                             try await _runTaskForwardingCancellation(feedbackTask)
                         }
@@ -400,7 +405,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                             emit(.success(emission))
                         }
                         if let action = outcome.action {
-                            let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, emit)
+                            let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, feedbackEmit)
                             if tracksFeedbacks, let feedbackTask {
                                 feedbackTasks.append(feedbackTask)
                             }

@@ -170,6 +170,29 @@ final class SendResultTests: MainTestCase
         XCTAssertEqual(errors.first as? TestError, TestError())
     }
 
+    func test_untrackedFeedbackDoesNotEmitIntoOriginalResult() async throws
+    {
+        let actomaton = Actomaton<UntrackedFeedbackAction, ErrorState, String>(
+            state: ErrorState(),
+            reducer: untrackedFeedbackReducer,
+            effectContext: effectContext
+        )
+
+        let singleResult = await actomaton.send(.singleRoot)
+        let singleResults = await singleResult.allResults
+        XCTAssertTrue(
+            singleResults.isEmpty,
+            "Untracked single-effect feedback emissions must not leak into the original SendResult."
+        )
+
+        let sequenceResult = await actomaton.send(.sequenceRoot)
+        let sequenceResults = await sequenceResult.allResults
+        XCTAssertTrue(
+            sequenceResults.isEmpty,
+            "Untracked sequence feedback emissions must not leak into the original SendResult."
+        )
+    }
+
     func test_tracksFeedbacks_sequenceFailureWaitsForSpawnedFeedback() async throws
     {
         let actomaton = Actomaton<SequenceFailureAction, SequenceFailureState, Never>(
@@ -280,6 +303,32 @@ private let neverEmissionReducer = Reducer<NeverEmissionAction, ErrorState, Void
         return Effect.fireAndForget { _ in
             throw TestError()
         }
+    }
+}
+
+// MARK: - Untracked feedback emission helpers
+
+private enum UntrackedFeedbackAction: Equatable, Sendable
+{
+    case singleRoot
+    case sequenceRoot
+    case feedback
+}
+
+private let untrackedFeedbackReducer = Reducer<UntrackedFeedbackAction, ErrorState, Void, String> { action, _, _ in
+    switch action {
+    case .singleRoot:
+        return Effect { _ in
+            .action(.feedback)
+        }
+
+    case .sequenceRoot:
+        return Effect.stream(autoFinish: true) { send, _ in
+            send(.action(.feedback))
+        }
+
+    case .feedback:
+        return .emit("feedback")
     }
 }
 

@@ -83,6 +83,45 @@ final class TestActomatonTests: MainTestCase
         XCTAssertLessThan(elapsed, .seconds(0.5))
     }
 
+    func test_sendTask_finish_throwsEffectFailure() async
+    {
+        let testActomaton = TestActomaton(
+            state: CounterState(count: 0),
+            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction, Never>> { action, state, _ in
+                switch action {
+                case .increment:
+                    state.count = 1
+                    return Effect.fireAndForget { _ in
+                        throw TestError()
+                    }
+                case .decrement:
+                    state.count -= 1
+                    return .empty
+                case .reset:
+                    state.count = 0
+                    return .empty
+                }
+            },
+            environment: (),
+            effectContext: effectContext
+        )
+
+        let task = await testActomaton.send(.increment) { state in
+            state.count = 1
+        }
+
+        do {
+            try await task.finish()
+            XCTFail("Expected effect failure.")
+        }
+        catch let error as TestError {
+            XCTAssertEqual(error, TestError())
+        }
+        catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     // MARK: - Basic send + assertion
 
     func test_singleSend() async
@@ -368,6 +407,8 @@ private enum CounterAction: Equatable, Sendable
     case decrement
     case reset
 }
+
+private struct TestError: Error, Equatable {}
 
 private let counterReducer = MealyReducer<
     CounterAction, CounterState, Void, Effect<CounterAction, Never>
