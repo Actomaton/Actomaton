@@ -3,15 +3,15 @@ import CustomDump
 
 // MARK: - debug (logging on `#if DEBUG`)
 
-extension Reducer where Output == Effect<Action>
+extension MealyReducer
 {
     /// Debug-logging `Action` and `State` during `self`'s reducer's run, only in DEBUG configuration.
-    public func debug(
+    public func debug<Emission>(
         _ name: String? = nil,
         action actionLogFormat: ActionLogFormat? = .all(maxDepth: .max),
         state stateLogFormat: StateLogFormat? = .diff
     ) -> Self
-        where Action: Sendable, State: Sendable
+        where Action: Sendable, State: Sendable, Output == Effect<Action, Emission>
     {
 #if DEBUG
         self.log(format: LogFormat(name: name, action: actionLogFormat, state: stateLogFormat))
@@ -23,16 +23,17 @@ extension Reducer where Output == Effect<Action>
     /// Convenient constructor for debug-logging `Action` and `State` during target reducer's run,
     /// by replacing `targetReducer = Reducer.init { ... }` with `Reducer.debug { ... }`,
     /// only in DEBUG configuration.
-    public static func debug(
+    public static func debug<Emission>(
         _ name: String? = nil,
         action actionLogFormat: ActionLogFormat? = .all(maxDepth: .max),
         state stateLogFormat: StateLogFormat? = .diff,
-        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Self.empty.run
+        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action, Emission>
+            = MealyReducer<Action, State, Environment, Effect<Action, Emission>>.empty().run
     ) -> Self
-        where Action: Sendable, State: Sendable
+        where Action: Sendable, State: Sendable, Output == Effect<Action, Emission>
     {
 #if DEBUG
-        self.log(
+        log(
             format: LogFormat(name: name, action: actionLogFormat, state: stateLogFormat),
             nextRun
         )
@@ -44,14 +45,14 @@ extension Reducer where Output == Effect<Action>
 
 // MARK: - log
 
-extension Reducer where Output == Effect<Action>
+extension MealyReducer
 {
     /// Debug-logging `Action` and `State` during `self`'s reducer's run, using ``LogFormat``.
     ///
     /// - Parameters:
     ///   - format: ``LogFormat`` that formats console-logging. No logging if `format = nil`.
-    public func log(format: LogFormat?) -> Self
-        where Action: Sendable, State: Sendable
+    public func log<Emission>(format: LogFormat?) -> Self
+        where Action: Sendable, State: Sendable, Output == Effect<Action, Emission>
     {
         Self.log(format: format, self.run)
     }
@@ -61,11 +62,12 @@ extension Reducer where Output == Effect<Action>
     ///
     /// - Parameters:
     ///   - format: ``LogFormat`` that formats console-logging. No logging if `format = nil`.
-    public static func log(
+    public static func log<Emission>(
         format: LogFormat?,
-        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action> = Self.empty.run
+        _ nextRun: @escaping @Sendable (Action, inout State, Environment) -> Effect<Action, Emission>
+            = MealyReducer<Action, State, Environment, Effect<Action, Emission>>.empty().run
     ) -> Self
-        where Action: Sendable, State: Sendable
+        where Action: Sendable, State: Sendable, Output == Effect<Action, Emission>
     {
         // Return normal reducer without logging.
         guard let format else {
@@ -76,7 +78,7 @@ extension Reducer where Output == Effect<Action>
             let currentState = state // Needs copy to not carry `inout`.
 
             // Effect for Action & State `.simple` or `.all` printing.
-            let preEffect = Effect<Action>.fireAndForget { _ in
+            let preEffect = Effect<Action, Emission>.fireAndForget { _ in
                 let name = format.name.map { "[\($0)]" } ?? ""
 
                 if let actionLogFormat = format.actionLogFormat {
@@ -115,7 +117,7 @@ extension Reducer where Output == Effect<Action>
             let nextState = state // Needs copy to not carry `inout`.
 
             /// Effect for State's `.diff` printing.
-            let postEffect = Effect<Action>.fireAndForget { _ in
+            let postEffect = Effect<Action, Emission>.fireAndForget { _ in
                 if let stateLogFormat = format.stateLogFormat {
                     switch stateLogFormat.format {
                     case .simple, .all:

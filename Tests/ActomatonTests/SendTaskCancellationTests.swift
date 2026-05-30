@@ -6,13 +6,13 @@ import XCTest
 /// in-flight feedback-loop effects.
 final class SendTaskCancellationTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     private var flags = Flags()
 
     private func setupActomaton(initialState: State) async
     {
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: initialState,
             reducer: Reducer { [flags] action, state, _ in
                 switch action {
@@ -103,7 +103,7 @@ final class SendTaskCancellationTests: MainTestCase
 
         assertEqual(await actomaton.state, ._1)
 
-        let task = await actomaton.send(._1To2, tracksFeedbacks: true)
+        let result = await actomaton.send(._1To2, tracksFeedbacks: true)
 
         // Advance to mid-flight of `._2To3`'s effect:
         // - `._1To2`'s effect sleeps 1 tick, fires `._2To3`, state -> _3
@@ -112,8 +112,8 @@ final class SendTaskCancellationTests: MainTestCase
         assertEqual(await actomaton.state, ._3)
 
         // Cancel while `._2To3` is still in-flight.
-        task?.cancel()
-        _ = try? await task?.value
+        result.cancel()
+        await result.completion()
 
         // Advance well past every remaining sleep so the in-flight effect would
         // have completed had cancellation not propagated.
@@ -152,14 +152,14 @@ final class SendTaskCancellationTests: MainTestCase
 
         assertEqual(await actomaton.state, ._1)
 
-        let task = await actomaton.send(._1To2, tracksFeedbacks: true)
+        let result = await actomaton.send(._1To2, tracksFeedbacks: true)
 
         // `._1To2`'s effect is mid-flight (0.5 of 1 tick).
         await clock.advance(by: .ticks(0.5))
         assertEqual(await actomaton.state, ._2)
 
-        task?.cancel()
-        _ = try? await task?.value
+        result.cancel()
+        await result.completion()
 
         await clock.advance(by: .ticks(10))
 
@@ -188,15 +188,15 @@ final class SendTaskCancellationTests: MainTestCase
 
         assertEqual(await actomaton.state, ._1)
 
-        let task = await actomaton.send(._startSeq, tracksFeedbacks: true)
+        let result = await actomaton.send(._startSeq, tracksFeedbacks: true)
 
         // Advance until the sequence has emitted `._seqInnerStep` and the
         // follow-up single effect is mid-flight.
         await clock.advance(by: .ticks(1.5))
         assertEqual(await actomaton.state, ._3)
 
-        task?.cancel()
-        _ = try? await task?.value
+        result.cancel()
+        await result.completion()
 
         await clock.advance(by: .ticks(10))
 

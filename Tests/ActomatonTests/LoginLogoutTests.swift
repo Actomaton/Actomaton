@@ -3,7 +3,7 @@ import XCTest
 
 final class LoginLogoutTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     private var flags = Flags()
 
@@ -27,7 +27,7 @@ final class LoginLogoutTests: MainTestCase
 
         struct LoginFlowEffectQueue: Newest1EffectQueue {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: .loggedOut,
             reducer: Reducer { [flags] action, state, _ in
                 switch (action, state) {
@@ -87,22 +87,22 @@ final class LoginLogoutTests: MainTestCase
     // `loggedOut => loggingIn => loggedIn => loggingOut => loggedOut` succeeds.
     func test_login_logout() async throws
     {
-        var t: Task<(), any Error>?
+        var result: SendResult<Never>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
-        t = await actomaton.send(.login)
+        result = await actomaton.send(.login)
         assertEqual(await actomaton.state, .loggingIn)
 
         await clock.advance(by: .ticks(1))
-        try await t?.value // wait for previous effect
+        await result?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedIn)
 
-        t = await actomaton.send(.logout)
+        result = await actomaton.send(.logout)
         assertEqual(await actomaton.state, .loggingOut)
 
         await clock.advance(by: .ticks(1))
-        try await t?.value // wait for previous effect
+        await result?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         let isLoginCancelled = await flags.isLoginCancelled
@@ -112,7 +112,7 @@ final class LoginLogoutTests: MainTestCase
     // `loggedOut => loggingIn ==(ForceLogout)==> loggingOut => loggedOut` succeeds.
     func test_login_forceLogout() async throws
     {
-        var t: Task<(), any Error>?
+        var result: SendResult<Never>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -121,12 +121,12 @@ final class LoginLogoutTests: MainTestCase
 
         // Wait for a while and interrupt by `forceLogout`.
         await clock.advance(by: .ticks(0.1))
-        t = await actomaton.send(.forceLogout)
+        result = await actomaton.send(.forceLogout)
 
         assertEqual(await actomaton.state, .loggingOut)
 
         await clock.advance(by: .ticks(1))
-        try await t?.value // wait for previous effect
+        await result?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         let isLoginCancelled = await flags.isLoginCancelled

@@ -14,7 +14,7 @@ private func readMe1_1_effectContext() async throws
         var isRunning = false
     }
 
-    let reducer = Reducer<Action, State, Void> { action, state, _ in
+    let reducer = Reducer<Action, State, Void, Never> { action, state, _ in
         switch action {
         case .start:
             state.isRunning = true
@@ -29,7 +29,7 @@ private func readMe1_1_effectContext() async throws
         }
     }
 
-    let actomaton = Actomaton<Action, State>(
+    let actomaton = Actomaton<Action, State, Never>(
         state: State(),
         reducer: reducer
     )
@@ -63,7 +63,7 @@ private func readMe1_4() async throws
         }
     }
 
-    let reducer = Reducer<Action, State, Environment> { action, _, environment in
+    let reducer = Reducer<Action, State, Environment, Never> { action, _, environment in
         switch action {
         case let .fetch(id):
             return Effect(queue: DelayedEffectQueue()) { _ in
@@ -77,7 +77,7 @@ private func readMe1_4() async throws
         }
     }
 
-    let actomaton = Actomaton<Action, State>(
+    let actomaton = Actomaton<Action, State, Never>(
         state: State(),
         reducer: reducer,
         environment: Environment(fetch: { _ in Data() /* ... */ })

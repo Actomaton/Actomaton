@@ -2,18 +2,18 @@ import ActomatonCore
 import Clocks
 import Foundation
 
-/// Default ``EffectManager`` implementation that manages ``Effect<Action>`` with queue-based task lifecycle.
+/// Default ``EffectManager`` implementation that manages ``Effect`` with queue-based task lifecycle.
 ///
 /// Handles task creation, queue policies (newest/oldest), effect delays, and pending effect suspension.
 /// Does NOT own the reducer or state — those are managed by ``MealyMachine``.
 ///
-/// `EffectQueueManager` is a plain non-`Sendable` class. Cleanup work spawned from detached tasks
+/// `EffectQueueManager` is a plain non-`Sendable` class. Cleanup work spawned from unstructured tasks
 /// re-enters the parent safe container that wraps this manager through the `withSendability`
 /// callback supplied at `setUp(...)`-time, which hands `self` back as a parameter — so no
-/// `[weak self]` capture of the (non-Sendable) `self` is needed in the detached task.
-package final class EffectQueueManager<Action, State>: EffectManager
+/// `[weak self]` capture of the (non-Sendable) `self` is needed in those tasks.
+package final class EffectQueueManager<Action, State, Emission>: EffectManager
 {
-    package typealias Output = Effect<Action>
+    package typealias Output = Effect<Action, Emission>
 
     private let effectContext: EffectContext
 
@@ -29,6 +29,15 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// Suspended effects with their original send context.
     private var pendingEffects: [_EffectQueue: [PendingEffect]] = [:]
 
+    /// Dequeued tasks still represented to the original caller by their suspended-effect task.
+    ///
+    /// - Key: the task returned to the public `send` / `SendResult` path while the effect is
+    ///   suspended. It completes only when the pending effect is dropped or the dequeued effect
+    ///   task finishes. This is the task cancelled by `SendResult.cancel()`.
+    /// - Value: the actual running effect task later created by `makeTask(...)` after queue
+    ///   capacity opens and the pending effect is dequeued.
+    private var dequeuedTasks: [Task<(), any Error>: Task<(), any Error>] = [:]
+
     /// Tracked latest effect start time for delayed effects calculation.
     private var latestEffectTime: [_EffectQueue: AnyClock<Duration>.Instant] = [:]
 
@@ -38,15 +47,22 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     // MARK: - Callbacks (set via setUp)
 
-    private var sendAction: (@Sendable (Action, TaskPriority?, Bool) async -> Task<(), any Error>?)?
+    private var sendAction: (
+        @Sendable (
+            Action,
+            TaskPriority?,
+            Bool,
+            _ emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
+        ) async -> Task<(), any Error>?
+    )?
 
     /// `@Sendable` closure with **inherited sendability** from the parent safe container that
     /// wraps this manager. Hands `self` back to the supplied callback under that sendability,
-    /// so the detached cleanup task in ``enqueueTask`` can mutate bookkeeping safely without
+    /// so cleanup tasks in ``enqueueTask`` can mutate bookkeeping safely without
     /// capturing (non-Sendable) `self`.
     private var withSendability: (
         @Sendable (
-            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State, Emission>) -> Void
         ) async -> Void
     )?
 
@@ -66,9 +82,14 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     package func setUp(
         withSendability: @escaping @Sendable (
-            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State>) -> Void
+            _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State, Emission>) -> Void
         ) async -> Void,
-        sendAction: @escaping @Sendable (Action, TaskPriority?, _ tracksFeedbacks: Bool) async -> Task<(), any Error>?
+        sendAction: @escaping @Sendable (
+            _ action: Action,
+            _ priority: TaskPriority?,
+            _ tracksFeedbacks: Bool,
+            _ emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
+        ) async -> Task<(), any Error>?
     )
     {
         self.withSendability = withSendability
@@ -76,9 +97,10 @@ package final class EffectQueueManager<Action, State>: EffectManager
     }
 
     package func processOutput(
-        _ output: Effect<Action>,
+        _ output: Effect<Action, Emission>,
         priority: TaskPriority?,
-        tracksFeedbacks: Bool
+        tracksFeedbacks: Bool,
+        emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
     ) -> Task<(), any Error>?
     {
         var tasks: [Task<(), any Error>] = []
@@ -87,7 +109,8 @@ package final class EffectQueueManager<Action, State>: EffectManager
                 contentsOf: processEffectKind(
                     kind,
                     priority: priority,
-                    tracksFeedbacks: tracksFeedbacks
+                    tracksFeedbacks: tracksFeedbacks,
+                    emit: emit
                 )
             )
         }
@@ -96,26 +119,21 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
         let tasks_ = tasks
 
-        // Make a detached task that waits for all `tasks`.
-        //
-        // The detached inner tasks are not children of this task group, so
-        // structured-cancellation propagation does NOT reach them automatically.
-        // Each child wraps its `try await task.value` with a per-task
-        // `withTaskCancellationHandler` that forwards an explicit `cancel()` to
-        // the awaited inner task — including the feedback-loop chain when
-        // `tracksFeedbacks` is `true`.
-        return Task.detached {
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                for task in tasks_ {
-                    group.addTask {
-                        try await withTaskCancellationHandler {
-                            try await task.value
-                        } onCancel: {
-                            task.cancel()
+        // Keep the returned task unstructured, but run its supervisor work off any caller actor.
+        return Task(priority: priority) { @concurrent in
+            try await withTaskCancellationHandler {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    for task in tasks_ {
+                        group.addTask(priority: priority) {
+                            try await _runTaskForwardingCancellation(task)
                         }
                     }
+                    try await group.waitForAll()
                 }
-                try await group.waitForAll()
+            } onCancel: {
+                for task in tasks_ {
+                    task.cancel()
+                }
             }
         }
     }
@@ -175,33 +193,47 @@ package final class EffectQueueManager<Action, State>: EffectManager
     // MARK: - Private
 
     private func processEffectKind(
-        _ kind: Effect<Action>.Kind,
+        _ kind: Effect<Action, Emission>.Kind,
         priority: TaskPriority?,
-        tracksFeedbacks: Bool
+        tracksFeedbacks: Bool,
+        emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
     ) -> [Task<(), any Error>]
     {
         switch kind {
         case .single, .sequence:
-            switch checkQueuePolicy(effectKind: kind, priority: priority, tracksFeedbacks: tracksFeedbacks) {
+            let taskPriority = kind.priority ?? priority
+
+            switch checkQueuePolicy(
+                effectKind: kind,
+                priority: taskPriority,
+                tracksFeedbacks: tracksFeedbacks,
+                emit: emit
+            ) {
             case .execute:
                 let time = calculateEffectTime(queue: kind.queue)
                 if let task = makeTask(
                     effectKind: kind,
                     time: time,
-                    priority: priority,
-                    tracksFeedbacks: tracksFeedbacks
+                    priority: taskPriority,
+                    tracksFeedbacks: tracksFeedbacks,
+                    emit: emit
                 )
                 {
                     return [task]
                 }
                 return []
 
-            case let .suspend(waitTask):
-                return [waitTask]
+            case let .suspend(suspendedEffectTask):
+                return [suspendedEffectTask]
 
             case .discard:
                 return []
             }
+
+        case let .emission(emission):
+            // Synchronous side-channel emission — deliver to the original `send` caller.
+            emit(.success(emission))
+            return []
 
         case .next:
             // Should not appear — MealyMachine.send resolves .next before passing to EffectQueueManager.
@@ -221,9 +253,10 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     /// Checks queue policy and performs any needed task drops/suspensions.
     private func checkQueuePolicy(
-        effectKind: Effect<Action>.Kind,
+        effectKind: Effect<Action, Emission>.Kind,
         priority: TaskPriority?,
-        tracksFeedbacks: Bool
+        tracksFeedbacks: Bool,
+        emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
     ) -> QueuePolicyDecision
     {
         guard let queue = effectKind.queue else { return .execute }
@@ -267,19 +300,31 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
                     let (stream, continuation) = AsyncStream<Never>.makeStream()
 
+                    let suspendedEffectTask = Task<(), any Error> {
+                        await withTaskCancellationHandler {
+                            for await _ in stream {}
+                        } onCancel: {
+                            continuation.finish()
+                        }
+                    }
+
                     pendingEffects[effectQueue, default: []].append(
                         PendingEffect(
                             kind: effectKind,
                             priority: priority,
                             tracksFeedbacks: tracksFeedbacks,
+                            suspendedEffectTask: suspendedEffectTask,
+                            emit: emit,
                             onComplete: continuation
                         )
                     )
 
-                    let waitTask = Task<(), any Error> {
-                        for await _ in stream {}
-                    }
-                    return .suspend(waitTask: waitTask)
+                    observeSuspendedEffectTaskCancellation(
+                        suspendedEffectTask,
+                        priority: priority
+                    )
+
+                    return .suspend(suspendedEffectTask: suspendedEffectTask)
 
                 case .discardNew:
                     cancelEffectKind(effectKind)
@@ -290,37 +335,51 @@ package final class EffectQueueManager<Action, State>: EffectManager
         }
     }
 
-    /// Creates a detached task for the given effect kind.
+    /// Creates an unstructured task for the given effect kind.
     private func makeTask(
-        effectKind: Effect<Action>.Kind,
+        effectKind: Effect<Action, Emission>.Kind,
         time: AnyClock<Duration>.Instant?,
         priority: TaskPriority?,
-        tracksFeedbacks: Bool
+        tracksFeedbacks: Bool,
+        emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
     ) -> Task<(), any Error>?
     {
         let sendAction = self.sendAction
         let context = self.effectContext
+        let feedbackEmit: @Sendable (Result<Emission, any Error>) -> Void = { result in
+            if tracksFeedbacks {
+                emit(result)
+            }
+        }
 
         switch effectKind {
         case let .single(single):
-            let task = Task.detached(priority: priority) {
-                if let time {
-                    try? await context.clock.sleep(until: time, tolerance: nil)
-                }
-                let nextAction = try await single.run(context)
-                if let nextAction {
-                    let feedbackTask = await sendAction?(nextAction, priority, tracksFeedbacks)
-                    if tracksFeedbacks, let feedbackTask {
-                        // `feedbackTask` is a detached task spawned via `sendAction`,
-                        // so cancellation on this enclosing detached task does not
-                        // reach it through structured concurrency. Forward the
-                        // cancel explicitly so the in-flight feedback chain stops.
-                        try await withTaskCancellationHandler {
-                            try await feedbackTask.value
-                        } onCancel: {
-                            feedbackTask.cancel()
+            let task = Task<(), any Error>(priority: priority) { @concurrent in
+                do {
+                    if let time {
+                        try? await context.clock.sleep(until: time, tolerance: nil)
+                    }
+                    let outcome = try await single.run(context)
+                    guard let outcome else { return }
+
+                    if let emission = outcome.emission {
+                        emit(.success(emission))
+                    }
+                    if let action = outcome.action {
+                        let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, feedbackEmit)
+                        if tracksFeedbacks, let feedbackTask {
+                            try await _runTaskForwardingCancellation(feedbackTask)
                         }
                     }
+                }
+                catch is CancellationError {
+                    // Cancellation is not an in-band failure; teardown is driven by the
+                    // supervisor cancelling all sibling tasks. Swallow so the aggregating
+                    // task group does not rethrow and cancel unrelated siblings.
+                }
+                catch {
+                    // Surface this single effect's error in-band, leaving siblings running.
+                    emit(.failure(error))
                 }
             }
             enqueueTask(
@@ -333,40 +392,51 @@ package final class EffectQueueManager<Action, State>: EffectManager
             return task
 
         case let .sequence(sequence):
-            let task = Task<(), any Error>.detached(priority: priority) {
-                if let time {
-                    try? await context.clock.sleep(until: time, tolerance: nil)
-                }
-                guard let seq = try await sequence.sequence(context) else { return }
+            let task = Task<(), any Error>(priority: priority) { @concurrent in
+                var feedbackTasks: [Task<(), any Error>] = []
 
-                if tracksFeedbacks {
-                    // Each feedback task lives inside its own child task scope
-                    // with its own cancellation handler, so no shared mutable
-                    // collection is needed. Structured cancellation in the
-                    // group propagates the outer task's cancel to every child;
-                    // each child's `onCancel` then cancels its `feedbackTask`.
-                    // `addTask` on an already-cancelled group still produces an
-                    // immediately-cancelled child, so feedback tasks spawned
-                    // during the cancel window are also cancelled.
-                    try await withThrowingTaskGroup(of: Void.self) { group in
-                        for try await nextAction in seq {
-                            let feedbackTask = await sendAction?(nextAction, priority, tracksFeedbacks)
-                            if let feedbackTask {
-                                group.addTask(priority: priority) {
-                                    try await withTaskCancellationHandler {
-                                        try await feedbackTask.value
-                                    } onCancel: {
-                                        feedbackTask.cancel()
-                                    }
-                                }
+                do {
+                    if let time {
+                        try? await context.clock.sleep(until: time, tolerance: nil)
+                    }
+                    guard let seq = try await sequence.sequence(context) else { return }
+                    for try await outcome in seq {
+                        if let emission = outcome.emission {
+                            emit(.success(emission))
+                        }
+                        if let action = outcome.action {
+                            let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, feedbackEmit)
+                            if tracksFeedbacks, let feedbackTask {
+                                feedbackTasks.append(feedbackTask)
                             }
                         }
-                        try await group.waitForAll()
+                    }
+                    if tracksFeedbacks {
+                        try await _runTasksForwardingCancellation(feedbackTasks, priority: priority)
                     }
                 }
-                else {
-                    for try await nextAction in seq {
-                        _ = await sendAction?(nextAction, priority, tracksFeedbacks)
+                catch is CancellationError {
+                    // Cancellation is not an in-band failure; siblings are torn down by the
+                    // supervisor, not by rethrowing here.
+                    if tracksFeedbacks {
+                        await _cancelAndDrainTasks(feedbackTasks)
+                    }
+                }
+                catch {
+                    // Surface this sequence effect's error (e.g. an `AsyncSequence` that threw,
+                    // or a `.stream` failure) in-band, leaving siblings running.
+                    emit(.failure(error))
+
+                    if tracksFeedbacks {
+                        do {
+                            try await _runTasksForwardingCancellation(feedbackTasks, priority: priority)
+                        }
+                        catch is CancellationError {
+                            await _cancelAndDrainTasks(feedbackTasks)
+                        }
+                        catch {
+                            emit(.failure(error))
+                        }
                     }
                 }
             }
@@ -379,16 +449,16 @@ package final class EffectQueueManager<Action, State>: EffectManager
             )
             return task
 
-        case .next, .cancel, .updateQueue:
+        case .next, .emission, .cancel, .updateQueue:
             return nil
         }
     }
 
-    /// Enqueues running `task` and sets up a detached cleanup task.
+    /// Enqueues running `task` and sets up an unstructured cleanup task.
     ///
     /// The cleanup task snapshots `self.withSendability` (a Sendable closure value) and uses
     /// it to re-enter the parent safe container under inherited sendability. `self` is handed
-    /// back as a parameter to the inner callback, so the detached task does NOT need to capture
+    /// back as a parameter to the inner callback, so the cleanup task does NOT need to capture
     /// `self` — letting `EffectQueueManager` remain non-Sendable.
     private func enqueueTask(
         _ task: Task<(), any Error>,
@@ -412,7 +482,7 @@ package final class EffectQueueManager<Action, State>: EffectManager
         let withSendability = self.withSendability
 
         // Clean up after `task` is completed.
-        Task<(), any Error>.detached(priority: priority) {
+        Task<(), any Error>(priority: priority) { @concurrent in
             // Wait for `task` to complete.
             _ = await task.result
 
@@ -431,6 +501,66 @@ package final class EffectQueueManager<Action, State>: EffectManager
                 )
             }
         }
+    }
+
+    /// Observes cancellation of the completion task returned for a suspended pending effect.
+    ///
+    /// `runOldest(..., .suspendNew)` returns this task to the caller before the effect actually
+    /// starts. The task completes only after the pending effect is dropped or the dequeued effect
+    /// task finishes. If `SendResult.cancel()` cancels that task, the cancellation observer re-enters
+    /// the manager and cancels the represented effect: either by removing it from `pendingEffects`,
+    /// or by forwarding cancellation to its dequeued running task.
+    private func observeSuspendedEffectTaskCancellation(
+        _ suspendedEffectTask: Task<(), any Error>,
+        priority: TaskPriority?
+    )
+    {
+        let withSendability = self.withSendability
+
+        // Clean up when the suspended-effect task is cancelled,
+        // whether it is still pending or already dequeued.
+        Task<(), Never>(priority: priority) { @concurrent in
+            _ = await suspendedEffectTask.result
+
+            if suspendedEffectTask.isCancelled {
+                await withSendability? { self_ in
+                    self_.cancelPendingEffect(suspendedEffectTask: suspendedEffectTask)
+                }
+            }
+        }
+    }
+
+    /// Cancels the effect represented by `suspendedEffectTask`.
+    ///
+    /// If the effect is still suspended, it is removed from `pendingEffects` without ever running.
+    /// If it has already been dequeued, the pending entry is gone, so
+    /// `dequeuedTasks` forwards cancellation from the suspended-effect task
+    /// to the running effect task.
+    private func cancelPendingEffect(suspendedEffectTask: Task<(), any Error>)
+    {
+        // Remove pending effect that is associated with `suspendedEffectTask`.
+        for (effectQueue, pendings) in pendingEffects {
+            guard let index = pendings.firstIndex(where: {
+                $0.suspendedEffectTask == suspendedEffectTask
+            })
+            else {
+                continue
+            }
+
+            if let removed = pendingEffects[effectQueue]?.remove(at: index) {
+                cancelEffectKind(removed.kind)
+                removed.onComplete.finish()
+            }
+
+            if pendingEffects[effectQueue]?.isEmpty == true {
+                pendingEffects[effectQueue] = nil
+            }
+
+            return
+        }
+
+        // Or, remove current running dequeued task.
+        dequeuedTasks.removeValue(forKey: suspendedEffectTask)?.cancel()
     }
 
     /// Cancels running and pending effects matching the predicate.
@@ -510,23 +640,42 @@ package final class EffectQueueManager<Action, State>: EffectManager
             let pending = pendingEffects[effectQueue]!.removeFirst()
             let time = calculateEffectTime(queue: queue)
 
+            if pending.suspendedEffectTask.isCancelled {
+                cancelEffectKind(pending.kind)
+                pending.onComplete.finish()
+                continue
+            }
+
             Debug
                 .print(
                     "[dequeuePendingIfPossible] Dequeued pending effect (running: \(currentCount), maxCount: \(maxCount))"
                 )
 
-            let task = makeTask(
+            let dequeuedTask = makeTask(
                 effectKind: pending.kind,
                 time: time,
                 priority: pending.priority,
-                tracksFeedbacks: pending.tracksFeedbacks
+                tracksFeedbacks: pending.tracksFeedbacks,
+                emit: pending.emit
             )
 
-            // Bridge: signal the original send's waiting task when the dequeued task completes.
+            // Bridge the original suspended-effect task to the newly-created running
+            // task. The bridge is used in both directions: completion of the running task
+            // finishes the suspended-effect task, and cancellation of the
+            // suspended-effect task cancels the running task via `dequeuedTasks`.
             let onComplete = pending.onComplete
-            if let task {
-                Task<Void, Never> {
-                    _ = await task.result
+            let suspendedEffectTask = pending.suspendedEffectTask
+            if let dequeuedTask {
+                dequeuedTasks[suspendedEffectTask] = dequeuedTask
+                let withSendability = self.withSendability
+
+                Task<Void, Never>(priority: pending.priority) {
+                    // Wait for `task` to complete.
+                    _ = await dequeuedTask.result
+
+                    await withSendability? { self_ in
+                        self_.dequeuedTasks.removeValue(forKey: suspendedEffectTask)
+                    }
                     onComplete.finish()
                 }
             }
@@ -538,22 +687,22 @@ package final class EffectQueueManager<Action, State>: EffectManager
 
     /// Cancels `effectKind`'s `single` or `sequence` immediately
     /// so that cancellation can still be delivered to `Effect`'s async scope.
-    private func cancelEffectKind(_ effectKind: Effect<Action>.Kind)
+    private func cancelEffectKind(_ effectKind: Effect<Action, Emission>.Kind)
     {
         let context = self.effectContext
 
         switch effectKind {
         case let .single(single):
-            Task<Void, any Error>.detached {
+            Task<Void, any Error>(priority: single.priority) { @concurrent in
                 _ = try await single.run(context)
             }
             .cancel() // Cancel immediately.
         case let .sequence(sequence):
-            Task<Void, any Error>.detached {
+            Task<Void, any Error>(priority: sequence.priority) { @concurrent in
                 _ = try await sequence.sequence(context)
             }
             .cancel() // Cancel immediately.
-        case .next, .cancel, .updateQueue:
+        case .next, .emission, .cancel, .updateQueue:
             return
         }
     }
@@ -563,9 +712,20 @@ package final class EffectQueueManager<Action, State>: EffectManager
     /// A suspended effect together with its original `send` context.
     private struct PendingEffect
     {
-        let kind: Effect<Action>.Kind
+        let kind: Effect<Action, Emission>.Kind
         let priority: TaskPriority?
         let tracksFeedbacks: Bool
+
+        /// Placeholder task returned to the original `send` while this effect is suspended.
+        ///
+        /// This task does not complete merely when the effect is dequeued. It stays alive until
+        /// the suspended effect is dropped, or until the dequeued effect task finishes, so callers
+        /// can await/cancel the full lifecycle through the original `SendResult`.
+        let suspendedEffectTask: Task<(), any Error>
+
+        /// Original emission callback — preserved so a deferred dequeue still routes
+        /// `Emission` emissions into the top-level result stream that issued the `send`.
+        let emit: @Sendable (Result<Emission, any Error>) -> Void
 
         /// Signalled when the dequeued effect task completes,
         /// allowing the original `send`'s returned Task to finish.
@@ -578,11 +738,64 @@ package final class EffectQueueManager<Action, State>: EffectManager
         /// The effect should be executed immediately.
         case execute
 
-        /// The effect was suspended. The associated task completes when
-        /// the effect is eventually dequeued and finishes.
-        case suspend(waitTask: Task<(), any Error>)
+        /// The effect was suspended.
+        ///
+        /// The associated task represents the suspended effect's full lifecycle: it remains pending
+        /// across dequeue and completes only after the dequeued effect task finishes, or after the
+        /// pending effect is cancelled/dropped.
+        case suspend(suspendedEffectTask: Task<(), any Error>)
 
         /// The effect was discarded (e.g. `discardNew` policy).
         case discard
+    }
+}
+
+/// Runs and awaits `task` while forwarding cancellation from the awaiting task into `task`.
+///
+/// Plain `try await task.value` only waits for the task's result. If the awaiting
+/// task is cancelled, Swift does not automatically call `cancel()` on the task being
+/// awaited, which matters here because effect tasks are unstructured task handles rather
+/// than children of the waiter. This helper preserves
+/// `SendResult.cancel()` semantics by turning cancellation of the waiter into
+/// cancellation of the underlying effect task.
+private func _runTaskForwardingCancellation(
+    _ task: Task<(), any Error>
+) async throws
+{
+    try await withTaskCancellationHandler {
+        try await task.value
+    } onCancel: {
+        task.cancel()
+    }
+}
+
+private func _runTasksForwardingCancellation(
+    _ tasks: [Task<(), any Error>],
+    priority: TaskPriority?
+) async throws
+{
+    try await withThrowingTaskGroup(of: Void.self) { group in
+        for task in tasks {
+            group.addTask(priority: priority) {
+                try await _runTaskForwardingCancellation(task)
+            }
+        }
+        try await group.waitForAll()
+    }
+}
+
+private func _cancelAndDrainTasks(
+    _ tasks: [Task<(), any Error>]
+) async
+{
+    for task in tasks {
+        task.cancel()
+    }
+
+    // These are already-running unstructured tasks. Sequentially awaiting their results only
+    // drains completion; it does not start them one-by-one, so wall-clock wait is bounded by
+    // the slowest cancellation-aware task rather than the sum of all task durations.
+    for task in tasks {
+        _ = await task.result
     }
 }

@@ -9,7 +9,7 @@ extension DistributedActomaton
     /// Initializer without `environment`.
     public init(
         state: State,
-        reducer: Reducer<Action, State, ()>,
+        reducer: Reducer<Action, State, (), Never>,
         effectContext: EffectContext = .init(clock: ContinuousClock()),
         actorSystem: ActorSystem
     )
@@ -17,7 +17,7 @@ extension DistributedActomaton
         self.init(
             state: state,
             reducer: reducer,
-            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext),
+            effectManager: EffectQueueManager<Action, State, Never>(effectContext: effectContext),
             actorSystem: actorSystem
         )
     }
@@ -25,7 +25,7 @@ extension DistributedActomaton
     /// Initializer with `environment`.
     public init<Environment>(
         state: State,
-        reducer: Reducer<Action, State, Environment>,
+        reducer: Reducer<Action, State, Environment, Never>,
         environment: Environment,
         effectContext: EffectContext = .init(clock: ContinuousClock()),
         actorSystem: ActorSystem
@@ -33,10 +33,10 @@ extension DistributedActomaton
     {
         self.init(
             state: state,
-            reducer: Reducer<Action, State, ()> { action, state, _ in
+            reducer: Reducer<Action, State, (), Never> { action, state, _ in
                 reducer.run(action, &state, environment)
             },
-            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext),
+            effectManager: EffectQueueManager<Action, State, Never>(effectContext: effectContext),
             actorSystem: actorSystem
         )
     }

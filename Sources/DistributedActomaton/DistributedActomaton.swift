@@ -2,16 +2,17 @@ import Actomaton
 import ActomatonEffect
 import Distributed
 
-/// `DistributedActomaton` wraps a ``MealyMachine`` specialized with `Output == Effect<Action>` inside a
-/// Swift distributed actor, providing serial isolation for `send(_:)` and `state` access. It owns the
+/// `DistributedActomaton` wraps a ``MealyMachine`` specialized with
+/// `Output == Effect<Action, Never>` inside a Swift distributed actor, providing serial isolation
+/// for `send(_:)` and `state` access. It owns the
 /// ``EffectManager`` and turns the asynchronous-remainder output from ``MealyMachine`` into
 /// running Swift Concurrency tasks.
 public distributed actor DistributedActomaton<Action, State, ActorSystem>
     where Action: Sendable, State: Sendable, ActorSystem: DistributedActorSystem
 {
-    private let machine: MealyMachine<Action, State, Effect<Action>>
+    private let machine: MealyMachine<Action, State, Effect<Action, Never>>
 
-    private let effectManager: any EffectManager<Action, State, Effect<Action>>
+    private let effectManager: any EffectManager<Action, State, Effect<Action, Never>>
 
     public distributed var state: State
     {
@@ -21,8 +22,8 @@ public distributed actor DistributedActomaton<Action, State, ActorSystem>
     /// Designated initializer that takes an explicit ``EffectManager``.
     public init(
         state: State,
-        reducer: MealyReducer<Action, State, (), Effect<Action>>,
-        effectManager: some EffectManager<Action, State, Effect<Action>>,
+        reducer: MealyReducer<Action, State, (), Effect<Action, Never>>,
+        effectManager: some EffectManager<Action, State, Effect<Action, Never>>,
         actorSystem: ActorSystem
     )
     {
@@ -39,7 +40,7 @@ public distributed actor DistributedActomaton<Action, State, ActorSystem>
                     self_.runIsolatedEffectManager(runEffM)
                 }
             },
-            sendAction: { [weak self] action, priority, tracksFeedbacks in
+            sendAction: { [weak self] action, priority, tracksFeedbacks, _ in
                 return await self?.whenLocal { self_ in
                     self_.sendLocal(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
                 } ?? nil
@@ -50,10 +51,8 @@ public distributed actor DistributedActomaton<Action, State, ActorSystem>
     /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
     /// to ``EffectManager/processOutput(_:priority:tracksFeedbacks:)``.
     ///
-    /// The return type is `Void` (rather than `Task<(), any Error>?` like
-    /// ``Actomaton/send(_:priority:tracksFeedbacks:)``)
-    /// because a `distributed func`'s return type must satisfy the actor system's
-    /// `SerializationRequirement` (typically `Codable`), and `Task` is not `Codable`.
+    /// The return type is `Void` because a `distributed func`'s return type must satisfy the
+    /// actor system's `SerializationRequirement` (typically `Codable`), and `Task` is not `Codable`.
     /// For local-only access to the launched effect task, use ``sendLocal(_:priority:tracksFeedbacks:)``
     /// via `whenLocal { ... }`.
     ///
@@ -85,15 +84,20 @@ public distributed actor DistributedActomaton<Action, State, ActorSystem>
     ) -> Task<(), any Error>?
     {
         let output = machine.send(action)
-        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        return effectManager.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks,
+            emit: { _ in }
+        )
     }
 
     /// Runs `runEffM` within this actor's isolation, supplying the underlying ``EffectManager``
-    /// so that conformers can mutate their own bookkeeping safely from detached tasks without
+    /// so that conformers can mutate their own bookkeeping safely from unstructured tasks without
     /// capturing `self` themselves.
     fileprivate func runIsolatedEffectManager<EffM>(
         _ runEffM: (EffM) -> Void
-    ) where EffM: EffectManager<Action, State, Effect<Action>>
+    ) where EffM: EffectManager<Action, State, Effect<Action, Never>>
     {
         // Safe downcast from the existential storage to the conformer's concrete `Self`.
         runEffM(effectManager as! EffM)

@@ -4,7 +4,7 @@ import XCTest
 /// Tests for dynamic `EffectQueue` where `maxCount` changes at runtime.
 final class DynamicQueueTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     fileprivate var resultsCollector: ResultsCollector<String> = .init()
 
@@ -12,7 +12,7 @@ final class DynamicQueueTests: MainTestCase
     {
         self.resultsCollector = ResultsCollector<String>()
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, state, _ in
                 switch action {

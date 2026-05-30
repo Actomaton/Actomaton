@@ -7,12 +7,12 @@ final class EffectQueueDelayTests: MainTestCase
     private func makeActomaton<Queue: EffectQueue>(
         queue: Queue,
         effectTime: TestDuration
-    ) -> (Actomaton<Action, State>, startedIDs: ResultsCollector<String>, cancelledIDs: ResultsCollector<String>)
+    ) -> (Actomaton<Action, State, Never>, startedIDs: ResultsCollector<String>, cancelledIDs: ResultsCollector<String>)
     {
         let startedIDs: ResultsCollector<String> = .init()
         let cancelledIDs: ResultsCollector<String> = .init()
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: .init(),
             reducer: Reducer { action, state, _ in
                 switch action {

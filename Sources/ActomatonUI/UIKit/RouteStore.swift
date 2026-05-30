@@ -15,7 +15,7 @@ public final class RouteStore<Action, State, Environment, Route>:
     /// Initializer with `environment`.
     public init(
         state: State,
-        reducer: Reducer<Action, State, SendRouteEnvironment<Environment, Route>>,
+        reducer: Reducer<Action, State, SendRouteEnvironment<Environment, Route>, Never>,
         environment: Environment,
         effectContext: EffectContext = .init(clock: ContinuousClock()),
         configuration: StoreConfiguration = .init(),
@@ -49,7 +49,7 @@ public final class RouteStore<Action, State, Environment, Route>:
     /// Initializer without `environment`.
     public convenience init(
         state: State,
-        reducer: Reducer<Action, State, SendRouteEnvironment<Void, Route>>,
+        reducer: Reducer<Action, State, SendRouteEnvironment<Void, Route>, Never>,
         effectContext: EffectContext = .init(clock: ContinuousClock()),
         routeType: Route.Type = Route.self
     ) where Environment == Void

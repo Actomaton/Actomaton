@@ -29,7 +29,7 @@ final class EffectStreamTests: MainTestCase
 
     func test_stream_emitsMultipleActions() async throws
     {
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -81,7 +81,7 @@ final class EffectStreamTests: MainTestCase
     {
         struct TimerID: EffectID {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { [flags] action, state, _ in
                 switch action {
@@ -138,7 +138,7 @@ final class EffectStreamTests: MainTestCase
     {
         struct TestNewest1Queue: Newest1EffectQueue {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { [flags] action, state, _ in
                 switch action {
@@ -197,7 +197,7 @@ final class EffectStreamTests: MainTestCase
         struct TimerID: EffectID {}
         struct TestNewest1Queue: Newest1EffectQueue {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { [flags] action, state, _ in
                 switch action {
@@ -248,7 +248,7 @@ final class EffectStreamTests: MainTestCase
     /// task completes without explicit cancellation.
     func test_stream_autoFinishTrue_unifiedTaskCompletesWhenClosureReturns() async throws
     {
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -269,32 +269,31 @@ final class EffectStreamTests: MainTestCase
             effectContext: effectContext
         )
 
-        let task = await actomaton.send(.start)
-        XCTAssertNotNil(task)
+        let result = await actomaton.send(.start)
 
         await clock.advance(by: .ticks(2.6))
 
         // Should NOT hang — `autoFinish: true` calls `continuation.finish()` on closure return.
-        try await task?.value
+        await result.completion()
 
         assertEqual(await actomaton.state, 2)
     }
 
-    /// `autoFinish: false` — `send` captured into an outer reference (here a detached
+    /// `autoFinish: false` — `send` captured into an outer reference (here an unstructured
     /// `Task`) can still emit `Action`s after the producer closure has returned.
     /// This is the long-lived-observer bridging pattern the docstring promises.
     func test_stream_autoFinishFalse_canEmitAfterClosureReturns() async throws
     {
         struct TimerID: EffectID {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { [clock] action, state, _ in
                 switch action {
                 case .start:
                     return .stream(id: TimerID()) { send, _ in
-                        // Hand `send` off to a detached task, then return immediately.
-                        // The continuation must stay open so the detached task can emit.
+                        // Hand `send` off to an unstructured task, then return immediately.
+                        // The continuation must stay open so that task can emit.
                         Task { @Sendable in
                             for _ in 0 ..< 3 {
                                 try await clock.sleep(for: .ticks(1))
@@ -324,7 +323,7 @@ final class EffectStreamTests: MainTestCase
         assertEqual(
             await actomaton.state,
             3,
-            "Detached task should keep emitting via `send` even after the producer closure returned."
+            "Unstructured task should keep emitting via `send` even after the producer closure returned."
         )
 
         await actomaton.send(.stop)
@@ -336,7 +335,7 @@ final class EffectStreamTests: MainTestCase
     {
         struct TimerID: EffectID {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -358,36 +357,30 @@ final class EffectStreamTests: MainTestCase
             effectContext: effectContext
         )
 
-        let task = await actomaton.send(.start)
-        XCTAssertNotNil(task)
+        let result = await actomaton.send(.start)
 
         await clock.advance(by: .ticks(2.6))
         assertEqual(await actomaton.state, 2)
 
-        // Stream did not finish on its own — `task.value` would hang here.
-        XCTAssertFalse(task?.isCancelled ?? true)
+        // Stream did not finish on its own — `result.completion()` would hang here.
+        XCTAssertFalse(result.isCancelled)
 
         // Explicit cancellation is required to complete the effect.
         await actomaton.send(.stop)
 
-        do {
-            try await task?.value
-        }
-        catch is CancellationError {
-            // Cancellation is one acceptable outcome.
-        }
+        await result.completion()
 
         assertEqual(await actomaton.state, 2)
     }
 
     /// Verifies that the underlying `AsyncThrowingStream` continuation finishes
-    /// with the thrown error, so the unified `send` task rethrows that error
-    /// (rather than hanging on the inner `for try await` loop).
-    func test_stream_unifiedTaskRethrowsClosureError() async throws
+    /// with the thrown error, so the unified `send` result receives that error
+    /// in-band rather than hanging on the inner `for try await` loop.
+    func test_stream_unifiedResultReceivesClosureError() async throws
     {
         struct StreamError: Error, Equatable {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -407,18 +400,15 @@ final class EffectStreamTests: MainTestCase
             effectContext: effectContext
         )
 
-        let task = await actomaton.send(.start)
-        XCTAssertNotNil(task)
+        let result = await actomaton.send(.start)
 
         await clock.advance(by: .ticks(1.3))
 
-        do {
-            try await task?.value
-            XCTFail("Should rethrow StreamError from the closure.")
+        let errors = await result.errors
+        guard let error = errors.first as? StreamError else {
+            return XCTFail("Should receive StreamError from the closure.")
         }
-        catch is StreamError {
-            // Expected — `continuation.finish(throwing:)` propagated the error.
-        }
+        XCTAssertEqual(error, StreamError())
 
         assertEqual(await actomaton.state, 1)
     }

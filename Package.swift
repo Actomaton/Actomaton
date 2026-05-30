@@ -88,6 +88,7 @@ let package = Package(
             dependencies: [
                 "ActomatonCore",
                 "ActomatonEffect",
+                "Actomaton",
                 .product(name: "CustomDump", package: "swift-custom-dump"),
             ]
         ),

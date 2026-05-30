@@ -2,15 +2,15 @@ import ActomatonCore
 import ActomatonEffect
 import Synchronization
 
-/// Non-actor driver for ``MealyMachine`` with `Output == Effect<Action>`, providing
+/// Non-actor driver for ``MealyMachine`` with `Output == Effect<Action, Emission>`, providing
 /// synchronous `send(_:)`, `state` and `withState(_:)` for callers that cannot enter an
 /// actor isolation — for example, a type conforming to `DistributedActorSystem` whose
 /// protocol surface is largely synchronous.
 ///
 /// `MealyDriver` is the "non-actor" sibling of ``Actomaton`` referenced by
-/// ``MealyMachine``'s docstring. Both wrappers share the same internals (`MealyMachine` +
-/// an ``EffectManager``); they differ only in how they provide the serial-access invariant
-/// that ``MealyMachine`` requires:
+/// ``MealyMachine``'s docstring. Both wrappers share the same internals (``MealyMachine`` +
+/// an ``EffectManager``) and the same typed side-channel `Emission` semantics; they differ
+/// only in how they provide the serial-access invariant that ``MealyMachine`` requires:
 ///
 /// - ``Actomaton`` uses Swift actor isolation.
 /// - ``MealyDriver`` uses an internal `Mutex` from the `Synchronization` framework.
@@ -18,20 +18,20 @@ import Synchronization
 /// The class is marked `@unchecked Sendable` because ``MealyMachine`` and the underlying
 /// ``EffectManager`` are both intentionally non-`Sendable`; the mutex supplies the
 /// serial-access invariant they require.
-public final class MealyDriver<Action, State>: @unchecked Sendable
-    where Action: Sendable
+public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
+    where Action: Sendable, Emission: Sendable
 {
-    private let machine: MealyMachine<Action, State, Effect<Action>>
+    private let machine: MealyMachine<Action, State, Effect<Action, Emission>>
 
-    private let effectManager: any EffectManager<Action, State, Effect<Action>>
+    private let effectManager: any EffectManager<Action, State, Effect<Action, Emission>>
 
     private let mutex = Mutex<Void>(())
 
     /// Designated initializer that takes an explicit ``EffectManager``.
     public init(
         state: State,
-        reducer: Reducer<Action, State, ()>,
-        effectManager: some EffectManager<Action, State, Effect<Action>>
+        reducer: Reducer<Action, State, (), Emission>,
+        effectManager: some EffectManager<Action, State, Effect<Action, Emission>>
     )
     {
         self.machine = MealyMachine(state: state, reducer: reducer)
@@ -41,8 +41,13 @@ public final class MealyDriver<Action, State>: @unchecked Sendable
             withSendability: { [weak self] runEffectManager in
                 self?.runIsolatedEffectManager(runEffectManager)
             },
-            sendAction: { [weak self] action, priority, tracksFeedbacks in
-                self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            sendAction: { [weak self] action, priority, tracksFeedbacks, emit in
+                self?.sendInternal(
+                    action,
+                    priority: priority,
+                    tracksFeedbacks: tracksFeedbacks,
+                    emit: emit
+                )
             }
         )
     }
@@ -63,37 +68,63 @@ public final class MealyDriver<Action, State>: @unchecked Sendable
     /// to ``EffectManager/processOutput(_:priority:tracksFeedbacks:)``.
     ///
     /// The reducer is run synchronously under the mutex; the asynchronous-remainder output
-    /// (`Effect<Action>`) is handed to the effect manager *after* the mutex is released, so
-    /// the manager's task scheduling never re-enters the mutex from the same call stack.
+    /// is handed to the effect manager *after* the mutex is released, so the manager's
+    /// task scheduling never re-enters the mutex from the same call stack.
     ///
     /// - Parameters:
     ///   - priority:
     ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
     ///   - tracksFeedbacks:
-    ///     If `true`, the returned `Task` will also track feedback effects triggered by
-    ///     subsequent actions, so that wait-for-all and cancellation are possible.
+    ///     If `true`, the returned ``SendResult`` will also track feedback effects triggered by
+    ///     next actions — so its `AsyncSequence` stays open until those downstream chains
+    ///     complete, and recursive ``Effect/Outcome/emit`` values flow into the same stream.
     ///     Default is `false`.
     ///
     /// - Returns:
-    ///   Unified task that can handle (wait for or cancel) all combined effects triggered
-    ///   by `action` in the reducer.
+    ///   A ``SendResult`` exposing both a non-throwing `AsyncSequence` of
+    ///   `Result<Emission, any Error>` elements (effect errors are surfaced in-band as `.failure`
+    ///   without cancelling sibling effects) and a `cancel()` handle that aborts the entire chain.
     @discardableResult
     public func send(
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
+    ) -> SendResult<Emission>
+    {
+        let output = mutex.withLock { _ in machine.send(action) }
+        return effectManager.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks
+        )
+    }
+
+    /// Reducer-side dispatch used internally by the recursive feedback path threaded through
+    /// ``EffectManager``'s `sendAction` callback. The `emit` parameter is the original caller's
+    /// emission sink, so all `Emission` values produced by downstream effects flow into the
+    /// single ``SendResult`` returned by the public `send`.
+    private func sendInternal(
+        _ action: Action,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool,
+        emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
     ) -> Task<(), any Error>?
     {
         let output = mutex.withLock { _ in machine.send(action) }
-        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        return effectManager.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks,
+            emit: emit
+        )
     }
 
     /// Runs `runEffectManager` under the driver's mutex, supplying the underlying
     /// ``EffectManager`` so that conformers can mutate their own bookkeeping safely from
-    /// detached tasks without capturing `self` themselves.
+    /// unstructured tasks without capturing `self` themselves.
     private func runIsolatedEffectManager<EffM>(
         _ runEffectManager: (EffM) -> Void
-    ) where EffM: EffectManager<Action, State, Effect<Action>>
+    ) where EffM: EffectManager<Action, State, Effect<Action, Emission>>
     {
         mutex.withLock { _ in
             // Safe downcast from the existential storage to the conformer's concrete `Self`.

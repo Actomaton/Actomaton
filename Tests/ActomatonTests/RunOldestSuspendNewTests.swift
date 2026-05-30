@@ -4,7 +4,7 @@ import XCTest
 /// Tests for `EffectQueue` with `EffectQueuePolicy.runOldest(maxCount: n, .suspendNew)`.
 final class RunOldestSuspendNewTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     fileprivate var resultsCollector: ResultsCollector<Int> = .init()
 
@@ -22,7 +22,7 @@ final class RunOldestSuspendNewTests: MainTestCase
             }
         }
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, state, _ in
                 switch action {
