@@ -169,6 +169,38 @@ final class SendResultTests: MainTestCase
         XCTAssertEqual(errors.count, 1)
         XCTAssertEqual(errors.first as? TestError, TestError())
     }
+
+    func test_tracksFeedbacks_sequenceFailureWaitsForSpawnedFeedback() async throws
+    {
+        let actomaton = Actomaton<SequenceFailureAction, SequenceFailureState, Never>(
+            state: SequenceFailureState(),
+            reducer: sequenceFailureReducer,
+            effectContext: effectContext
+        )
+        let completionFlag = CompletionFlag()
+
+        let result = await actomaton.send(.start, tracksFeedbacks: true)
+        let completionTask = Task {
+            await result.completion()
+            await completionFlag.markCompleted()
+        }
+
+        await settle()
+
+        assertEqual(await actomaton.state.isFollowUpStarted, true)
+        let isCompletedBeforeFollowUpFinishes = await completionFlag.isCompleted
+        XCTAssertFalse(
+            isCompletedBeforeFollowUpFinishes,
+            "Tracked sequence result must stay open for feedback effects emitted before the sequence failure."
+        )
+
+        await clock.advance(by: .ticks(1.5))
+        await completionTask.value
+
+        assertEqual(await actomaton.state.isFollowUpFinished, true)
+        let isCompletedAfterFollowUpFinishes = await completionFlag.isCompleted
+        XCTAssertTrue(isCompletedAfterFollowUpFinishes)
+    }
 }
 
 // MARK: - Private
@@ -248,5 +280,56 @@ private let neverEmissionReducer = Reducer<NeverEmissionAction, ErrorState, Void
         return Effect.fireAndForget { _ in
             throw TestError()
         }
+    }
+}
+
+// MARK: - Sequence failure feedback helpers
+
+private enum SequenceFailureAction: Equatable, Sendable
+{
+    case start
+    case followUp
+    case finishFollowUp
+}
+
+private struct SequenceFailureState: Equatable, Sendable
+{
+    var isFollowUpStarted = false
+    var isFollowUpFinished = false
+}
+
+private let sequenceFailureReducer = Reducer<SequenceFailureAction, SequenceFailureState, Void, Never> {
+    action,
+    state,
+    _ in
+    switch action {
+    case .start:
+        return Effect.sequence { _ in
+            AsyncThrowingStream<SequenceFailureAction, any Error> { continuation in
+                continuation.yield(.followUp)
+                continuation.finish(throwing: TestError())
+            }
+        }
+
+    case .followUp:
+        state.isFollowUpStarted = true
+        return Effect { context in
+            try await context.clock.sleep(for: .ticks(1))
+            return .finishFollowUp
+        }
+
+    case .finishFollowUp:
+        state.isFollowUpFinished = true
+        return .empty
+    }
+}
+
+private actor CompletionFlag
+{
+    private(set) var isCompleted = false
+
+    func markCompleted()
+    {
+        isCompleted = true
     }
 }

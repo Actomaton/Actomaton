@@ -75,6 +75,35 @@ final class SendTaskAwaitPendingEffectTests: MainTestCase
             "Both A and B should have completed."
         )
     }
+
+    func test_deinitFinishesDequeuedPendingEffectCompletion() async throws
+    {
+        var actomaton: Actomaton<Action, State, Never>? = self.actomaton
+        self.actomaton = nil
+        weak var weakActomaton = actomaton
+
+        guard let resultA = await actomaton?.send(.fetch(id: "A")) else {
+            return XCTFail("Result for an immediately-running effect should be non-nil.")
+        }
+        guard let resultB = await actomaton?.send(.fetch(id: "B")) else {
+            return XCTFail("Result for a suspended effect should be non-nil.")
+        }
+
+        // A completes at tick 3, then B is dequeued and starts running.
+        await clock.advance(by: .ticks(3.5))
+        await resultA.completion()
+
+        guard let completedCount = await actomaton?.state.completedCount else {
+            return XCTFail("Actomaton should still be alive before explicit release.")
+        }
+        assertEqual(completedCount, 1)
+
+        actomaton = nil
+        XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
+        weakActomaton = nil // For suppressing `WeakMutability` warning.
+
+        try await awaitCompletionWithTimeout(resultB)
+    }
 }
 
 // MARK: - Private
@@ -97,5 +126,26 @@ private struct SuspendQueue: EffectQueue, Hashable
     var effectQueuePolicy: EffectQueuePolicy
     {
         .runOldest(maxCount: 1, .suspendNew)
+    }
+}
+
+private struct CompletionTimeoutError: Error {}
+
+private func awaitCompletionWithTimeout(
+    _ result: SendResult<Never>,
+    timeout: Duration = .milliseconds(500)
+) async throws
+{
+    try await withThrowingTaskGroup(of: Void.self) { group in
+        group.addTask {
+            await result.completion()
+        }
+        group.addTask {
+            try await Task.sleep(for: timeout)
+            throw CompletionTimeoutError()
+        }
+
+        defer { group.cancelAll() }
+        _ = try await group.next()
     }
 }

@@ -125,7 +125,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     for task in tasks_ {
                         group.addTask(priority: priority) {
-                            try await _awaitTaskForwardingCancellation(task)
+                            try await _runTaskForwardingCancellation(task)
                         }
                     }
                     try await group.waitForAll()
@@ -363,7 +363,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                     if let action = outcome.action {
                         let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, emit)
                         if tracksFeedbacks, let feedbackTask {
-                            try await _awaitTaskForwardingCancellation(feedbackTask)
+                            try await _runTaskForwardingCancellation(feedbackTask)
                         }
                     }
                 }
@@ -388,42 +388,51 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
 
         case let .sequence(sequence):
             let task = Task<(), any Error>(priority: priority) { @concurrent in
+                var feedbackTasks: [Task<(), any Error>] = []
+
                 do {
                     if let time {
                         try? await context.clock.sleep(until: time, tolerance: nil)
                     }
                     guard let seq = try await sequence.sequence(context) else { return }
-                    var feedbackTasks: [Task<(), any Error>] = []
                     for try await outcome in seq {
                         if let emission = outcome.emission {
                             emit(.success(emission))
                         }
                         if let action = outcome.action {
                             let feedbackTask = await sendAction?(action, priority, tracksFeedbacks, emit)
-                            if let feedbackTask {
+                            if tracksFeedbacks, let feedbackTask {
                                 feedbackTasks.append(feedbackTask)
                             }
                         }
                     }
                     if tracksFeedbacks {
-                        try await withThrowingTaskGroup(of: Void.self) { group in
-                            for feedbackTask in feedbackTasks {
-                                group.addTask(priority: priority) {
-                                    try await _awaitTaskForwardingCancellation(feedbackTask)
-                                }
-                            }
-                            try await group.waitForAll()
-                        }
+                        try await _runTasksForwardingCancellation(feedbackTasks, priority: priority)
                     }
                 }
                 catch is CancellationError {
                     // Cancellation is not an in-band failure; siblings are torn down by the
                     // supervisor, not by rethrowing here.
+                    if tracksFeedbacks {
+                        await _cancelAndDrainTasks(feedbackTasks)
+                    }
                 }
                 catch {
                     // Surface this sequence effect's error (e.g. an `AsyncSequence` that threw,
                     // or a `.stream` failure) in-band, leaving siblings running.
                     emit(.failure(error))
+
+                    if tracksFeedbacks {
+                        do {
+                            try await _runTasksForwardingCancellation(feedbackTasks, priority: priority)
+                        }
+                        catch is CancellationError {
+                            await _cancelAndDrainTasks(feedbackTasks)
+                        }
+                        catch {
+                            emit(.failure(error))
+                        }
+                    }
                 }
             }
             enqueueTask(
@@ -549,15 +558,6 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
         dequeuedTasks.removeValue(forKey: suspendedEffectTask)?.cancel()
     }
 
-    private func completeDequeuedPendingEffect(
-        suspendedEffectTask: Task<(), any Error>,
-        onComplete: AsyncStream<Never>.Continuation
-    )
-    {
-        dequeuedTasks.removeValue(forKey: suspendedEffectTask)
-        onComplete.finish()
-    }
-
     /// Cancels running and pending effects matching the predicate.
     private func cancelEffects(
         predicate: @escaping @Sendable (any EffectID) -> Bool
@@ -669,11 +669,9 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                     _ = await dequeuedTask.result
 
                     await withSendability? { self_ in
-                        self_.completeDequeuedPendingEffect(
-                            suspendedEffectTask: suspendedEffectTask,
-                            onComplete: onComplete
-                        )
+                        self_.dequeuedTasks.removeValue(forKey: suspendedEffectTask)
                     }
+                    onComplete.finish()
                 }
             }
             else {
@@ -747,7 +745,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
     }
 }
 
-/// Awaits `task` while forwarding cancellation from the awaiting task into `task`.
+/// Runs and awaits `task` while forwarding cancellation from the awaiting task into `task`.
 ///
 /// Plain `try await task.value` only waits for the task's result. If the awaiting
 /// task is cancelled, Swift does not automatically call `cancel()` on the task being
@@ -755,7 +753,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
 /// than children of the waiter. This helper preserves
 /// `SendResult.cancel()` semantics by turning cancellation of the waiter into
 /// cancellation of the underlying effect task.
-private func _awaitTaskForwardingCancellation(
+private func _runTaskForwardingCancellation(
     _ task: Task<(), any Error>
 ) async throws
 {
@@ -763,5 +761,36 @@ private func _awaitTaskForwardingCancellation(
         try await task.value
     } onCancel: {
         task.cancel()
+    }
+}
+
+private func _runTasksForwardingCancellation(
+    _ tasks: [Task<(), any Error>],
+    priority: TaskPriority?
+) async throws
+{
+    try await withThrowingTaskGroup(of: Void.self) { group in
+        for task in tasks {
+            group.addTask(priority: priority) {
+                try await _runTaskForwardingCancellation(task)
+            }
+        }
+        try await group.waitForAll()
+    }
+}
+
+private func _cancelAndDrainTasks(
+    _ tasks: [Task<(), any Error>]
+) async
+{
+    for task in tasks {
+        task.cancel()
+    }
+
+    // These are already-running unstructured tasks. Sequentially awaiting their results only
+    // drains completion; it does not start them one-by-one, so wall-clock wait is bounded by
+    // the slowest cancellation-aware task rather than the sum of all task durations.
+    for task in tasks {
+        _ = await task.result
     }
 }
