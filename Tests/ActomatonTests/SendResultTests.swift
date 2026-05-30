@@ -107,6 +107,72 @@ final class SendResultTests: MainTestCase
         XCTAssertEqual(failures.count, 1, "Exactly one effect failed in-band.")
     }
 
+    /// A single `SendResult` must be able to surface MULTIPLE `.failure` elements: one effect's
+    /// error never terminates the stream, so every effect's error (plus all preceding emissions)
+    /// is observed. A sequence emits two values then throws while a sibling single effect also
+    /// throws.
+    func test_actomatonSend_multipleEffectsThrow_deliversMultipleInBandFailures() async throws
+    {
+        let actomaton = Actomaton<ErrorAction, ErrorState, String>(
+            state: ErrorState(),
+            reducer: errorReducer,
+            effectContext: effectContext
+        )
+
+        let result = await actomaton.send(.multipleFailures)
+        let results = await result.allResults
+
+        let successes = results.compactMap { try? $0.get() }
+        let failures: [TestError] = results.compactMap {
+            if case let .failure(error) = $0 {
+                return error as? TestError
+            }
+            else {
+                return nil
+            }
+        }
+
+        XCTAssertEqual(Set(successes), ["a", "b"], "All sequence emissions before the throw are delivered.")
+        XCTAssertEqual(failures.count, 2, "Both effects' errors surface in-band; one `.failure` never ends the stream.")
+        XCTAssertEqual(Set(failures.map(\.id)), [1, 2], "Each effect's distinct error is observed.")
+        XCTAssertFalse(result.isCancelled, "Finished by in-band failures, not cancellation.")
+    }
+
+    /// A `.failure` arriving early must NOT close the stream: a sibling that fails only *after*
+    /// suspending across an `await` still delivers its own `.failure` afterwards. This is the
+    /// temporal counterpart to
+    /// ``test_actomatonSend_multipleEffectsThrow_deliversMultipleInBandFailures`` — there both
+    /// effects settle synchronously, whereas here the second failure must survive a real
+    /// scheduling gap after the first one was already observed.
+    func test_actomatonSend_lateFailureSurvivesEarlyFailureAcrossAwait() async throws
+    {
+        let actomaton = Actomaton<ErrorAction, ErrorState, String>(
+            state: ErrorState(),
+            reducer: errorReducer,
+            effectContext: effectContext
+        )
+
+        let result = await actomaton.send(.failEarlyAndLate)
+        let results = await result.allResults
+
+        let failures: [TestError] = results.compactMap {
+            if case let .failure(error) = $0 {
+                return error as? TestError
+            }
+            else {
+                return nil
+            }
+        }
+
+        XCTAssertEqual(results.count, 2, "No `.success` elements; only the two failures.")
+        XCTAssertEqual(
+            Set(failures.map(\.id)),
+            [1, 2],
+            "Both failures surface — the late one arrived after the stream stayed open past the early one."
+        )
+        XCTAssertFalse(result.isCancelled, "Finished by in-band failures, not cancellation.")
+    }
+
     /// A `CancellationError` thrown from inside an effect is swallowed (not reported as a
     /// `.failure`); the chain finishes cleanly.
     func test_actomatonSend_effectThrowsCancellationError_finishesCleanlyNoFailure() async throws
@@ -252,7 +318,7 @@ private let emissionReducer = Reducer<EmissionAction, EmissionState, Void, Strin
 
 // MARK: - Error helpers
 
-private struct TestError: Error, Equatable {}
+private struct TestError: Error, Equatable { var id: Int = 0 }
 
 private enum ErrorAction: Equatable, Sendable
 {
@@ -260,6 +326,8 @@ private enum ErrorAction: Equatable, Sendable
     case emitThenThrow
     case throwCancellation
     case concurrent
+    case multipleFailures
+    case failEarlyAndLate
 }
 
 private struct ErrorState: Equatable, Sendable {}
@@ -287,6 +355,29 @@ private let errorReducer = Reducer<ErrorAction, ErrorState, Void, String> { acti
             return .emission("delayed")
         }
         return throwing + delayed
+
+    case .multipleFailures:
+        // A `.stream` sequence emits two values then throws (1 failure), running concurrently
+        // with a `.single` effect that also throws (another failure). The single `SendResult`
+        // must surface BOTH errors in-band along with both emissions — proving one `.failure`
+        // never terminates the stream.
+        let sequence = Effect<ErrorAction, String>.stream { send, _ in
+            send(.emission("a"))
+            send(.emission("b"))
+            throw TestError(id: 1)
+        }
+        let throwing = Effect<ErrorAction, String> { _ in throw TestError(id: 2) }
+        return sequence + throwing
+
+    case .failEarlyAndLate:
+        // One effect throws immediately; a sibling throws only after sleeping across an `await`.
+        // If the early failure closed the stream, the late failure would never arrive.
+        let early = Effect<ErrorAction, String> { _ in throw TestError(id: 1) }
+        let late = Effect<ErrorAction, String> { _ in
+            try await Task.sleep(for: .milliseconds(50))
+            throw TestError(id: 2)
+        }
+        return early + late
     }
 }
 
