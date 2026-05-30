@@ -125,7 +125,7 @@ public actor TestActomaton<Action, State, Emission>
         priority: TaskPriority?,
         tracksFeedbacks: Bool,
         emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         let output = machine.send(action)
         return effectManager.processOutput(

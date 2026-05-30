@@ -59,7 +59,7 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
             _ priority: TaskPriority?,
             _ tracksFeedbacks: Bool,
             _ emit: @escaping @Sendable (Result<Output.Emission, any Error>) -> Void
-        ) async -> Task<(), any Error>?
+        ) async -> Task<(), Never>?
     )
 
     /// Process the reducer output, creating and managing tasks as needed.
@@ -73,5 +73,5 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
         priority: TaskPriority?,
         tracksFeedbacks: Bool,
         emit: @escaping @Sendable (Result<Output.Emission, any Error>) -> Void
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
 }

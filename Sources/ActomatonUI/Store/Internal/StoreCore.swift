@@ -93,7 +93,7 @@ internal final class StoreCore<Action, State, Environment>
         _ action: BindableAction<Action, State>,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         let output = machine.send(action)
         return effectManager.processOutput(

@@ -44,7 +44,7 @@ public final class ViewStore<Action, State>: ObservableObject
 
     private let _send: @MainActor (
         BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
 
     private var cancellables: Set<AnyCancellable> = []
 
@@ -53,7 +53,7 @@ public final class ViewStore<Action, State>: ObservableObject
         state: CurrentValuePublisher<State>,
         send: @escaping @MainActor (
             BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool
-        ) -> Task<(), any Error>?,
+        ) -> Task<(), Never>?,
         areStatesEqual: @escaping (State, State) -> Bool
     )
     {
@@ -86,7 +86,7 @@ public final class ViewStore<Action, State>: ObservableObject
         _ action: BindableAction<Action, State>,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         self._send(action, priority, tracksFeedbacks)
     }

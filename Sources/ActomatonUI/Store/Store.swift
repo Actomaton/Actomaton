@@ -60,7 +60,7 @@ public class Store<Action, State, Environment>
 
     private let _send: @MainActor (
         BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
 
     /// Initializer with `environment`.
     public convenience init(
@@ -109,7 +109,7 @@ public class Store<Action, State, Environment>
         environment: Environment,
         send: @escaping @MainActor (
             BindableAction<Action, State>, TaskPriority?, _ tracksFeedbacks: Bool
-        ) -> Task<(), any Error>?
+        ) -> Task<(), Never>?
     )
     {
         self._state = state
@@ -134,7 +134,7 @@ public class Store<Action, State, Environment>
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         self._send(.action(action), priority: priority, tracksFeedbacks: tracksFeedbacks)
     }
@@ -145,7 +145,7 @@ public class Store<Action, State, Environment>
         _ action: BindableAction<Action, State>,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         self._send(action, priority, tracksFeedbacks)
     }

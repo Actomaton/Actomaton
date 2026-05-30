@@ -43,7 +43,7 @@ final class DeinitTests: MainTestCase
         XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
 
         // Wait until deinit fully completes.
-        try? await task?.value
+        await task?.value
 
         // Check results.
         //
