@@ -91,7 +91,7 @@ public actor Actomaton<Action, State, Emission>
         priority: TaskPriority?,
         tracksFeedbacks: Bool,
         emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         // `MealyMachine.send` recursively resolves synchronous `.next(Action)` feedbacks
         // because `Effect<Action, Emission>: MealyOutput` exposes `MealyOutput.Action == Action`.

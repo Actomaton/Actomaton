@@ -81,7 +81,7 @@ public distributed actor DistributedActomaton<Action, State, ActorSystem>
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         let output = machine.send(action)
         return effectManager.processOutput(

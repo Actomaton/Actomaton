@@ -108,7 +108,7 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
         priority: TaskPriority?,
         tracksFeedbacks: Bool,
         emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
-    ) -> Task<(), any Error>?
+    ) -> Task<(), Never>?
     {
         let output = mutex.withLock { _ in machine.send(action) }
         return effectManager.processOutput(
