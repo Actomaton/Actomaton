@@ -12,7 +12,7 @@ final class DeinitTests: MainTestCase
         let resultsCollector = ResultsCollector<String>()
         let clock = self.clock
 
-        var actomaton: Store? = Store<Action, State, Environment>(
+        var store: Store? = Store<Action, State, Environment>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, _, _ in
                 switch action {
@@ -33,14 +33,14 @@ final class DeinitTests: MainTestCase
             effectContext: effectContext
         )
 
-        weak var weakActomaton = actomaton
+        weak var weakStore = store
 
-        let task = actomaton?.send(.run)
+        let task = store?.send(.run)
         await clock.advance(by: .ticks(1))
 
-        // Deinit `actomaton`.
-        actomaton = nil
-        XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
+        // Deinit `store`.
+        store = nil
+        XCTAssertNil(weakStore, "`weakStore` should also become `nil`.")
 
         // Wait until deinit fully completes.
         await task?.value
@@ -56,7 +56,7 @@ final class DeinitTests: MainTestCase
             "Running effect should be cancelled, and `DeinitChecker` should deinit."
         )
 
-        weakActomaton = nil // For suppressing `WeakMutability` warning.
+        weakStore = nil // For suppressing `WeakMutability` warning.
     }
 }
 
