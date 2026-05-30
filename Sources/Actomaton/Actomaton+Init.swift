@@ -7,31 +7,35 @@ extension Actomaton
     /// Initializer without `environment`.
     public init(
         state: State,
-        reducer: Reducer<Action, State, ()>,
+        reducer: Reducer<Action, State, (), Emission>,
         effectContext: EffectContext = .init(clock: ContinuousClock())
     )
     {
         self.init(
             state: state,
             reducer: reducer,
-            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext)
+            effectManager: EffectQueueManager<Action, State, Emission>(
+                effectContext: effectContext
+            )
         )
     }
 
     /// Initializer with `environment`.
     public init<Environment>(
         state: State,
-        reducer: Reducer<Action, State, Environment>,
+        reducer: Reducer<Action, State, Environment, Emission>,
         environment: Environment,
         effectContext: EffectContext = .init(clock: ContinuousClock())
     ) where Environment: Sendable
     {
         self.init(
             state: state,
-            reducer: Reducer<Action, State, ()> { action, state, _ in
+            reducer: Reducer<Action, State, (), Emission> { action, state, _ in
                 reducer.run(action, &state, environment)
             },
-            effectManager: EffectQueueManager<Action, State>(effectContext: effectContext)
+            effectManager: EffectQueueManager<Action, State, Emission>(
+                effectContext: effectContext
+            )
         )
     }
 }

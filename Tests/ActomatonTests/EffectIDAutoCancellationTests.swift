@@ -4,7 +4,7 @@ import XCTest
 /// Tests for `Newest1EffectQueue` where previous effect will be automatically cancelled by the next effect.
 final class EffectIDAutoCancellationTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     private var flags = Flags()
 
@@ -33,7 +33,7 @@ final class EffectIDAutoCancellationTests: MainTestCase
 
         struct TestNewest1EffectQueue: Newest1EffectQueue {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: ._1,
             reducer: Reducer { [flags] action, state, _ in
                 switch action {

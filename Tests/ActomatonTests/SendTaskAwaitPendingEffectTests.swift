@@ -1,15 +1,15 @@
 import Actomaton
 import XCTest
 
-/// Tests that `send`'s returned Task tracks effects that were initially suspended
+/// Tests that `send`'s returned result tracks effects that were initially suspended
 /// by a queue's `suspendNew` policy and later dequeued.
 final class SendTaskAwaitPendingEffectTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     override func setUp() async throws
     {
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: State(),
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -31,17 +31,17 @@ final class SendTaskAwaitPendingEffectTests: MainTestCase
         self.actomaton = actomaton
     }
 
-    /// `send`'s returned Task should be non-nil for a suspended effect and should
+    /// `send`'s returned result should be non-nil for a suspended effect and should
     /// complete only after the effect is eventually dequeued and finishes.
     func test_sendTask_tracksPendingEffectCompletion() async throws
     {
         // maxConcurrent = 1.
         // A runs immediately, B gets suspended.
-        let taskA = await actomaton.send(.fetch(id: "A"))
-        let taskB = await actomaton.send(.fetch(id: "B"))
+        let resultA = await actomaton.send(.fetch(id: "A"))
+        let resultB = await actomaton.send(.fetch(id: "B"))
 
-        XCTAssertNotNil(taskA, "Task for an immediately-running effect should be non-nil.")
-        XCTAssertNotNil(taskB, "Task for a suspended effect should be non-nil (waitTask).")
+        XCTAssertNotNil(resultA, "Result for an immediately-running effect should be non-nil.")
+        XCTAssertNotNil(resultB, "Result for a suspended effect should be non-nil.")
 
         assertEqual(
             await actomaton.state.completedCount, 0,
@@ -56,12 +56,12 @@ final class SendTaskAwaitPendingEffectTests: MainTestCase
             "Only A should have completed. B just started."
         )
 
-        // Run clock advance and taskB await in parallel.
-        // taskB is still waiting (B is running), and clock.advance triggers B's completion.
-        // If the AsyncStream bridge is broken, taskB would never complete and this would hang.
+        // Run clock advance and resultB await in parallel.
+        // resultB is still waiting (B is running), and clock.advance triggers B's completion.
+        // If the AsyncStream bridge is broken, resultB would never complete and this would hang.
         try await withThrowingTaskGroup(of: Void.self) { [clock] group in
             group.addTask {
-                try await taskB?.value
+                await resultB.completion()
             }
             group.addTask {
                 // B completes at tick 6.

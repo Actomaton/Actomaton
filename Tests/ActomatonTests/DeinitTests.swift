@@ -9,7 +9,7 @@ final class DeinitTests: MainTestCase
         let resultsCollector = ResultsCollector<String>()
         let clock = self.clock
 
-        var actomaton: Actomaton? = Actomaton<Action, State>(
+        var actomaton: Actomaton? = Actomaton<Action, State, Never>(
             state: State(),
             reducer: Reducer { [resultsCollector] action, _, _ in
                 switch action {
@@ -32,7 +32,7 @@ final class DeinitTests: MainTestCase
 
         weak var weakActomaton = actomaton
 
-        let task = await actomaton?.send(.run)
+        let result = await actomaton?.send(.run)
         await clock.advance(by: .ticks(1))
 
         // Deinit `actomaton`.
@@ -40,7 +40,7 @@ final class DeinitTests: MainTestCase
         XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
 
         // Wait until deinit fully completes.
-        try? await task?.value
+        await result?.completion()
 
         await settle()
 

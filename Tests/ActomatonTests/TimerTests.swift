@@ -4,13 +4,13 @@ import XCTest
 /// Tests for `Effect.cancel`.
 final class TimerTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     override func setUp() async throws
     {
         struct TimerID: EffectID {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 switch action {

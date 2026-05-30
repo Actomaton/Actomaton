@@ -4,7 +4,7 @@ import XCTest
 /// Tests for `Effect.cancel`.
 final class EffectCancellationTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     private var flags = Flags()
 
@@ -34,7 +34,7 @@ final class EffectCancellationTests: MainTestCase
         struct EffectID1To2: EffectID {}
         struct EffectID2To3: EffectID {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: ._1,
             reducer: Reducer { [flags] action, state, _ in
                 switch action {

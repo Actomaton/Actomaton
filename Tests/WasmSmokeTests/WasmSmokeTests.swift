@@ -31,7 +31,7 @@ func `mealy machine transitions on wasm`() async
 @Test
 func `actomaton runs synchronous effects on wasm`() async
 {
-    let reducer = Reducer<CounterAction, CounterState, Void> { action, state, _ in
+    let reducer = Reducer<CounterAction, CounterState, Void, Never> { action, state, _ in
         switch action {
         case .increment:
             state.count += 1

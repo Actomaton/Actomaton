@@ -4,11 +4,11 @@ import XCTest
 /// Tests for `actomaton.send`'s returned `Task`.
 final class FeedbackTrackingTaskTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     private func setupActomaton(initalState: State) async
     {
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: initalState,
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -107,11 +107,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
 
         assertEqual(await actomaton.state, ._1)
 
-        let task = await actomaton.send(._1To2, tracksFeedbacks: false)
+        let result = await actomaton.send(._1To2, tracksFeedbacks: false)
 
         // Wait for `._1To2`'s effect only (upto `_2To3`'s next state-transition without its effect)
         await clock.advance(by: .ticks(1))
-        try await task?.value
+        await result.completion()
 
         assertEqual(
             await actomaton.state,
@@ -147,11 +147,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
         assertEqual(await actomaton.state, ._1)
 
         // Single effect, tracking feedbacks.
-        let task = await actomaton.send(._1To2, tracksFeedbacks: true)
+        let result = await actomaton.send(._1To2, tracksFeedbacks: true)
 
         // Wait for all: `._1To2`, `._2To3`, `._3To4`, `._increment`, `._4To5`, `._5To6`.
         await clock.advance(by: .ticks(6))
-        try await task?.value
+        await result.completion()
 
         assertEqual(
             await actomaton.state,
@@ -168,11 +168,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
         assertEqual(await actomaton.state, ._3)
 
         // Sequence effect, tracking feedbacks.
-        let task = await actomaton.send(._3To4, tracksFeedbacks: true)
+        let result = await actomaton.send(._3To4, tracksFeedbacks: true)
 
         // Wait for all: `._3To4`, `._increment`, `._4To5`, `._5To6`.
         await clock.advance(by: .ticks(4))
-        try await task?.value
+        await result.completion()
 
         assertEqual(
             await actomaton.state,

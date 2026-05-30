@@ -65,7 +65,7 @@ public class Store<Action, State, Environment>
     /// Initializer with `environment`.
     public convenience init(
         state initialState: State,
-        reducer: Reducer<Action, State, Environment>,
+        reducer: Reducer<Action, State, Environment, Never>,
         environment: Environment,
         effectContext: EffectContext = .init(clock: ContinuousClock()),
         configuration: StoreConfiguration = .init()
@@ -89,7 +89,7 @@ public class Store<Action, State, Environment>
     /// Initializer without `environment`.
     public convenience init(
         state initialState: State,
-        reducer: Reducer<Action, State, Void>,
+        reducer: Reducer<Action, State, Void, Never>,
         effectContext: EffectContext = .init(clock: ContinuousClock()),
         configuration: StoreConfiguration = .init()
     ) where Environment == Void

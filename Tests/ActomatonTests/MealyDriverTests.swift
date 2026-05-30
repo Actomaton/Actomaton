@@ -4,11 +4,11 @@ import XCTest
 /// Smoke test for ``MealyDriver`` — the non-actor counterpart of ``Actomaton``.
 final class MealyDriverTests: MainTestCase
 {
-    fileprivate var driver: MealyDriver<Action, State>!
+    fileprivate var driver: MealyDriver<Action, State, Never>!
 
     override func setUp() async throws
     {
-        let driver = MealyDriver<Action, State>(
+        let driver = MealyDriver<Action, State, Never>(
             state: State(),
             reducer: Reducer { action, state, _ in
                 switch action {

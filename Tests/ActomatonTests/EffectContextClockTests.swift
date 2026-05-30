@@ -8,7 +8,7 @@ final class EffectContextClockTests: XCTestCase
     {
         let clock = TestClock<Duration>()
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: .idle,
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -27,11 +27,11 @@ final class EffectContextClockTests: XCTestCase
             effectContext: EffectContext(clock: clock)
         )
 
-        let task = await actomaton.send(.start)
+        let result = await actomaton.send(.start)
         assertEqual(await actomaton.state, .running)
 
         await clock.advance(by: .ticks(1))
-        try await task?.value
+        await result.completion()
 
         assertEqual(await actomaton.state, .finished)
     }
@@ -40,7 +40,7 @@ final class EffectContextClockTests: XCTestCase
     {
         let clock = TestClock<Duration>()
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: .idle,
             reducer: Reducer { action, state, _ in
                 switch action {
@@ -59,11 +59,11 @@ final class EffectContextClockTests: XCTestCase
             effectContext: EffectContext(clock: clock)
         )
 
-        let task = await actomaton.send(.start)
+        let result = await actomaton.send(.start)
         assertEqual(await actomaton.state, .running)
 
         await clock.advance(by: .ticks(2))
-        try await task?.value
+        await result.completion()
 
         assertEqual(await actomaton.state, .finished)
     }

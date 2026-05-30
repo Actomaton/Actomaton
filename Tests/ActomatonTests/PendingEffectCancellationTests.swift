@@ -4,7 +4,7 @@ import XCTest
 /// Tests for `Effect.cancel` to cancel pending effects by `Oldest1SuspendNewEffectQueue`.
 final class PendingEffectCancellationTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     private var flags = Flags()
 
@@ -45,7 +45,7 @@ final class PendingEffectCancellationTests: MainTestCase
 
         struct TestOldest1SuspendNewEffectQueue: Oldest1SuspendNewEffectQueue {}
 
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: .init(),
             reducer: Reducer { [flags] action, _, _ in
                 switch action {

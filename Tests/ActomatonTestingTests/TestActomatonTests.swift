@@ -8,9 +8,9 @@ final class TestActomatonTests: MainTestCase
 {
     func test_sendTask_finish_success() async throws
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
-            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
+            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction, Never>> { action, state, _ in
                 switch action {
                 case .increment:
                     state.count = 1
@@ -29,7 +29,7 @@ final class TestActomatonTests: MainTestCase
             effectContext: effectContext
         )
 
-        let task = await tm.send(.increment) { state in
+        let task = await testActomaton.send(.increment) { state in
             state.count = 1
         }
 
@@ -42,9 +42,9 @@ final class TestActomatonTests: MainTestCase
 
     func test_sendTask_finish_timeout() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
-            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
+            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction, Never>> { action, state, _ in
                 switch action {
                 case .increment:
                     state.count = 1
@@ -63,7 +63,7 @@ final class TestActomatonTests: MainTestCase
             effectContext: effectContext
         )
 
-        let task = await tm.send(.increment) { state in
+        let task = await testActomaton.send(.increment) { state in
             state.count = 1
         }
 
@@ -87,13 +87,13 @@ final class TestActomatonTests: MainTestCase
 
     func test_singleSend() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
             reducer: counterReducer,
             environment: ()
         )
 
-        await tm.send(.increment) { state in
+        await testActomaton.send(.increment) { state in
             state.count = 1
         }
     }
@@ -102,21 +102,21 @@ final class TestActomatonTests: MainTestCase
 
     func test_chainedSends() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
             reducer: counterReducer,
             environment: ()
         )
 
-        await tm.send(.increment) { state in
+        await testActomaton.send(.increment) { state in
             state.count = 1
         }
 
-        await tm.send(.increment) { state in
+        await testActomaton.send(.increment) { state in
             state.count = 2
         }
 
-        await tm.send(.decrement) { state in
+        await testActomaton.send(.decrement) { state in
             state.count = 1
         }
     }
@@ -128,11 +128,18 @@ final class TestActomatonTests: MainTestCase
 #else
         let recorder = ResultsCollector<CounterAction>()
 
-        let tm = TestActomaton(
+        typealias Reducer = MealyReducer<
+            CounterAction,
+            CounterState,
+            ResultsCollector<CounterAction>,
+            Effect<CounterAction, Never>
+        >
+
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
-            reducer: MealyReducer<CounterAction, CounterState, ResultsCollector<CounterAction>, Effect<CounterAction>> {
+            reducer: Reducer {
                 action, state, recorder in
-                let recordEffect = Effect<CounterAction>.fireAndForget { _ in
+                let recordEffect = Effect<CounterAction, Never>.fireAndForget { _ in
                     await recorder.append(action)
                 }
 
@@ -151,13 +158,13 @@ final class TestActomatonTests: MainTestCase
             environment: recorder
         )
 
-        let task = await tm.send(.increment) { state in
+        let task = await testActomaton.send(.increment) { state in
             state.count = 1
         }
         try await task.finish()
 
         XCTExpectFailure("`send` should fail before dispatching a new action when feedback remains unhandled.")
-        _ = await tm.send(.decrement)
+        _ = await testActomaton.send(.decrement)
 
         let recordedActions = await recorder.results
         XCTAssertEqual(recordedActions, [.increment, .reset])
@@ -168,35 +175,35 @@ final class TestActomatonTests: MainTestCase
 
     func test_noAssertionSend_stateUnchanged() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
             reducer: counterReducer,
             environment: ()
         )
 
         // Reset when count is already 0 — state doesn't change, so no assertion needed.
-        await tm.send(.reset)
+        await testActomaton.send(.reset)
     }
 
     // MARK: - Action feedback chain
 
     func test_actionFeedbackChain() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: ChainState(steps: []),
             reducer: chainReducer,
             environment: ()
         )
 
-        await tm.send(.step1) { state in
+        await testActomaton.send(.step1) { state in
             state.steps = ["step1"]
         }
 
-        await tm.receive(.step2) { state in
+        await testActomaton.receive(.step2) { state in
             state.steps = ["step1", "step2"]
         }
 
-        await tm.receive(.step3) { state in
+        await testActomaton.receive(.step3) { state in
             state.steps = ["step1", "step2", "step3"]
         }
     }
@@ -205,9 +212,9 @@ final class TestActomatonTests: MainTestCase
 
     func test_effectBasedReducer_asyncNextAction() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
-            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
+            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction, Never>> { action, state, _ in
                 switch action {
                 case .increment:
                     state.count += 1
@@ -225,20 +232,20 @@ final class TestActomatonTests: MainTestCase
             environment: ()
         )
 
-        await tm.send(.increment) { state in
+        await testActomaton.send(.increment) { state in
             state.count = 1
         }
 
-        await tm.receive(.reset) { state in
+        await testActomaton.receive(.reset) { state in
             state.count = 0
         }
     }
 
     func test_effectBasedReducer_syncNextAction() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
-            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
+            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction, Never>> { action, state, _ in
                 switch action {
                 case .increment:
                     state.count += 1
@@ -254,20 +261,51 @@ final class TestActomatonTests: MainTestCase
             environment: ()
         )
 
-        await tm.send(.increment) { state in
+        await testActomaton.send(.increment) { state in
             state.count = 1
         }
 
-        await tm.receive(.reset) { state in
+        await testActomaton.receive(.reset) { state in
+            state.count = 0
+        }
+    }
+
+    func test_acceptsNonNeverEmissionReducer() async
+    {
+        let testActomaton = TestActomaton(
+            state: CounterState(count: 0),
+            reducer: MealyReducer<
+                CounterAction, CounterState, Void, Effect<CounterAction, String>
+            > { action, state, _ in
+                switch action {
+                case .increment:
+                    state.count += 1
+                    return .emit("incremented") + .next(action: .reset)
+                case .decrement:
+                    state.count -= 1
+                    return .emit("decremented")
+                case .reset:
+                    state.count = 0
+                    return .emit("reset")
+                }
+            },
+            environment: ()
+        )
+
+        await testActomaton.send(.increment) { state in
+            state.count = 1
+        }
+
+        await testActomaton.receive(.reset) { state in
             state.count = 0
         }
     }
 
     func test_asyncEffectReceive() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: CounterState(count: 0),
-            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction>> { action, state, _ in
+            reducer: MealyReducer<CounterAction, CounterState, Void, Effect<CounterAction, Never>> { action, state, _ in
                 switch action {
                 case .increment:
                     state.count = 1
@@ -286,11 +324,11 @@ final class TestActomatonTests: MainTestCase
             environment: ()
         )
 
-        await tm.send(.increment) { state in
+        await testActomaton.send(.increment) { state in
             state.count = 1
         }
 
-        await tm.receive(.reset) { state in
+        await testActomaton.receive(.reset) { state in
             state.count = 0
         }
     }
@@ -299,18 +337,18 @@ final class TestActomatonTests: MainTestCase
 
     func test_multipleFieldChanges() async
     {
-        let tm = TestActomaton(
+        let testActomaton = TestActomaton(
             state: UserState(name: "", loggedIn: false),
             reducer: userReducer,
             environment: ()
         )
 
-        await tm.send(.login(name: "alice")) { state in
+        await testActomaton.send(.login(name: "alice")) { state in
             state.name = "alice"
             state.loggedIn = true
         }
 
-        await tm.send(.logout) { state in
+        await testActomaton.send(.logout) { state in
             state.name = ""
             state.loggedIn = false
         }
@@ -332,7 +370,7 @@ private enum CounterAction: Equatable, Sendable
 }
 
 private let counterReducer = MealyReducer<
-    CounterAction, CounterState, Void, Effect<CounterAction>
+    CounterAction, CounterState, Void, Effect<CounterAction, Never>
 > { action, state, _ in
     switch action {
     case .increment:
@@ -359,7 +397,7 @@ private enum ChainAction: Sendable
     case step3
 }
 
-private let chainReducer = MealyReducer<ChainAction, ChainState, Void, Effect<ChainAction>> { action, state, _ in
+private let chainReducer = MealyReducer<ChainAction, ChainState, Void, Effect<ChainAction, Never>> { action, state, _ in
     switch action {
     case .step1:
         state.steps.append("step1")
@@ -385,7 +423,7 @@ private enum UserAction: Sendable
     case logout
 }
 
-private let userReducer = MealyReducer<UserAction, UserState, Void, Effect<UserAction>> { action, state, _ in
+private let userReducer = MealyReducer<UserAction, UserState, Void, Effect<UserAction, Never>> { action, state, _ in
     switch action {
     case let .login(name):
         state.name = name

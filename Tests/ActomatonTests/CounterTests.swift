@@ -3,11 +3,11 @@ import XCTest
 
 final class CounterTests: MainTestCase
 {
-    fileprivate var actomaton: Actomaton<Action, State>!
+    fileprivate var actomaton: Actomaton<Action, State, Never>!
 
     override func setUp() async throws
     {
-        let actomaton = Actomaton<Action, State>(
+        let actomaton = Actomaton<Action, State, Never>(
             state: State(),
             reducer: Reducer { action, state, _ in
                 switch action {

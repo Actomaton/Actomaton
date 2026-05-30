@@ -13,12 +13,12 @@ internal final class StoreCore<Action, State, Environment>
     private typealias Machine = MealyMachine<
         BindableAction<Action, State>,
         State,
-        Effect<BindableAction<Action, State>>
+        Effect<BindableAction<Action, State>, Never>
     >
 
     private let machine: Machine
 
-    private let effectManager: EffectQueueManager<BindableAction<Action, State>, State>
+    private let effectManager: EffectQueueManager<BindableAction<Action, State>, State, Never>
 
     private let _state: CurrentValueSubject<State, Never>
 
@@ -29,7 +29,7 @@ internal final class StoreCore<Action, State, Environment>
     /// Initializer with `environment`.
     internal init(
         state initialState: State,
-        reducer: Reducer<Action, State, Environment>,
+        reducer: Reducer<Action, State, Environment, Never>,
         environment: Environment,
         effectContext: EffectContext,
         configuration: StoreConfiguration
@@ -51,14 +51,16 @@ internal final class StoreCore<Action, State, Environment>
 
         self.machine = machine
 
-        let effectManager = EffectQueueManager<BindableAction<Action, State>, State>(effectContext: effectContext)
+        let effectManager = EffectQueueManager<BindableAction<Action, State>, State, Never>(
+            effectContext: effectContext
+        )
         self.effectManager = effectManager
 
         effectManager.setUp(
             withSendability: { [weak self] runEffM in
                 await self?.runIsolatedEffectManager(runEffM)
             },
-            sendAction: { [weak self] action, priority, tracksFeedbacks in
+            sendAction: { [weak self] action, priority, tracksFeedbacks, _ in
                 await self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
             }
         )
@@ -94,15 +96,20 @@ internal final class StoreCore<Action, State, Environment>
     ) -> Task<(), any Error>?
     {
         let output = machine.send(action)
-        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        return effectManager.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks,
+            emit: { _ in }
+        )
     }
 
     /// Runs `runEffM` on the MainActor, supplying the underlying ``EffectManager`` so that
-    /// conformers can mutate their own bookkeeping safely from detached tasks without
+    /// conformers can mutate their own bookkeeping safely from unstructured tasks without
     /// capturing `self` itself.
     private func runIsolatedEffectManager<EffM>(
         _ runEffM: (EffM) -> Void
-    ) where EffM: EffectManager<BindableAction<Action, State>, State, Effect<BindableAction<Action, State>>>
+    ) where EffM: EffectManager<BindableAction<Action, State>, State, Effect<BindableAction<Action, State>, Never>>
     {
         runEffM(effectManager as! EffM)
     }
@@ -112,14 +119,14 @@ internal final class StoreCore<Action, State, Environment>
 
 /// Lifts from `Reducer`'s `Action` to `Store.BindableAction`.
 private func lift<Action, State, Environment>(
-    reducer: Reducer<Action, State, Environment>
-) -> Reducer<BindableAction<Action, State>, State, Environment>
+    reducer: Reducer<Action, State, Environment, Never>
+) -> Reducer<BindableAction<Action, State>, State, Environment, Never>
 {
     .init { action, state, environment in
         switch action {
         case let .action(innerAction):
             let effect = reducer.run(innerAction, &state, environment)
-            return effect.map { BindableAction<Action, State>.action($0) }
+            return effect.map(action: { BindableAction<Action, State>.action($0) })
 
         case let .state(newState):
             state = newState

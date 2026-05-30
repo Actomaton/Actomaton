@@ -3,16 +3,20 @@ import ActomatonEffect
 
 /// Actor + Automaton = Actomaton.
 ///
-/// `Actomaton` wraps a ``MealyMachine`` specialized with `Output == Effect<Action>` inside a
-/// Swift actor, providing serial isolation for `send(_:)` and `state` access. It owns the
+/// `Actomaton` wraps a ``MealyMachine`` specialized with `Output == Effect<Action, Emission>`
+/// inside a Swift actor, providing serial isolation for `send(_:)` and `state` access. It owns the
 /// ``EffectManager`` and turns the asynchronous-remainder output from ``MealyMachine`` into
 /// running Swift Concurrency tasks.
-public actor Actomaton<Action, State>
-    where Action: Sendable
+///
+/// `Emission` is the typed side-channel value: each `send(_:)` call returns a ``SendResult``
+/// whose `AsyncSequence` of `Emission` values is produced by the triggered effects'
+/// synchronous `.emit` kinds and async `Outcome` emissions.
+public actor Actomaton<Action, State, Emission>
+    where Action: Sendable, Emission: Sendable
 {
-    private let machine: MealyMachine<Action, State, Effect<Action>>
+    private let machine: MealyMachine<Action, State, Effect<Action, Emission>>
 
-    private let effectManager: any EffectManager<Action, State, Effect<Action>>
+    private let effectManager: any EffectManager<Action, State, Effect<Action, Emission>>
 
     public var state: State
     {
@@ -22,8 +26,8 @@ public actor Actomaton<Action, State>
     /// Designated initializer that takes an explicit ``EffectManager``.
     public init(
         state: State,
-        reducer: MealyReducer<Action, State, (), Effect<Action>>,
-        effectManager: some EffectManager<Action, State, Effect<Action>>
+        reducer: MealyReducer<Action, State, (), Effect<Action, Emission>>,
+        effectManager: some EffectManager<Action, State, Effect<Action, Emission>>
     )
     {
         self.machine = MealyMachine(
@@ -36,8 +40,13 @@ public actor Actomaton<Action, State>
             withSendability: { [weak self] runEffM in
                 await self?.runIsolatedEffectManager(runEffM)
             },
-            sendAction: { [weak self] action, priority, tracksFeedbacks in
-                await self?.send(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            sendAction: { [weak self] action, priority, tracksFeedbacks, emit in
+                await self?.sendInternal(
+                    action,
+                    priority: priority,
+                    tracksFeedbacks: tracksFeedbacks,
+                    emit: emit
+                )
             }
         )
     }
@@ -49,29 +58,60 @@ public actor Actomaton<Action, State>
     ///   - priority:
     ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
     ///   - tracksFeedbacks:
-    ///     If `true`, returned `Task` will also track its feedback effects that are triggered by next actions,
-    ///     so that their wait-for-all and cancellations are possible.
+    ///     If `true`, the returned ``SendResult`` will also track feedback effects triggered by
+    ///     next actions — so its `AsyncSequence` stays open until those downstream chains
+    ///     complete, and recursive ``Effect/Outcome/emit`` values flow into the same stream.
     ///     Default is `false`.
     ///
     /// - Returns:
-    ///   Unified task that can handle (wait for or cancel) all combined effects triggered by `action` in `Reducer`.
+    ///   A ``SendResult`` exposing both a non-throwing `AsyncSequence` of
+    ///   `Result<Emission, any Error>` elements (effect errors are surfaced in-band as `.failure`
+    ///   without cancelling sibling effects) and a `cancel()` handle that aborts the entire chain.
     @discardableResult
     public func send(
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> Task<(), any Error>?
+    ) -> SendResult<Emission>
     {
         let output = machine.send(action)
-        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        return effectManager.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks
+        )
+    }
+
+    /// Reducer-side dispatch used internally by the recursive feedback path threaded through
+    /// ``EffectManager``'s `sendAction` callback. The `emit` parameter is the original caller's
+    /// emission sink, so all `Emission` values produced by downstream effects flow into the
+    /// single ``SendResult`` returned by the public `send`.
+    private func sendInternal(
+        _ action: Action,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool,
+        emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
+    ) -> Task<(), any Error>?
+    {
+        // `MealyMachine.send` recursively resolves synchronous `.next(Action)` feedbacks
+        // because `Effect<Action, Emission>: MealyOutput` exposes `MealyOutput.Action == Action`.
+        // The returned `output` contains only the asynchronous remainder plus any synchronous
+        // `.emit` kinds (which ride along unchanged).
+        let output = machine.send(action)
+        return effectManager.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks,
+            emit: emit
+        )
     }
 
     /// Runs `runEffM` within this actor's isolation, supplying the underlying ``EffectManager``
-    /// so that conformers can mutate their own bookkeeping safely from detached tasks without
+    /// so that conformers can mutate their own bookkeeping safely from unstructured tasks without
     /// capturing `self` themselves.
     fileprivate func runIsolatedEffectManager<EffM>(
         _ runEffM: (EffM) -> Void
-    ) where EffM: EffectManager<Action, State, Effect<Action>>
+    ) where EffM: EffectManager<Action, State, Effect<Action, Emission>>
     {
         // Safe downcast from the existential storage to the conformer's concrete `Self`.
         runEffM(effectManager as! EffM)

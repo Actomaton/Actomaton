@@ -6,18 +6,22 @@ import XCTest
 /// A testing utility that wraps `MealyMachine` + `EffectQueueManager` to provide
 /// TCA-like `send` / `receive` assertions with readable diff output.
 ///
+/// `Emission` matches the reducer's side-channel output type, so tests can use
+/// the same `Effect<Action, Emission>` reducer shape as production code. `TestActomaton`
+/// does not expose emitted values; it only asserts state changes and feedback actions.
+///
 /// ```swift
-/// let tm = TestActomaton(
+/// let testActomaton = TestActomaton(
 ///     state: MyState(),
 ///     reducer: myReducer,
 ///     environment: ()
 /// )
 ///
-/// await tm.send(.increment) { state in
+/// await testActomaton.send(.increment) { state in
 ///     state.count = 1
 /// }
 ///
-/// await tm.receive(.didLoad) { state in
+/// await testActomaton.receive(.didLoad) { state in
 ///     state.isLoading = false
 /// }
 /// ```
@@ -27,14 +31,14 @@ import XCTest
 ///   `State: Equatable` conformance witness can be sent across isolation when `self` is captured
 ///   in `@Sendable` closures (e.g. `effectManager.setUp` callbacks, `TaskGroup.addTask`).
 ///   `State` values themselves do NOT need to be `Sendable`.
-public actor TestActomaton<Action, State>
-    where Action: Sendable, State: Equatable & SendableMetatype
+public actor TestActomaton<Action, State, Emission>
+    where Action: Sendable, State: Equatable & SendableMetatype, Emission: Sendable
 {
     private typealias InternalAction = TestActomatonAction<Action>
     private typealias RuntimeState = TestActomatonRuntimeState<Action, State>
 
-    private let machine: MealyMachine<InternalAction, RuntimeState, Effect<InternalAction>>
-    private let effectManager: EffectQueueManager<InternalAction, RuntimeState>
+    private let machine: MealyMachine<InternalAction, RuntimeState, Effect<InternalAction, Emission>>
+    private let effectManager: EffectQueueManager<InternalAction, RuntimeState, Emission>
     private let receivedActionSignal: AsyncStream<Void>
     private var consumedReceivedActionCount: Int = 0
 
@@ -44,7 +48,7 @@ public actor TestActomaton<Action, State>
     /// ``receive(_:timeout:assert:fileID:file:line:)``.
     public init<Environment>(
         state: State,
-        reducer: MealyReducer<Action, State, Environment, Effect<Action>>,
+        reducer: MealyReducer<Action, State, Environment, Effect<Action, Emission>>,
         environment: Environment,
         effectContext: EffectContext = .init(clock: ContinuousClock())
     ) where Environment: Sendable
@@ -52,10 +56,12 @@ public actor TestActomaton<Action, State>
         let receivedActionSignal = AsyncStream.makeStream(of: Void.self)
         self.receivedActionSignal = receivedActionSignal.stream
 
-        let reducer = MealyReducer<InternalAction, RuntimeState, (), Effect<InternalAction>> { action, state, _ in
+        typealias Reducer = MealyReducer<InternalAction, RuntimeState, (), Effect<InternalAction, Emission>>
+
+        let reducer = Reducer { action, state, _ in
             let stateBeforeAction = state.current
             let effect = reducer.run(action.action, &state.current, environment)
-            let mappedEffect = effect.map(InternalAction.receive)
+            let mappedEffect = effect.map(action: InternalAction.receive)
 
             switch action {
             case .send:
@@ -71,36 +77,43 @@ public actor TestActomaton<Action, State>
                     )
                 )
 
-                return Effect.fireAndForget { _ in
+                return Effect<InternalAction, Emission>.fireAndForget { _ in
                     receivedActionSignal.continuation.yield()
                 } + mappedEffect
             }
         }
 
-        self.machine = MealyMachine<InternalAction, RuntimeState, Effect<InternalAction>>(
+        self.machine = MealyMachine<InternalAction, RuntimeState, Effect<InternalAction, Emission>>(
             state: .init(current: state),
             reducer: reducer
         )
 
-        let effectManager = EffectQueueManager<InternalAction, RuntimeState>(effectContext: effectContext)
+        let effectManager = EffectQueueManager<InternalAction, RuntimeState, Emission>(
+            effectContext: effectContext
+        )
         self.effectManager = effectManager
 
         effectManager.setUp(
             withSendability: { [weak self] runEffM in
                 await self?.runIsolatedEffectManager(runEffM)
             },
-            sendAction: { [weak self] action, priority, tracksFeedbacks in
-                await self?.sendFromEffect(action, priority: priority, tracksFeedbacks: tracksFeedbacks)
+            sendAction: { [weak self] action, priority, tracksFeedbacks, emit in
+                await self?.sendFromEffect(
+                    action,
+                    priority: priority,
+                    tracksFeedbacks: tracksFeedbacks,
+                    emit: emit
+                )
             }
         )
     }
 
     /// Runs `runEffM` within this actor's isolation, supplying the underlying ``EffectManager``
-    /// so that conformers can mutate their own bookkeeping safely from detached tasks without
+    /// so that conformers can mutate their own bookkeeping safely from unstructured tasks without
     /// capturing `self` themselves.
     private func runIsolatedEffectManager<EffM>(
         _ runEffM: (EffM) -> Void
-    ) where EffM: EffectManager<InternalAction, RuntimeState, Effect<InternalAction>>
+    ) where EffM: EffectManager<InternalAction, RuntimeState, Effect<InternalAction, Emission>>
     {
         runEffM(effectManager as! EffM)
     }
@@ -110,11 +123,17 @@ public actor TestActomaton<Action, State>
     private func sendFromEffect(
         _ action: InternalAction,
         priority: TaskPriority?,
-        tracksFeedbacks: Bool
+        tracksFeedbacks: Bool,
+        emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
     ) -> Task<(), any Error>?
     {
         let output = machine.send(action)
-        return effectManager.processOutput(output, priority: priority, tracksFeedbacks: tracksFeedbacks)
+        return effectManager.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks,
+            emit: emit
+        )
     }
 
     /// Sends an action and asserts how state changes before any feedback action is received.
@@ -134,7 +153,7 @@ public actor TestActomaton<Action, State>
         fileID: StaticString = #fileID,
         file filePath: StaticString = #filePath,
         line: UInt = #line
-    ) async -> TestActomatonTask
+    ) async -> TestActomatonTask<Emission>
     {
         let runtimeState = self.machine.state
 
@@ -161,13 +180,17 @@ public actor TestActomaton<Action, State>
                 line: line
             )
 
-            return TestActomatonTask(task: nil, timeout: timeout)
+            return TestActomatonTask(sendResult: nil, timeout: timeout)
         }
 
         let expected = runtimeState.current
 
         let output = self.machine.send(.send(action))
-        let task = self.effectManager.processOutput(output, priority: nil, tracksFeedbacks: true)
+        let sendResult = self.effectManager.processOutput(
+            output,
+            priority: nil,
+            tracksFeedbacks: true
+        )
 
         guard let actual = (self.machine.state).latestSentState else {
             XCTFail(
@@ -179,7 +202,7 @@ public actor TestActomaton<Action, State>
                 file: filePath,
                 line: line
             )
-            return .init(task: task, timeout: timeout)
+            return .init(sendResult: sendResult, timeout: timeout)
         }
 
         self.assertStateChange(
@@ -194,7 +217,7 @@ public actor TestActomaton<Action, State>
 
         await Self.drainImmediateFeedbacks()
 
-        return .init(task: task, timeout: timeout)
+        return .init(sendResult: sendResult, timeout: timeout)
     }
 
     /// Asserts an action was received from an effect and verifies the resulting state change.
