@@ -120,21 +120,10 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
         let tasks_ = tasks
 
         // Keep the returned task unstructured, but run its supervisor work off any caller actor.
+        // `_runTasksForwardingCancellation` already forwards cancellation of this supervisor task
+        // into `tasks_` (via its per-task `withTaskCancellationHandler`), so no outer handler is needed.
         return Task<(), Never>(priority: priority) { @concurrent in
-            await withTaskCancellationHandler {
-                await withTaskGroup(of: Void.self) { group in
-                    for task in tasks_ {
-                        group.addTask(priority: priority) {
-                            await _runTaskForwardingCancellation(task)
-                        }
-                    }
-                    await group.waitForAll()
-                }
-            } onCancel: {
-                for task in tasks_ {
-                    task.cancel()
-                }
-            }
+            await _runTasksForwardingCancellation(tasks_, priority: priority)
         }
     }
 
