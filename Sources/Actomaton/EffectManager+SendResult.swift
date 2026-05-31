@@ -19,7 +19,7 @@ extension EffectManager
         let (stream, continuation) = AsyncStream<Result<Output.Emission, any Error>>.makeStream()
         let emit: @Sendable (Result<Output.Emission, any Error>) -> Void = { continuation.yield($0) }
 
-        let task = self.processOutput(
+        let processingTask = self.processOutput(
             output,
             priority: priority,
             tracksFeedbacks: tracksFeedbacks,
@@ -39,12 +39,10 @@ extension EffectManager
         //   so the effect chain unwinds, then finish cleanly.
         let supervisor = Task<Void, Never>(priority: priority) { @concurrent in
             await withTaskCancellationHandler {
-                await task?.value
-
-                // Call `finish` regardless of successful / failure completions.
+                await processingTask?.value
                 continuation.finish()
             } onCancel: {
-                task?.cancel()
+                processingTask?.cancel()
             }
         }
 
