@@ -95,7 +95,10 @@ final class SendResultCancellationTests: MainTestCase
         await settle()
 
         let isQueuedSecondCancelled = await flags.isQueuedSecondCancelled
-        XCTAssertTrue(isQueuedSecondCancelled)
+        XCTAssertFalse(
+            isQueuedSecondCancelled,
+            "Second effect was still suspended (never started), so dropping it does not run `ifCancelled`."
+        )
 
         await clock.advance(by: .ticks(2.5))
         await firstResult.completion()

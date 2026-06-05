@@ -83,8 +83,8 @@ final class RunOldestDiscardNewTests: MainTestCase
         let results = await resultsCollector.results.sorted()
         XCTAssertEqual(
             results,
-            [2],
-            "2nd increment's effect should be cancelled by discard."
+            [],
+            "Should be empty: 2nd increment's effect is discarded without starting, so `ifCancelled` never runs."
         )
     }
 
@@ -125,8 +125,8 @@ final class RunOldestDiscardNewTests: MainTestCase
         let results = await resultsCollector.results.sorted()
         XCTAssertEqual(
             results,
-            [3],
-            "3rd increment's effect should be cancelled by discard."
+            [],
+            "Should be empty: 3rd increment's effect is discarded without starting, so `ifCancelled` never runs."
         )
     }
 }

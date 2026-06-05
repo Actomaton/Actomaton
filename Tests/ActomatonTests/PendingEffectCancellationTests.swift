@@ -65,8 +65,8 @@ final class PendingEffectCancellationTests: MainTestCase
                         return try await context.clock.sleep(for: .ticks(1)) {
                             return ._didFetch2
                         } ifCancelled: {
-                            // NOTE: When Effect 2 is suspended and cancelled before execution,
-                            // this scope won't even be called
+                            // NOTE: Effect 2 is suspended (pending) and cancelled before it ever
+                            // starts, so it is discarded without running — this scope is never called.
 
                             Debug.print("Effect 2 cancelled")
                             await flags.mark(result2: .cancelled)
@@ -120,8 +120,16 @@ final class PendingEffectCancellationTests: MainTestCase
 
         await clock.advance(by: .ticks(1.5))
 
-        assertEqual(await flags.result1, .cancelled)
-        assertEqual(await flags.result2, .cancelled)
+        assertEqual(
+            await flags.result1,
+            .cancelled,
+            "Effect 1 was running, so cancellation runs its `ifCancelled` cleanup."
+        )
+        assertEqual(
+            await flags.result2,
+            .initial,
+            "Effect 2 was still suspended (never started), so it is discarded without running `ifCancelled`."
+        )
     }
 }
 

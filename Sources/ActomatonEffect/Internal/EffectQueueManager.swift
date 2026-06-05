@@ -169,10 +169,10 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             }
         }
 
-        // Drain and cancel pending effects to trigger their cancellation handlers.
+        // Drain pending effects. They never started, so there is nothing to cancel —
+        // just signal completion so their suspended-effect tasks finish.
         for (queue, pendings) in pendingEffects {
             for pending in pendings {
-                cancelEffectKind(pending.kind)
                 pending.onComplete.finish()
             }
             pendingEffects[queue] = nil
@@ -316,7 +316,6 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                     return .suspend(suspendedEffectTask: suspendedEffectTask)
 
                 case .discardNew:
-                    cancelEffectKind(effectKind)
                     return .discard
                 }
             }
@@ -531,7 +530,6 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             }
 
             if let removed = pendingEffects[effectQueue]?.remove(at: index) {
-                cancelEffectKind(removed.kind)
                 removed.onComplete.finish()
             }
 
@@ -565,7 +563,6 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             for (i, pending) in pendings.enumerated().reversed() {
                 if let effectID = pending.kind.id, predicate(effectID.value) {
                     if let removed = pendingEffects[effectQueue]?.remove(at: i) {
-                        cancelEffectKind(removed.kind)
                         removed.onComplete.finish()
                     }
                 }
@@ -624,7 +621,6 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             let time = calculateEffectTime(queue: queue)
 
             if pending.suspendedEffectTask.isCancelled {
-                cancelEffectKind(pending.kind)
                 pending.onComplete.finish()
                 continue
             }
@@ -665,28 +661,6 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             else {
                 onComplete.finish()
             }
-        }
-    }
-
-    /// Cancels `effectKind`'s `single` or `sequence` immediately
-    /// so that cancellation can still be delivered to `Effect`'s async scope.
-    private func cancelEffectKind(_ effectKind: Effect<Action, Emission>.Kind)
-    {
-        let context = self.effectContext
-
-        switch effectKind {
-        case let .single(single):
-            Task<Void, any Error>(priority: single.priority) { @concurrent in
-                _ = try await single.run(context)
-            }
-            .cancel() // Cancel immediately.
-        case let .sequence(sequence):
-            Task<Void, any Error>(priority: sequence.priority) { @concurrent in
-                _ = try await sequence.sequence(context)
-            }
-            .cancel() // Cancel immediately.
-        case .next, .emission, .cancel, .updateQueue:
-            return
         }
     }
 
