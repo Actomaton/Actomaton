@@ -209,8 +209,8 @@ final class EffectQueueDelayTests: MainTestCase
 
         await actomaton.send(.fetch(id: "1")) // fetch at t=0, comples at t=3
         await actomaton.send(.fetch(id: "2")) // delayed fetch at t=2, comples at t=5
-        await actomaton.send(.fetch(id: "3")) // delayed fetch at t=4, will be auto-cancelled by queue
-        await actomaton.send(.fetch(id: "4")) // delayed fetch at t=6, will be auto-cancelled by queue
+        await actomaton.send(.fetch(id: "3")) // discarded by queue without starting
+        await actomaton.send(.fetch(id: "4")) // discarded by queue without starting
 
         assertEqual(await actomaton.state.finishedIDs, [])
 
@@ -226,7 +226,11 @@ final class EffectQueueDelayTests: MainTestCase
             ["1", "2"],
             "Only first 2 should run effects."
         )
-        assertEqual(await cancelledIDs.results.sorted(), ["3", "4"])
+        assertEqual(
+            await cancelledIDs.results.sorted(),
+            [],
+            "Discarded effects \"3\"/\"4\" never start, so their `ifCancelled` never runs."
+        )
     }
 }
 
