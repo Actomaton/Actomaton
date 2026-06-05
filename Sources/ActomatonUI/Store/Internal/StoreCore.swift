@@ -35,18 +35,14 @@ internal final class StoreCore<Action, State, Environment>
         configuration: StoreConfiguration
     )
     {
-        let _state = CurrentValueSubject<State, Never>(initialState)
-        self._state = _state
+        self._state = CurrentValueSubject<State, Never>(initialState)
         self.environment = environment
 
         let machine = Machine(
             state: initialState,
             reducer: lift(reducer: reducer)
                 .log(format: configuration.logFormat),
-            environment: environment,
-            willChangeState: { _, new in
-                _state.value = new
-            }
+            environment: environment
         )
 
         self.machine = machine
@@ -96,6 +92,7 @@ internal final class StoreCore<Action, State, Environment>
     ) -> Task<(), Never>?
     {
         let output = machine.send(action)
+        _state.value = machine.state
         return effectManager.processOutput(
             output,
             priority: priority,
