@@ -19,49 +19,31 @@
 public final class MealyMachine<Action, State, Output>: SendableMetatype
 {
     public private(set) var state: State
-    {
-        willSet {
-            willChangeState(state, newValue)
-        }
-    }
 
     private let reducer: MealyReducer<Action, State, (), Output>
 
-    /// State change handler. Wrappers can use this to fan out state changes to their own
-    /// observers (Combine publishers, callbacks, etc.).
-    private let willChangeState: (_ old: State, _ new: State) -> Void
-
     /// Initializer without `environment`.
-    ///
-    /// - Parameters:
-    ///   - willChangeState:
-    ///     Hook fired inside `state.willSet`. Wrappers can use it to forward state changes
-    ///     to external observers.
     public init(
         state: State,
-        reducer: MealyReducer<Action, State, (), Output>,
-        willChangeState: @escaping (_ old: State, _ new: State) -> Void = { _, _ in }
+        reducer: MealyReducer<Action, State, (), Output>
     )
     {
         self.state = state
         self.reducer = reducer
-        self.willChangeState = willChangeState
     }
 
     /// Initializer with `environment`.
     public convenience init<Environment>(
         state: State,
         reducer: MealyReducer<Action, State, Environment, Output>,
-        environment: Environment,
-        willChangeState: @escaping (_ old: State, _ new: State) -> Void = { _, _ in }
+        environment: Environment
     ) where Environment: Sendable
     {
         self.init(
             state: state,
             reducer: MealyReducer { action, state, _ in
                 reducer.run(action, &state, environment)
-            },
-            willChangeState: willChangeState
+            }
         )
     }
 }
