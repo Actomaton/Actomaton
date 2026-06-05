@@ -215,8 +215,10 @@ public actor TestActomaton<Action, State, Emission>
             assert: assert
         )
 
-        await Self.drainImmediateFeedbacks()
-
+        // No barrier is needed here: synchronous feedback (`.next`) is already surfaced into
+        // `receivedActions` by `machine.send`'s recursive resolution, so the fail-fast check on the
+        // next `send` sees it. Asynchronous feedback is awaited deterministically by `receive` via
+        // `receivedActionSignal`, not eagerly drained here.
         return .init(sendResult: sendResult, timeout: timeout)
     }
 
@@ -344,10 +346,18 @@ extension TestActomaton
                 assert: updateStateToExpectedResult
             )
         }
-
-        await Self.drainImmediateFeedbacks()
     }
 
+    /// Waits until at least one unconsumed received action is available, or `timeout` elapses.
+    ///
+    /// Feedback arrival is awaited deterministically rather than by spinning the scheduler:
+    /// - Synchronous feedback (`.next`) is already appended to `receivedActions` by
+    ///   `machine.send`'s recursive resolution, so the count check below returns immediately.
+    /// - Asynchronous feedback wakes this method through `receivedActionSignal`, which fires
+    ///   exactly when an effect-originated action is appended (see the `.receive` reducer branch).
+    ///
+    /// The `timeout` is a real-time failsafe for the "no feedback ever arrives" assertion failure,
+    /// not part of the happy path; a delivered feedback returns as soon as its signal fires.
     private func waitForReceivedAction(
         timeout: Duration,
         fileID: StaticString,
@@ -355,8 +365,6 @@ extension TestActomaton
         line: UInt
     ) async -> Bool
     {
-        await Self.drainImmediateFeedbacks()
-
         if await self.unconsumedReceivedActionsCount > 0 {
             return true
         }
@@ -476,18 +484,6 @@ extension TestActomaton
                 file: filePath,
                 line: line
             )
-        }
-    }
-
-    /// Gives the concurrency runtime a few turns to surface already-triggered feedback actions.
-    ///
-    /// This is intentionally a small race-avoidance shim for tests, not a way to wait for full
-    /// effect completion. Time-based effects should still be driven explicitly by a test clock or
-    /// by awaiting the task returned from `send`.
-    private static func drainImmediateFeedbacks(count: Int = 20) async
-    {
-        for _ in 0 ..< count {
-            await Task.yield()
         }
     }
 }
