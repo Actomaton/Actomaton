@@ -58,8 +58,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
 
     /// `@Sendable` closure with **inherited sendability** from the parent safe container that
     /// wraps this manager. Hands `self` back to the supplied callback under that sendability,
-    /// so cleanup tasks in ``enqueueTask`` can mutate bookkeeping safely without
-    /// capturing (non-Sendable) `self`.
+    /// so cleanup tasks can mutate bookkeeping safely without capturing (non-Sendable) `self`.
     private var withSendability: (
         @Sendable (
             _ runEffM: @escaping @Sendable (EffectQueueManager<Action, State, Emission>) -> Void
@@ -308,9 +307,15 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                         )
                     )
 
-                    observeSuspendedEffectTaskCancellation(
+                    waitForTask(
                         suspendedEffectTask,
-                        priority: priority
+                        priority: priority,
+                        condition: {
+                            suspendedEffectTask.isCancelled
+                        },
+                        cleanUp: { self_ in
+                            self_.cancelPendingEffect(suspendedEffectTask: suspendedEffectTask)
+                        }
                     )
 
                     return .suspend(suspendedEffectTask: suspendedEffectTask)
@@ -437,11 +442,6 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
     }
 
     /// Enqueues running `task` and sets up an unstructured cleanup task.
-    ///
-    /// The cleanup task snapshots `self.withSendability` (a Sendable closure value) and uses
-    /// it to re-enter the parent safe container under inherited sendability. `self` is handed
-    /// back as a parameter to the inner callback, so the cleanup task does NOT need to capture
-    /// `self` — letting `EffectQueueManager` remain non-Sendable.
     private func enqueueTask(
         _ task: Task<(), Never>,
         id: _EffectID?,
@@ -461,54 +461,45 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             self.queuedRunningTasks[_EffectQueue(queue), default: []].append(task)
         }
 
-        let withSendability = self.withSendability
-
-        // Clean up after `task` is completed.
-        Task<(), Never>(priority: priority) { @concurrent in
-            // Wait for `task` to complete.
-            _ = await task.result
-
+        waitForTask(task, priority: priority) { self_ in
             Debug.print("[enqueueTask] Task completed, removing id-task: \(effectID)")
 
-            // Re-enter the parent safe container. `self_` is the same `EffectQueueManager`
-            // instance (handed back by the wrapper's `withSendability`); accessing it under the
-            // wrapper's inherited sendability is safe without `self` being Sendable.
-            await withSendability? { self_ in
-                self_.handleTaskCompleted(
-                    id: effectID,
-                    task: task,
-                    queue: queue,
-                    priority: priority,
-                    tracksFeedbacks: tracksFeedbacks
-                )
-            }
+            self_.handleTaskCompleted(
+                id: effectID,
+                task: task,
+                queue: queue,
+                priority: priority,
+                tracksFeedbacks: tracksFeedbacks
+            )
         }
     }
 
-    /// Observes cancellation of the completion task returned for a suspended pending effect.
+    /// Sets up an unstructured task that waits for `task`, then re-enters the parent safe container.
     ///
-    /// `runOldest(..., .suspendNew)` returns this task to the caller before the effect actually
-    /// starts. The task completes only after the pending effect is dropped or the dequeued effect
-    /// task finishes. If `SendResult.cancel()` cancels that task, the cancellation observer re-enters
-    /// the manager and cancels the represented effect: either by removing it from `pendingEffects`,
-    /// or by forwarding cancellation to its dequeued running task.
-    private func observeSuspendedEffectTaskCancellation(
-        _ suspendedEffectTask: Task<(), Never>,
-        priority: TaskPriority?
+    /// The cleanup task snapshots `self.withSendability` (a Sendable closure value) and uses
+    /// it to re-enter the parent safe container under inherited sendability. `self` is handed
+    /// back as a parameter to the inner callback, so the cleanup task does NOT need to capture
+    /// `self` — letting `EffectQueueManager` remain non-Sendable.
+    private func waitForTask(
+        _ task: Task<(), Never>,
+        priority: TaskPriority?,
+        condition: @escaping @Sendable () -> Bool = { true },
+        cleanUp: @escaping @Sendable (EffectQueueManager<Action, State, Emission>) -> Void,
+        afterCleanUp: (@Sendable () -> Void)? = nil
     )
     {
         let withSendability = self.withSendability
 
-        // Clean up when the suspended-effect task is cancelled,
-        // whether it is still pending or already dequeued.
+        // Clean up after waiting for `task` to be completed.
         Task<(), Never>(priority: priority) { @concurrent in
-            _ = await suspendedEffectTask.result
+            _ = await task.result
 
-            if suspendedEffectTask.isCancelled {
-                await withSendability? { self_ in
-                    self_.cancelPendingEffect(suspendedEffectTask: suspendedEffectTask)
-                }
-            }
+            guard condition() else { return }
+
+            // Clean up with safe `self` access.
+            await withSendability?(cleanUp)
+
+            afterCleanUp?()
         }
     }
 
@@ -646,17 +637,17 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             let suspendedEffectTask = pending.suspendedEffectTask
             if let dequeuedTask {
                 dequeuedTasks[suspendedEffectTask] = dequeuedTask
-                let withSendability = self.withSendability
 
-                Task<Void, Never>(priority: pending.priority) {
-                    // Wait for `task` to complete.
-                    _ = await dequeuedTask.result
-
-                    await withSendability? { self_ in
+                waitForTask(
+                    dequeuedTask,
+                    priority: pending.priority,
+                    cleanUp: { self_ in
                         self_.dequeuedTasks.removeValue(forKey: suspendedEffectTask)
+                    },
+                    afterCleanUp: {
+                        onComplete.finish()
                     }
-                    onComplete.finish()
-                }
+                )
             }
             else {
                 onComplete.finish()
