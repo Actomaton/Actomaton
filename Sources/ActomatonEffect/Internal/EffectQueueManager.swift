@@ -737,7 +737,7 @@ private func _runTasksForwardingCancellation(
     case 1:
         if let task = tasks.first {
             await _runTaskForwardingCancellation(task)
-        } 
+        }
     default:
         await withTaskGroup(of: Void.self) { group in
             for task in tasks {
