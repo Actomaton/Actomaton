@@ -74,20 +74,31 @@ extension MealyMachine where Output: MealyOutput, Output.Action == Action
     /// until the returned `Output` contains only asynchronous remainders.
     ///
     /// Built on top of ``run(_:)``: runs the reducer once, then re-feeds each synchronous
-    /// action recursively through `send(_:)`, accumulating asynchronous remainders.
+    /// action recursively, accumulating asynchronous remainders into one output.
     ///
     /// - Returns: The combined asynchronous-remainder output. Wrappers hand this to their effect manager.
     @discardableResult
     public func send(_ action: Action) -> Output
     {
-        let initial = run(action)
-        let (syncActions, remainder) = initial.splitSynchronousActions()
-        var remainingOutputs = remainder
+        var output = run(action)
+        let syncActions = output.splitSynchronousActions()
 
-        for syncAction in syncActions {
-            let nestedRemainder = send(syncAction)
-            remainingOutputs = remainingOutputs + nestedRemainder
+        _send(actions: syncActions, accumulatedOutput: &output)
+        return output
+    }
+
+    private func _send(
+        actions: [Action],
+        accumulatedOutput: inout Output
+    )
+    {
+        for action in actions {
+            var output = run(action)
+            let syncActions = output.splitSynchronousActions()
+
+            accumulatedOutput.append(output)
+
+            _send(actions: syncActions, accumulatedOutput: &accumulatedOutput)
         }
-        return remainingOutputs
     }
 }

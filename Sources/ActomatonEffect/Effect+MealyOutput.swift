@@ -9,24 +9,25 @@ import ActomatonCore
 /// can deliver them to the caller's top-level result stream.
 extension Effect: MealyOutput
 {
-    public func splitSynchronousActions() -> (actions: [Action], remainder: Effect<Action, Emission>)
+    public mutating func splitSynchronousActions() -> [Action]
     {
         var actions: [Action] = []
-        var remainingKinds: [Effect<Action, Emission>.Kind] = []
 
-        for kind in kinds {
+        self.kinds.removeAll { kind in
             switch kind {
             case let .next(action):
                 actions.append(action)
+                return true
+
             case .single, .sequence, .emission, .cancel, .updateQueue:
-                remainingKinds.append(kind)
+                return false
             }
         }
 
-        return (actions: actions, remainder: Effect(kinds: remainingKinds))
+        return actions
     }
 
-    // `static func + (lhs:rhs:)` is already provided by `Effect`'s monoid extension.
+    // `append(_:)` is provided by `Effect`'s monoid extension.
 }
 
 /// ``Effect`` exposes its side-channel value type via ``EffectOutput`` so that
