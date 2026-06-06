@@ -731,13 +731,22 @@ private func _runTasksForwardingCancellation(
     priority: TaskPriority?
 ) async
 {
-    await withTaskGroup(of: Void.self) { group in
-        for task in tasks {
-            group.addTask(priority: priority) {
-                await _runTaskForwardingCancellation(task)
-            }
+    switch tasks.count {
+    case 0:
+        break
+    case 1:
+        if let task = tasks.first {
+            await _runTaskForwardingCancellation(task)
         }
-        await group.waitForAll()
+    default:
+        await withTaskGroup(of: Void.self) { group in
+            for task in tasks {
+                group.addTask(priority: priority) {
+                    await _runTaskForwardingCancellation(task)
+                }
+            }
+            await group.waitForAll()
+        }
     }
 }
 
