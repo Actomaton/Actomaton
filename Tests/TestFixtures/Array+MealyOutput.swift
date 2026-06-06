@@ -1,12 +1,18 @@
 import ActomatonCore
 
 /// `Array<Action>` is the simplest ``MealyOutput``: every element is itself a synchronous
-/// feedback action, the asynchronous remainder is always empty, and concatenation is the
-/// stdlib `+`.
+/// feedback action, and the asynchronous remainder is always empty.
 extension Array: MealyOutput
 {
-    public func splitSynchronousActions() -> (actions: [Element], remainder: [Element])
+    public mutating func splitSynchronousActions() -> [Element]
     {
-        (actions: self, remainder: [])
+        let actions = self
+        self.removeAll(keepingCapacity: true)
+        return actions
+    }
+
+    public mutating func append(_ other: [Element])
+    {
+        self.append(contentsOf: other)
     }
 }

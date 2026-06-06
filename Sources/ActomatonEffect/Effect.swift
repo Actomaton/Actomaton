@@ -10,7 +10,7 @@
 /// Async-effect steps produce ``Outcome`` values that may carry an action, an emission, or both.
 public struct Effect<Action, Emission>
 {
-    internal let kinds: [Kind]
+    internal var kinds: [Kind]
 }
 
 // MARK: - Public Initializers (canonical: Outcome)
@@ -659,9 +659,14 @@ extension Effect
         .init(kinds: l.kinds + r.kinds)
     }
 
+    public mutating func append(_ other: Effect)
+    {
+        self.kinds.append(contentsOf: other.kinds)
+    }
+
     public static func combine(_ effects: [Effect]) -> Effect
     {
-        effects.reduce(into: .empty, { $0 = $0 + $1 })
+        effects.reduce(into: .empty, { $0.append($1) })
     }
 
     public static func combine(_ effects: Effect...) -> Effect
