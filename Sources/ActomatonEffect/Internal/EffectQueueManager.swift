@@ -256,7 +256,8 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
 
         switch queue.effectQueuePolicy {
         case let .runNewest(maxCount):
-            // NOTE: +1 to make a space for new effect.
+            // The incoming effect must run immediately, so make room for it by
+            // cancelling the oldest queued running tasks first.
             let droppingCount = (queuedRunningTasks[effectQueue]?.count ?? 0) - maxCount + 1
             if droppingCount > 0 {
                 for _ in 0 ..< droppingCount {
@@ -282,12 +283,17 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             if currentCount >= maxCount {
                 switch overflowPolicy {
                 case .suspendNew:
-                    // Enqueue to pending buffer with a completion signal
-                    // so the original `send`'s Task can track deferred execution.
+                    // Capacity is full, so return a lightweight suspended task to
+                    // the caller now and keep the original effect context in the
+                    // pending buffer until a running task completes.
+
                     Debug.print("[checkQueuePolicy] [runOldest-suspendNew] Enqueue to pending buffer")
 
                     let (stream, continuation) = AsyncStream<Never>.makeStream()
 
+                    // The stream is finished when the pending effect is dropped or
+                    // when its later dequeued running task completes. This lets the
+                    // original `send` task represent the full deferred lifecycle.
                     let suspendedEffectTask = Task<(), Never> {
                         await withTaskCancellationHandler {
                             for await _ in stream {}
@@ -314,6 +320,9 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                             suspendedEffectTask.isCancelled
                         },
                         cleanUp: { self_ in
+                            // Cancellation while still pending removes the pending
+                            // entry; cancellation after dequeue forwards to the
+                            // actual running task via `dequeuedTasks`.
                             self_.cancelPendingEffect(suspendedEffectTask: suspendedEffectTask)
                         }
                     )
@@ -608,7 +617,12 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             let currentCount = queuedRunningTasks[effectQueue]?.count ?? 0
             guard currentCount < maxCount else { break }
 
-            let pending = pendingEffects[effectQueue]!.removeFirst()
+            // Re-check and remove through a local copy so the non-empty invariant
+            // is explicit here instead of relying on the loop condition above.
+            guard var pendings = pendingEffects[effectQueue], let pending = pendings.first else { break }
+            pendings.removeFirst()
+            pendingEffects[effectQueue] = pendings.isEmpty ? nil : pendings
+
             let time = calculateEffectTime(queue: queue)
 
             if pending.suspendedEffectTask.isCancelled {
@@ -621,6 +635,9 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                     "[dequeuePendingIfPossible] Dequeued pending effect (running: \(currentCount), maxCount: \(maxCount))"
                 )
 
+            // `makeTask` registers the dequeued task in `queuedRunningTasks`
+            // synchronously, so the next loop iteration observes the updated
+            // running count and stops when capacity is filled.
             let dequeuedTask = makeTask(
                 effectKind: pending.kind,
                 time: time,
