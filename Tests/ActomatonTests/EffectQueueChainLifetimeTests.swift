@@ -42,10 +42,16 @@ final class EffectQueueChainLifetimeTests: MainTestCase
                     }
 
                 case .second:
-                    return Effect(queue: Newest1Queue()) { context in
+                    return Effect(queue: Newest1Queue()) { _ in
                         // Suspension window: with broken bookkeeping, the evicted
-                        // ancestor's teardown cancels this descendant right here.
-                        try await context.clock.sleep(for: .ticks(1))
+                        // ancestor's teardown cancels this descendant somewhere in
+                        // these yields. Plain yields (not `context.clock.sleep`) keep
+                        // the test independent of `TEST_CLOCK`'s `TestClock`, which
+                        // nobody advances here — a clock sleep would hang CI.
+                        for _ in 0 ..< 200 {
+                            try Task.checkCancellation()
+                            await Task.yield()
+                        }
                         return .third
                     }
 
