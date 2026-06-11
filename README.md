@@ -96,7 +96,7 @@ enum Action: Sendable {
 
 typealias Environment = Void
 
-let reducer: Reducer<Action, State, Environment>
+let reducer: Reducer<Action, State, Environment, Never>
 reducer = Reducer { action, state, environment in
     switch action {
     case .increment:
@@ -108,7 +108,7 @@ reducer = Reducer { action, state, environment in
     }
 }
 
-let actomaton = Actomaton<Action, State>(
+let actomaton = Actomaton<Action, State, Never>(
     state: State(),
     reducer: reducer
 )
@@ -218,7 +218,7 @@ let reducer = Reducer { action, state, environment in
     }
 }
 
-let actomaton = Actomaton<Action, State>(
+let actomaton = Actomaton<Action, State, Never>(
     state: 0,
     reducer: reducer,
     environment: environment
@@ -330,7 +330,7 @@ let reducer = Reducer { action, state, environment in
     }
 }
 
-let actomaton = Actomaton<Action, State>(
+let actomaton = Actomaton<Action, State, Never>(
     state: .loggedOut,
     reducer: reducer,
     environment: environment
@@ -412,7 +412,7 @@ struct DelayedEffectQueue: EffectQueue {
     }
 }
 
-let reducer = Reducer<Action, State, Environment> { action, state, environment in
+let reducer = Reducer<Action, State, Environment, Never> { action, state, environment in
     switch action {
     case let .fetch(id):
         return Effect(queue: DelayedEffectQueue()) { _ in
@@ -425,7 +425,7 @@ let reducer = Reducer<Action, State, Environment> { action, state, environment i
     }
 }
 
-let actomaton = Actomaton<Action, State>(
+let actomaton = Actomaton<Action, State, Never>(
     state: State(),
     reducer: reducer,
         environment: Environment(fetch: { /* ... */ })
@@ -513,7 +513,7 @@ extension Root {
     }
 
     // NOTE: `contramap` is also called `pullback` in swift-composable-architecture.
-    static var reducer: Reducer<Action, State, Environment> {
+    static var reducer: Reducer<Action, State, Environment, Never> {
         Reducer.combine(
             Counter.reducer
                 .contramap(action: /Action.counter)
