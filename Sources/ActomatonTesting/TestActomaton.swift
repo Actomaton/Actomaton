@@ -39,7 +39,7 @@ public actor TestActomaton<Action, State, Emission>
 
     private let machine: MealyMachine<InternalAction, RuntimeState, Effect<InternalAction, Emission>>
     private let effectManager: EffectQueueManager<InternalAction, RuntimeState, Emission>
-    private let receivedActionSignal: AsyncStream<Void>
+    private let receivedActionSignal: AsyncSignal
     private var consumedReceivedActionCount: Int = 0
 
     /// Creates a `TestActomaton` from an `Effect`-based reducer.
@@ -53,8 +53,8 @@ public actor TestActomaton<Action, State, Emission>
         effectContext: EffectContext = .init(clock: ContinuousClock())
     ) where Environment: Sendable
     {
-        let receivedActionSignal = AsyncStream.makeStream(of: Void.self)
-        self.receivedActionSignal = receivedActionSignal.stream
+        let receivedActionSignal = AsyncSignal()
+        self.receivedActionSignal = receivedActionSignal
 
         typealias Reducer = MealyReducer<InternalAction, RuntimeState, (), Effect<InternalAction, Emission>>
 
@@ -78,7 +78,7 @@ public actor TestActomaton<Action, State, Emission>
                 )
 
                 return Effect<InternalAction, Emission>.fireAndForget { _ in
-                    receivedActionSignal.continuation.yield()
+                    receivedActionSignal.signal()
                 } + mappedEffect
             }
         }
@@ -417,9 +417,7 @@ extension TestActomaton
 
     private func awaitReceivedActionSignal() async -> Bool
     {
-        var iterator = self.receivedActionSignal.makeAsyncIterator()
-        let next: Void? = await iterator.next()
-        return next != nil
+        await self.receivedActionSignal.wait()
     }
 
     private var unconsumedReceivedActionsCount: Int
