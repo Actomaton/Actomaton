@@ -98,6 +98,11 @@ final class SendResultTests: MainTestCase
         // Under fail-fast aggregation the throw would cancel the sleeping sibling and "delayed"
         // would never arrive (or arrive as a CancellationError failure).
         let result = await actomaton.send(.concurrent)
+
+        // Drive the sleeping sibling's clock; without this, the effect would never
+        // complete under `TEST_CLOCK=1`.
+        await clock.advance(by: .ticks(1))
+
         let results = await result.allResults
 
         let successes = results.compactMap { try? $0.get() }
@@ -153,6 +158,11 @@ final class SendResultTests: MainTestCase
         )
 
         let result = await actomaton.send(.failEarlyAndLate)
+
+        // Drive the late effect's clock; without this, the effect would never
+        // complete under `TEST_CLOCK=1`.
+        await clock.advance(by: .ticks(1))
+
         let results = await result.allResults
 
         let failures: [TestError] = results.compactMap {
@@ -350,8 +360,8 @@ private let errorReducer = Reducer<ErrorAction, ErrorState, Void, String> { acti
         // One effect throws immediately; the sibling sleeps then emits. If the throw were to
         // cancel siblings, "delayed" would never be emitted.
         let throwing = Effect<ErrorAction, String> { _ in throw TestError() }
-        let delayed = Effect<ErrorAction, String> { _ in
-            try await Task.sleep(for: .milliseconds(50))
+        let delayed = Effect<ErrorAction, String> { context in
+            try await context.clock.sleep(for: .ticks(1))
             return .emission("delayed")
         }
         return throwing + delayed
@@ -373,8 +383,8 @@ private let errorReducer = Reducer<ErrorAction, ErrorState, Void, String> { acti
         // One effect throws immediately; a sibling throws only after sleeping across an `await`.
         // If the early failure closed the stream, the late failure would never arrive.
         let early = Effect<ErrorAction, String> { _ in throw TestError(id: 1) }
-        let late = Effect<ErrorAction, String> { _ in
-            try await Task.sleep(for: .milliseconds(50))
+        let late = Effect<ErrorAction, String> { context in
+            try await context.clock.sleep(for: .ticks(1))
             throw TestError(id: 2)
         }
         return early + late
