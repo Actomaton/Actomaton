@@ -146,6 +146,10 @@ let package = Package(
     swiftLanguageModes: [.v6]
 )
 
+// Uncomment to simulate a Linux/Wasm (no-Combine) build from macOS, or to trial
+// upcoming features package-wide. `DISABLE_COMBINE` is honored by `#if` guards
+// in ActomatonUI sources and tests.
+//
 //for target in package.targets {
 //    if target.swiftSettings == nil {
 //        target.swiftSettings = []
