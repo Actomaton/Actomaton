@@ -20,13 +20,15 @@ final class DistributedActomatonSmokeTests: XCTestCase
             actorSystem: LocalTestingDistributedActorSystem()
         )
 
+        // Await each send's effect task before the next send so the recorder's
+        // append order is deterministic (concurrent fire-and-forget effects would
+        // otherwise race, e.g. recording [1, 6, 3]).
         await actomaton.whenLocal { local in
-            local.send(1)
-            local.send(2)
-            local.send(3)
+            await local.sendLocal(1)?.value
+            await local.sendLocal(2)?.value
+            await local.sendLocal(3)?.value
         }
 
-        await recorder.waitForCount(3)
         let values = await recorder.values
         XCTAssertEqual(values, [1, 3, 6])
     }
@@ -39,12 +41,5 @@ private actor Recorder
     func append(_ value: Int)
     {
         values.append(value)
-    }
-
-    func waitForCount(_ count: Int) async
-    {
-        while values.count < count {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
     }
 }
