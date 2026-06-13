@@ -264,7 +264,9 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
 
         // Cancel any registered `SendResult` supervisors so their streams finish.
         for (_, supervisors) in sendingTasks {
-            for supervisor in supervisors { supervisor.cancel() }
+            for supervisor in supervisors {
+                supervisor.cancel()
+            }
         }
         sendingTasks.removeAll()
     }
@@ -702,7 +704,9 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
         // (its `SendResult`), not just the effect tasks sharing this `id`.
         for id in sendingTasks.keys where predicate(id.value) {
             if let supervisors = sendingTasks.removeValue(forKey: id) {
-                for supervisor in supervisors { supervisor.cancel() }
+                for supervisor in supervisors {
+                    supervisor.cancel()
+                }
             }
         }
     }
