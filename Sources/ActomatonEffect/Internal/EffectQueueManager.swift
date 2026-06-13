@@ -149,8 +149,8 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
     }
 
     package func processSendOutput(
-        id: (any EffectID)?,
         _ output: Effect<Action, Emission>,
+        id: (any EffectID)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     ) -> SendResult<Emission>

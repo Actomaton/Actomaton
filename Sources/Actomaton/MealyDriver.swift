@@ -65,7 +65,7 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
     }
 
     /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
-    /// to ``EffectManager/processSendOutput(id:_:priority:tracksFeedbacks:)``.
+    /// to ``EffectManager/processSendOutput(_:id:priority:tracksFeedbacks:)``.
     ///
     /// The reducer is run synchronously under the mutex; the asynchronous-remainder output
     /// is handed to the effect manager *after* the mutex is released, so the manager's
@@ -91,16 +91,16 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
     ///   without cancelling sibling effects) and a `cancel()` handle that aborts the entire chain.
     @discardableResult
     public func send(
-        id: (any EffectID)? = nil,
         _ action: Action,
+        id: (any EffectID)? = nil,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
     ) -> SendResult<Emission>
     {
         let output = mutex.withLock { _ in machine.send(action) }
         return effectManager.processSendOutput(
-            id: id,
             output,
+            id: id,
             priority: priority,
             tracksFeedbacks: tracksFeedbacks
         )

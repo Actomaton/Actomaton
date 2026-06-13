@@ -89,8 +89,8 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
     ///   ``SendResult`` exactly as ``SendResult/cancel()`` would — in addition to cancelling any
     ///   effect tasks sharing that `id`.
     func processSendOutput(
-        id: (any EffectID)?,
         _ output: Output,
+        id: (any EffectID)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
     ) -> SendResult<Output.Emission>

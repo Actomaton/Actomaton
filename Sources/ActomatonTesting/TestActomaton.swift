@@ -147,8 +147,8 @@ public actor TestActomaton<Action, State, Emission>
     /// chain or cancel it explicitly.
     @discardableResult
     public func send(
-        id: (any EffectID)? = nil,
         _ action: Action,
+        id: (any EffectID)? = nil,
         assert: ((_ state: inout State) -> Void)? = nil,
         timeout: Duration = .seconds(1),
         fileID: StaticString = #fileID,
@@ -188,8 +188,8 @@ public actor TestActomaton<Action, State, Emission>
 
         let output = self.machine.send(.send(action))
         let sendResult = self.effectManager.processSendOutput(
-            id: id,
             output,
+            id: id,
             priority: nil,
             tracksFeedbacks: true
         )

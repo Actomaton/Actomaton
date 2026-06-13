@@ -30,7 +30,7 @@ final class SendResultIDCancellationTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(id: TimerID(), .start)
+        let result = await actomaton.send(.start, id: TimerID())
 
         await clock.advance(by: .ticks(0.1))
 
@@ -57,7 +57,7 @@ final class SendResultIDCancellationTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(id: TimerID(), .start)
+        let result = await actomaton.send(.start, id: TimerID())
 
         await clock.advance(by: .ticks(0.1))
 
@@ -80,8 +80,8 @@ final class SendResultIDCancellationTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let first = await actomaton.send(id: TimerID(), .start)
-        let second = await actomaton.send(id: TimerID(), .start)
+        let first = await actomaton.send(.start, id: TimerID())
+        let second = await actomaton.send(.start, id: TimerID())
 
         await clock.advance(by: .ticks(0.1))
 
@@ -99,7 +99,7 @@ final class SendResultIDCancellationTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(id: ChainID(), .feedbackRoot, tracksFeedbacks: true)
+        let result = await actomaton.send(.feedbackRoot, id: ChainID(), tracksFeedbacks: true)
 
         await clock.advance(by: .ticks(1.5))
         assertEqual(await actomaton.state.isChildStarted, true)

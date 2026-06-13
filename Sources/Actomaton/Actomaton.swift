@@ -52,7 +52,7 @@ public actor Actomaton<Action, State, Emission>
     }
 
     /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
-    /// to ``EffectManager/processSendOutput(id:_:priority:tracksFeedbacks:)``.
+    /// to ``EffectManager/processSendOutput(_:id:priority:tracksFeedbacks:)``.
     ///
     /// - Parameters:
     ///   - id:
@@ -74,16 +74,16 @@ public actor Actomaton<Action, State, Emission>
     ///   without cancelling sibling effects) and a `cancel()` handle that aborts the entire chain.
     @discardableResult
     public func send(
-        id: (any EffectID)? = nil,
         _ action: Action,
+        id: (any EffectID)? = nil,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
     ) -> SendResult<Emission>
     {
         let output = machine.send(action)
         return effectManager.processSendOutput(
-            id: id,
             output,
+            id: id,
             priority: priority,
             tracksFeedbacks: tracksFeedbacks
         )
