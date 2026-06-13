@@ -20,8 +20,7 @@
 /// Use ``isCancelled`` to disambiguate the two clean-finish cases. Cancellation is **not** reported
 /// as a `.failure` element.
 ///
-public struct SendResult<Emission>: AsyncSequence, Sendable
-    where Emission: Sendable
+public struct SendResult<Emission>: AsyncSequence
 {
     public typealias Element = Result<Emission, any Error>
     public typealias AsyncIterator = AsyncStream<Result<Emission, any Error>>.AsyncIterator
@@ -126,3 +125,5 @@ public struct SendResult<Emission>: AsyncSequence, Sendable
         for await _ in self {}
     }
 }
+
+extension SendResult: Sendable where Emission: Sendable {}

@@ -12,7 +12,7 @@ import ActomatonEffect
 /// whose `AsyncSequence` of `Emission` values is produced by the triggered effects'
 /// synchronous `.emit` kinds and async `Outcome` emissions.
 public actor Actomaton<Action, State, Emission>
-    where Action: Sendable, Emission: Sendable
+    where Action: Sendable
 {
     private let machine: MealyMachine<Action, State, Effect<Action, Emission>>
 
@@ -52,9 +52,14 @@ public actor Actomaton<Action, State, Emission>
     }
 
     /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
-    /// to ``EffectManager/processOutput(_:priority:tracksFeedbacks:)``.
+    /// to ``EffectManager/processSendOutput(id:_:priority:tracksFeedbacks:)``.
     ///
     /// - Parameters:
+    ///   - id:
+    ///     Optional cancellation identifier for the whole `send`. When non-`nil`, the returned
+    ///     ``SendResult`` is registered under `id`, so a reducer-side ``Effect/cancel(id:)``
+    ///     (or ``Effect/cancel(ids:)``) matching `id` cancels this ``SendResult`` exactly as
+    ///     ``SendResult/cancel()`` would — in addition to cancelling effect tasks sharing `id`.
     ///   - priority:
     ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
     ///   - tracksFeedbacks:
@@ -69,13 +74,15 @@ public actor Actomaton<Action, State, Emission>
     ///   without cancelling sibling effects) and a `cancel()` handle that aborts the entire chain.
     @discardableResult
     public func send(
+        id: (any EffectID)? = nil,
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
     ) -> SendResult<Emission>
     {
         let output = machine.send(action)
-        return effectManager.processOutput(
+        return effectManager.processSendOutput(
+            id: id,
             output,
             priority: priority,
             tracksFeedbacks: tracksFeedbacks

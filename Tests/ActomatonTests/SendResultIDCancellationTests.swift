@@ -1,0 +1,197 @@
+import Actomaton
+import XCTest
+
+/// Tests for cancelling a whole `send` (its ``SendResult``) via a reducer-side `Effect.cancel(id:)`,
+/// enabled by registering the `SendResult` through `send(id:)`.
+///
+/// The triggered effect itself carries **no** `id` here, so cancellation flows purely through the
+/// `SendResult` registered under the `send`-level `id` → its supervisor → the underlying effect.
+final class SendResultIDCancellationTests: MainTestCase
+{
+    private var flags = Flags()
+
+    private actor Flags
+    {
+        var isCancelled = false
+
+        func markCancelled()
+        {
+            isCancelled = true
+        }
+    }
+
+    override func setUp() async throws
+    {
+        flags = Flags()
+    }
+
+    /// `Effect.cancel(id:)` matching the `send`-id cancels the `SendResult` (like `SendResult.cancel()`).
+    func test_effectCancel_cancelsSendResult() async throws
+    {
+        let actomaton = makeActomaton()
+
+        let result = await actomaton.send(id: TimerID(), .start)
+
+        await clock.advance(by: .ticks(0.1))
+
+        await actomaton.send(.stop) // -> Effect.cancel(id: TimerID())
+        await result.completion()
+
+        XCTAssertTrue(
+            result.isCancelled,
+            "`Effect.cancel(id:)` matching the registered send-id cancels the `SendResult`."
+        )
+
+        await clock.advance(by: .ticks(2))
+
+        let isCancelled = await flags.isCancelled
+        XCTAssertTrue(
+            isCancelled,
+            "Supervisor teardown cancels the underlying effect, so `ifCancelled` runs."
+        )
+        assertEqual(await actomaton.state.isFinished, false)
+    }
+
+    /// A non-matching `Effect.cancel(id:)` leaves the `SendResult` running to natural completion.
+    func test_effectCancel_differentID_doesNotCancelSendResult() async throws
+    {
+        let actomaton = makeActomaton()
+
+        let result = await actomaton.send(id: TimerID(), .start)
+
+        await clock.advance(by: .ticks(0.1))
+
+        await actomaton.send(.stopOther) // -> Effect.cancel(id: OtherID())
+        await settle()
+
+        XCTAssertFalse(result.isCancelled, "A different id must not cancel this SendResult.")
+
+        await clock.advance(by: .ticks(1))
+        await result.completion()
+
+        XCTAssertFalse(result.isCancelled)
+        let isCancelled = await flags.isCancelled
+        XCTAssertFalse(isCancelled)
+        assertEqual(await actomaton.state.isFinished, true)
+    }
+
+    /// Multiple `send(id:)` sharing the same id are all cancelled together by one `Effect.cancel(id:)`.
+    func test_effectCancel_cancelsAllSendResultsSharingID() async throws
+    {
+        let actomaton = makeActomaton()
+
+        let first = await actomaton.send(id: TimerID(), .start)
+        let second = await actomaton.send(id: TimerID(), .start)
+
+        await clock.advance(by: .ticks(0.1))
+
+        await actomaton.send(.stop)
+        await first.completion()
+        await second.completion()
+
+        XCTAssertTrue(first.isCancelled)
+        XCTAssertTrue(second.isCancelled)
+    }
+
+    /// With `tracksFeedbacks: true`, cancelling the registered send-id tears down the whole feedback
+    /// chain — the same whole-chain semantics as `SendResult.cancel()`.
+    func test_effectCancel_tracksFeedbacks_tearsDownWholeChain() async throws
+    {
+        let actomaton = makeActomaton()
+
+        let result = await actomaton.send(id: ChainID(), .feedbackRoot, tracksFeedbacks: true)
+
+        await clock.advance(by: .ticks(1.5))
+        assertEqual(await actomaton.state.isChildStarted, true)
+
+        await actomaton.send(.stopChain) // -> Effect.cancel(id: ChainID())
+        await result.completion()
+
+        XCTAssertTrue(result.isCancelled)
+
+        await clock.advance(by: .ticks(2))
+        assertEqual(await actomaton.state.isChainFinished, false)
+    }
+
+    private func makeActomaton() -> Actomaton<Action, State, Never>
+    {
+        Actomaton<Action, State, Never>(
+            state: State(),
+            reducer: Reducer { [flags] action, state, _ in
+                switch action {
+                case .start:
+                    return Effect { context in
+                        try await context.clock.sleep(for: .ticks(1)) {
+                            .finished
+                        } ifCancelled: {
+                            await flags.markCancelled()
+                            return nil
+                        }
+                    }
+
+                case .finished:
+                    state.isFinished = true
+                    return .empty
+
+                case .stop:
+                    return Effect.cancel(id: TimerID())
+
+                case .stopOther:
+                    return Effect.cancel(id: OtherID())
+
+                case .feedbackRoot:
+                    return Effect { context in
+                        try await context.clock.sleep(for: .ticks(1)) {
+                            .feedbackChild
+                        } ifCancelled: {
+                            return nil
+                        }
+                    }
+
+                case .feedbackChild:
+                    state.isChildStarted = true
+                    return Effect { context in
+                        try await context.clock.sleep(for: .ticks(1)) {
+                            .feedbackFinished
+                        } ifCancelled: {
+                            return nil
+                        }
+                    }
+
+                case .feedbackFinished:
+                    state.isChainFinished = true
+                    return .empty
+
+                case .stopChain:
+                    return Effect.cancel(id: ChainID())
+                }
+            },
+            effectContext: effectContext
+        )
+    }
+}
+
+// MARK: - Private
+
+private enum Action: Sendable
+{
+    case start
+    case finished
+    case stop
+    case stopOther
+    case feedbackRoot
+    case feedbackChild
+    case feedbackFinished
+    case stopChain
+}
+
+private struct State: Equatable, Sendable
+{
+    var isFinished = false
+    var isChildStarted = false
+    var isChainFinished = false
+}
+
+private struct TimerID: EffectID {}
+private struct OtherID: EffectID {}
+private struct ChainID: EffectID {}

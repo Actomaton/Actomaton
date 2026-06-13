@@ -30,6 +30,15 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
 
     // MARK: - Task tracking
 
+    /// ``SendResult`` supervisors registered by `send`-level `id`, so a reducer-side
+    /// `Effect.cancel(id:)` can cancel a whole `send` (its `SendResult`) just like it cancels an
+    /// effect task sharing that `id`. Cancelling a registered supervisor cancels its `SendResult`.
+    ///
+    /// - Note: The supervisor `Task` is its own identity key (it is `Hashable`), exactly like
+    ///   ``runningTasks`` holds a `Set` of tasks per ``_EffectID`` — so multiple `send(id:)` calls
+    ///   sharing the same `id` are all cancelled together, and each deregisters itself on completion.
+    private var sendingTasks: [_EffectID: Set<Task<Void, Never>>] = [:]
+
     /// Effect-identified running tasks for manual cancellation or on-deinit cancellation.
     /// - Note: Multiple effects can have same ``_EffectID``.
     private var runningTasks: [_EffectID: Set<WorkTask>] = [:]
@@ -139,6 +148,69 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
         }
     }
 
+    package func processSendOutput(
+        id: (any EffectID)?,
+        _ output: Effect<Action, Emission>,
+        priority: TaskPriority?,
+        tracksFeedbacks: Bool
+    ) -> SendResult<Emission>
+        where Emission: Sendable
+    {
+        let (stream, continuation) = AsyncStream<Result<Emission, any Error>>.makeStream()
+        let emit: @Sendable (Result<Emission, any Error>) -> Void = { continuation.yield($0) }
+
+        let processingTask = self.processOutput(
+            output,
+            priority: priority,
+            tracksFeedbacks: tracksFeedbacks,
+            emit: emit
+        )
+
+        // Stream-finishing supervisor. Effect errors are surfaced in-band as `.failure` elements
+        // by each effect task, and the chain task swallows cancellation, so the supervisor just
+        // awaits the chain and finishes the stream:
+        //
+        // - chain completes (success or in-band failures already delivered) -> finish cleanly.
+        // - supervisor cancelled — via `SendResult.cancel()` OR a reducer-side `Effect.cancel(id:)`
+        //   matching the registered `id` — -> propagate cancellation to the chain, then finish.
+        let supervisor = Task<Void, Never>(priority: priority) { @concurrent in
+            await withTaskCancellationHandler {
+                await processingTask?.value
+                continuation.finish()
+            } onCancel: {
+                processingTask?.cancel()
+            }
+        }
+
+        if let id {
+            registerSendingTask(id: _EffectID(id), supervisor: supervisor, priority: priority)
+        }
+
+        return SendResult(stream: stream, supervisor: supervisor)
+    }
+
+    /// Registers `supervisor`'s cancellation under `id`, so a reducer-side `Effect.cancel(id:)`
+    /// (or `Effect.cancel(ids:)`) matching `id` cancels the whole `send` — equivalent to calling
+    /// `SendResult.cancel()` — in addition to cancelling effect tasks sharing that `id`.
+    ///
+    /// Auto-deregisters when the supervisor settles (naturally or via cancellation) so that a
+    /// later reuse of the same `id` never cancels an already-finished `SendResult`.
+    private func registerSendingTask(
+        id: _EffectID,
+        supervisor: Task<Void, Never>,
+        priority: TaskPriority?
+    )
+    {
+        sendingTasks[id, default: []].insert(supervisor)
+
+        waitForTask(supervisor, priority: priority) { self_ in
+            self_.sendingTasks[id]?.remove(supervisor)
+            if self_.sendingTasks[id]?.isEmpty == true {
+                self_.sendingTasks[id] = nil
+            }
+        }
+    }
+
     private func handleTaskCompleted(
         id: _EffectID,
         task: WorkTask,
@@ -189,6 +261,12 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             }
             pendingEffects[queue] = nil
         }
+
+        // Cancel any registered `SendResult` supervisors so their streams finish.
+        for (_, supervisors) in sendingTasks {
+            for supervisor in supervisors { supervisor.cancel() }
+        }
+        sendingTasks.removeAll()
     }
 
     // MARK: - Private
@@ -617,6 +695,14 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
                         removed.onComplete.finish()
                     }
                 }
+            }
+        }
+
+        // Cancel registered `SendResult` supervisors so `Effect.cancel` reaches the whole `send`
+        // (its `SendResult`), not just the effect tasks sharing this `id`.
+        for id in sendingTasks.keys where predicate(id.value) {
+            if let supervisors = sendingTasks.removeValue(forKey: id) {
+                for supervisor in supervisors { supervisor.cancel() }
             }
         }
     }
