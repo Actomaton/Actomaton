@@ -19,7 +19,7 @@ import Synchronization
 /// ``EffectManager`` are both intentionally non-`Sendable`; the mutex supplies the
 /// serial-access invariant they require.
 public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
-    where Action: Sendable, Emission: Sendable
+    where Action: Sendable
 {
     private let machine: MealyMachine<Action, State, Effect<Action, Emission>>
 
@@ -65,13 +65,18 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
     }
 
     /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
-    /// to ``EffectManager/processOutput(_:priority:tracksFeedbacks:)``.
+    /// to ``EffectManager/processSendOutput(id:_:priority:tracksFeedbacks:)``.
     ///
     /// The reducer is run synchronously under the mutex; the asynchronous-remainder output
     /// is handed to the effect manager *after* the mutex is released, so the manager's
     /// task scheduling never re-enters the mutex from the same call stack.
     ///
     /// - Parameters:
+    ///   - id:
+    ///     Optional cancellation identifier for the whole `send`. When non-`nil`, the returned
+    ///     ``SendResult`` is registered under `id`, so a reducer-side ``Effect/cancel(id:)``
+    ///     (or ``Effect/cancel(ids:)``) matching `id` cancels this ``SendResult`` exactly as
+    ///     ``SendResult/cancel()`` would — in addition to cancelling effect tasks sharing `id`.
     ///   - priority:
     ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
     ///   - tracksFeedbacks:
@@ -86,13 +91,15 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
     ///   without cancelling sibling effects) and a `cancel()` handle that aborts the entire chain.
     @discardableResult
     public func send(
+        id: (any EffectID)? = nil,
         _ action: Action,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
     ) -> SendResult<Emission>
     {
         let output = mutex.withLock { _ in machine.send(action) }
-        return effectManager.processOutput(
+        return effectManager.processSendOutput(
+            id: id,
             output,
             priority: priority,
             tracksFeedbacks: tracksFeedbacks
