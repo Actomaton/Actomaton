@@ -4,7 +4,7 @@
 /// Queue bookkeeping is scoped to an effect's **own work** (its single/sequence
 /// execution): the slot is released — and `runNewest` eviction strikes — when the
 /// effect itself completes, NOT when its `tracksFeedbacks` descendant chain settles.
-/// The descendant chain remains tracked by `SendResult` (stream lifetime and
+/// The descendant chain remains tracked by `SendResults` (stream lifetime and
 /// `cancel()` teardown), so recursive feedback chains can safely route every
 /// generation through the same queue.
 public protocol EffectQueue: Hashable, Sendable

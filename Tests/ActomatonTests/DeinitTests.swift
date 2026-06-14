@@ -32,7 +32,7 @@ final class DeinitTests: MainTestCase
 
         weak var weakActomaton = actomaton
 
-        let result = await actomaton?.send(.run)
+        let results = await actomaton?.send(.run)
         await clock.advance(by: .ticks(1))
 
         // Deinit `actomaton`.
@@ -40,7 +40,7 @@ final class DeinitTests: MainTestCase
         XCTAssertNil(weakActomaton, "`weakActomaton` should also become `nil`.")
 
         // Wait until deinit fully completes.
-        await result?.completion()
+        await results?.completion()
 
         await settle()
 
@@ -49,9 +49,9 @@ final class DeinitTests: MainTestCase
         // NOTE:
         // Arrival timing of 2 results are almost simultaneous thus isn't guaranteed in order,
         // so will use `Set` here.
-        let results = await resultsCollector.results
+        let collectedResults = await resultsCollector.results
         XCTAssertEqual(
-            Set(results), ["Effect cancelled", "DeinitChecker deinit"],
+            Set(collectedResults), ["Effect cancelled", "DeinitChecker deinit"],
             "Running effect should be cancelled, and `DeinitChecker` should deinit."
         )
 

@@ -8,7 +8,7 @@ import ActomatonEffect
 /// ``EffectManager`` and turns the asynchronous-remainder output from ``MealyMachine`` into
 /// running Swift Concurrency tasks.
 ///
-/// `Emission` is the typed side-channel value: each `send(_:)` call returns a ``SendResult``
+/// `Emission` is the typed side-channel value: each `send(_:)` call returns a ``SendResults``
 /// whose `AsyncSequence` of `Emission` values is produced by the triggered effects'
 /// synchronous `.emit` kinds and async `Outcome` emissions.
 public actor Actomaton<Action, State, Emission>
@@ -57,19 +57,19 @@ public actor Actomaton<Action, State, Emission>
     /// - Parameters:
     ///   - id:
     ///     Optional cancellation identifier for the whole `send`. When non-`nil`, the returned
-    ///     ``SendResult`` is registered under `id`, so a reducer-side ``Effect/cancel(id:)``
-    ///     (or ``Effect/cancel(ids:)``) matching `id` cancels this ``SendResult`` exactly as
-    ///     ``SendResult/cancel()`` would — in addition to cancelling effect tasks sharing `id`.
+    ///     ``SendResults`` is registered under `id`, so a reducer-side ``Effect/cancel(id:)``
+    ///     (or ``Effect/cancel(ids:)``) matching `id` cancels this ``SendResults`` exactly as
+    ///     ``SendResults/cancel()`` would — in addition to cancelling effect tasks sharing `id`.
     ///   - priority:
     ///     Priority of the task. If `nil`, the priority will come from `Task.currentPriority`.
     ///   - tracksFeedbacks:
-    ///     If `true`, the returned ``SendResult`` will also track feedback effects triggered by
+    ///     If `true`, the returned ``SendResults`` will also track feedback effects triggered by
     ///     next actions — so its `AsyncSequence` stays open until those downstream chains
     ///     complete, and recursive ``Effect/Outcome/emit`` values flow into the same stream.
     ///     Default is `false`.
     ///
     /// - Returns:
-    ///   A ``SendResult`` exposing both a non-throwing `AsyncSequence` of
+    ///   A ``SendResults`` exposing both a non-throwing `AsyncSequence` of
     ///   `Result<Emission, any Error>` elements (effect errors are surfaced in-band as `.failure`
     ///   without cancelling sibling effects) and a `cancel()` handle that aborts the entire chain.
     @discardableResult
@@ -78,7 +78,7 @@ public actor Actomaton<Action, State, Emission>
         id: (any EffectID)? = nil,
         priority: TaskPriority? = nil,
         tracksFeedbacks: Bool = false
-    ) -> SendResult<Emission>
+    ) -> SendResults<Emission>
     {
         let output = machine.send(action)
         return effectManager.processSendOutput(
@@ -92,7 +92,7 @@ public actor Actomaton<Action, State, Emission>
     /// Reducer-side dispatch used internally by the recursive feedback path threaded through
     /// ``EffectManager``'s `sendAction` callback. The `emit` parameter is the original caller's
     /// emission sink, so all `Emission` values produced by downstream effects flow into the
-    /// single ``SendResult`` returned by the public `send`.
+    /// single ``SendResults`` returned by the public `send`.
     private func sendInternal(
         _ action: Action,
         priority: TaskPriority?,

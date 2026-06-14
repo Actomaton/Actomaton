@@ -269,12 +269,12 @@ final class EffectStreamTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.start)
+        let results = await actomaton.send(.start)
 
         await clock.advance(by: .ticks(2.6))
 
         // Should NOT hang — `autoFinish: true` calls `continuation.finish()` on closure return.
-        await result.completion()
+        await results.completion()
 
         assertEqual(await actomaton.state, 2)
     }
@@ -357,18 +357,18 @@ final class EffectStreamTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.start)
+        let results = await actomaton.send(.start)
 
         await clock.advance(by: .ticks(2.6))
         assertEqual(await actomaton.state, 2)
 
-        // Stream did not finish on its own — `result.completion()` would hang here.
-        XCTAssertFalse(result.isCancelled)
+        // Stream did not finish on its own — `results.completion()` would hang here.
+        XCTAssertFalse(results.isCancelled)
 
         // Explicit cancellation is required to complete the effect.
         await actomaton.send(.stop)
 
-        await result.completion()
+        await results.completion()
 
         assertEqual(await actomaton.state, 2)
     }
@@ -400,11 +400,11 @@ final class EffectStreamTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.start)
+        let results = await actomaton.send(.start)
 
         await clock.advance(by: .ticks(1.3))
 
-        let errors = await result.errors
+        let errors = await results.errors
         guard let error = errors.first as? StreamError else {
             return XCTFail("Should receive StreamError from the closure.")
         }

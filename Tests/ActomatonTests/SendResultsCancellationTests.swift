@@ -1,8 +1,8 @@
 import Actomaton
 import XCTest
 
-/// Tests for `SendResult.cancel()` cascading into the actual effect tasks.
-final class SendResultCancellationTests: MainTestCase
+/// Tests for `SendResults.cancel()` cascading into the actual effect tasks.
+final class SendResultsCancellationTests: MainTestCase
 {
     private var flags = Flags()
 
@@ -49,11 +49,11 @@ final class SendResultCancellationTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(.topLevel)
+        let results = await actomaton.send(.topLevel)
 
         await clock.advance(by: .ticks(0.1))
-        result.cancel()
-        await result.completion()
+        results.cancel()
+        await results.completion()
 
         await clock.advance(by: .ticks(2))
 
@@ -66,13 +66,13 @@ final class SendResultCancellationTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(.feedbackRoot, tracksFeedbacks: true)
+        let results = await actomaton.send(.feedbackRoot, tracksFeedbacks: true)
 
         await clock.advance(by: .ticks(1.5))
         assertEqual(await actomaton.state.isFeedbackChildStarted, true)
 
-        result.cancel()
-        await result.completion()
+        results.cancel()
+        await results.completion()
 
         await clock.advance(by: .ticks(2))
 

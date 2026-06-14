@@ -76,22 +76,22 @@ public protocol EffectManager<Action, State, Output>: SendableMetatype
     ) -> Task<(), Never>?
 
     /// Processes the top-level `send` output and wraps its emitted side-channel values in a
-    /// ``SendResult``.
+    /// ``SendResults``.
     ///
     /// This is the entry point for public `send` calls (as opposed to recursive feedback, which
     /// keeps using the primitive ``processOutput(_:priority:tracksFeedbacks:emit:)`` overload so
-    /// all downstream emissions flow into the original caller's single ``SendResult`` stream).
+    /// all downstream emissions flow into the original caller's single ``SendResults`` stream).
     ///
     /// - Parameter id:
     ///   Optional cancellation identifier for the whole `send`. When non-`nil`, the returned
-    ///   ``SendResult``'s cancellation is registered under `id`, so a reducer-side
+    ///   ``SendResults``'s cancellation is registered under `id`, so a reducer-side
     ///   ``Effect/cancel(id:)`` (or ``Effect/cancel(ids:)``) matching `id` cancels this
-    ///   ``SendResult`` exactly as ``SendResult/cancel()`` would — in addition to cancelling any
+    ///   ``SendResults`` exactly as ``SendResults/cancel()`` would — in addition to cancelling any
     ///   effect tasks sharing that `id`.
     func processSendOutput(
         _ output: Output,
         id: (any EffectID)?,
         priority: TaskPriority?,
         tracksFeedbacks: Bool
-    ) -> SendResult<Output.Emission>
+    ) -> SendResults<Output.Emission>
 }

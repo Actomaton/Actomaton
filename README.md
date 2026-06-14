@@ -339,27 +339,27 @@ let actomaton = Actomaton<Action, State, Never>(
 @main
 enum Main {
     static func test_login_logout() async {
-        var result: SendResult<Never>?
+        var results: SendResults<Never>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
-        result = await actomaton.send(.login)
+        results = await actomaton.send(.login)
         assertEqual(await actomaton.state, .loggingIn)
 
-        await result?.completion() // wait for previous effect
+        await results?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedIn)
 
-        result = await actomaton.send(.logout)
+        results = await actomaton.send(.logout)
         assertEqual(await actomaton.state, .loggingOut)
 
-        await result?.completion() // wait for previous effect
+        await results?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         XCTAssertFalse(isLoginCancelled)
     }
 
     static func test_login_forceLogout() async throws {
-        var result: SendResult<Never>?
+        var results: SendResults<Never>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -369,22 +369,22 @@ enum Main {
         // Wait for a while and interrupt by `forceLogout`.
         // Login's effect will be automatically cancelled because of same `EffectQueue`.
         try await Task.sleep(/* 1 ms */)
-        result = await actomaton.send(.forceLogout)
+        results = await actomaton.send(.forceLogout)
 
         assertEqual(await actomaton.state, .loggingOut)
 
-        await result?.completion() // wait for previous effect
+        await results?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
     }
 }
 ```
 
-Here we see the notions of `EffectQueue` and the `SendResult<Emission>` returned from `actomaton.send(...)`:
+Here we see the notions of `EffectQueue` and the `SendResults<Emission>` returned from `actomaton.send(...)`:
 
 - `EffectQueue` is for automatic cancellation or suspension of effects.
   In this example, `Newest1EffectQueue` is used so that only the newest 1 effect (`forceLogout`) will survive,
   and the rest of older queued effects (e.g. an in-flight `login`) will be automatically cancelled.
-- (Optional) `SendResult<Emission>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await result.completion()` to wait for all of them to be completed, or `result.cancel()` to cancel all. Note that `Actomaton` already manages such effects for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
+- (Optional) `SendResults<Emission>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await results.completion()` to wait for all of them to be completed, or `results.cancel()` to cancel all. Note that `Actomaton` already manages such effects for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
 
 ### Example 1-4. `EffectQueue`
 

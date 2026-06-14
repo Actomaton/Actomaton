@@ -6,7 +6,7 @@ import XCTest
 /// `tracksFeedbacks` feedback chains.
 ///
 /// Queue bookkeeping (slot release, `runNewest` eviction, `cancel(id:)`) must track an
-/// effect's **own work** only, while `SendResult` keeps tracking the whole feedback
+/// effect's **own work** only, while `SendResults` keeps tracking the whole feedback
 /// chain. When the two were conflated (one task = own work + descendant chain):
 ///
 /// 1. `runNewest(maxCount: 1)`: dispatching the *next* effect of a recursive feedback
@@ -63,8 +63,8 @@ final class EffectQueueChainLifetimeTests: MainTestCase
         )
         self.actomaton = actomaton
 
-        let result = await actomaton.send(.first, tracksFeedbacks: true)
-        await result.completion()
+        let results = await actomaton.send(.first, tracksFeedbacks: true)
+        await results.completion()
 
         assertEqual(
             await actomaton.state,
@@ -99,13 +99,13 @@ final class EffectQueueChainLifetimeTests: MainTestCase
         )
         self.actomaton = actomaton
 
-        let result = await actomaton.send(.first, tracksFeedbacks: true)
+        let results = await actomaton.send(.first, tracksFeedbacks: true)
 
         let completed = await awaitWithTimeout(.seconds(3)) {
-            await result.completion()
+            await results.completion()
         }
         if !completed {
-            result.cancel() // unwind the deadlocked chain so the test suite can proceed
+            results.cancel() // unwind the deadlocked chain so the test suite can proceed
         }
 
         XCTAssertTrue(
@@ -115,9 +115,9 @@ final class EffectQueueChainLifetimeTests: MainTestCase
         assertEqual(await actomaton.state, [.first, .second, .third])
     }
 
-    // MARK: - SendResult.cancel(): whole-chain teardown must keep working
+    // MARK: - SendResults.cancel(): whole-chain teardown must keep working
 
-    func test_sendResultCancel_stillTearsDownDescendants() async throws
+    func test_sendResultsCancel_stillTearsDownDescendants() async throws
     {
         let descendantCancelled = ResultsCollector<Bool>()
 
@@ -145,20 +145,20 @@ final class EffectQueueChainLifetimeTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.first, tracksFeedbacks: true)
+        let results = await actomaton.send(.first, tracksFeedbacks: true)
 
-        for await element in result {
+        for await element in results {
             if case .success("descendant-started") = element {
                 // The descendant effect is in flight — cancel the whole chain.
-                result.cancel()
+                results.cancel()
             }
         }
 
-        XCTAssertTrue(result.isCancelled)
+        XCTAssertTrue(results.isCancelled)
         assertEqual(
             await descendantCancelled.results,
             [true],
-            "`SendResult.cancel()` must still tear down feedback descendants (chain-task semantics are unchanged by the own-work split)."
+            "`SendResults.cancel()` must still tear down feedback descendants (chain-task semantics are unchanged by the own-work split)."
         )
         assertEqual(await actomaton.state, [.first, .second])
     }

@@ -14,8 +14,8 @@ final class EffectPriorityTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(.single, priority: .background)
-        await result.completion()
+        let results = await actomaton.send(.single, priority: .background)
+        await results.completion()
 
         assertEqual(
             await priorities.results,
@@ -27,8 +27,8 @@ final class EffectPriorityTests: MainTestCase
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(.sequence, priority: .background)
-        await result.completion()
+        let results = await actomaton.send(.sequence, priority: .background)
+        await results.completion()
 
         assertEqual(
             await priorities.results,

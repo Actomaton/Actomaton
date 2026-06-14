@@ -11,24 +11,24 @@ public struct TestActomatonTask<Emission>: Sendable
     /// as production `send` entry points.
     ///
     /// `TestActomaton` does not expose emitted values as assertions yet, but owning the
-    /// `SendResult` keeps completion and cancellation behavior aligned with `Actomaton.send`.
-    private let sendResult: SendResult<Emission>?
+    /// `SendResults` keeps completion and cancellation behavior aligned with `Actomaton.send`.
+    private let sendResults: SendResults<Emission>?
     private let timeout: Duration
 
     init(
-        sendResult: SendResult<Emission>?,
+        sendResults: SendResults<Emission>?,
         timeout: Duration
     )
     {
-        self.sendResult = sendResult
+        self.sendResults = sendResults
         self.timeout = timeout
     }
 
     /// Cancels the underlying send result and waits for it to settle.
     public func cancel() async
     {
-        self.sendResult?.cancel()
-        await self.sendResult?.completion()
+        self.sendResults?.cancel()
+        await self.sendResults?.completion()
     }
 
     /// Waits for the underlying send result to finish, throwing ``TimeoutError`` if it does not
@@ -43,10 +43,10 @@ public struct TestActomatonTask<Emission>: Sendable
     {
         let duration = timeout ?? self.timeout
 
-        guard let sendResult = self.sendResult else { return }
+        guard let sendResults = self.sendResults else { return }
 
         let results = try await _withTimeout(duration) {
-            await sendResult.allResults
+            await sendResults.allResults
         }
 
         for result in results {
@@ -59,7 +59,7 @@ public struct TestActomatonTask<Emission>: Sendable
     /// Whether the underlying send result has been cancelled.
     public var isCancelled: Bool
     {
-        self.sendResult?.isCancelled ?? true
+        self.sendResults?.isCancelled ?? true
     }
 }
 

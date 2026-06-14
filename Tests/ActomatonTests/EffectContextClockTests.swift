@@ -27,11 +27,11 @@ final class EffectContextClockTests: XCTestCase
             effectContext: EffectContext(clock: clock)
         )
 
-        let result = await actomaton.send(.start)
+        let results = await actomaton.send(.start)
         assertEqual(await actomaton.state, .running)
 
         await clock.advance(by: .ticks(1))
-        await result.completion()
+        await results.completion()
 
         assertEqual(await actomaton.state, .finished)
     }
@@ -59,11 +59,11 @@ final class EffectContextClockTests: XCTestCase
             effectContext: EffectContext(clock: clock)
         )
 
-        let result = await actomaton.send(.start)
+        let results = await actomaton.send(.start)
         assertEqual(await actomaton.state, .running)
 
         await clock.advance(by: .ticks(2))
-        await result.completion()
+        await results.completion()
 
         assertEqual(await actomaton.state, .finished)
     }

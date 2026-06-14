@@ -107,11 +107,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
 
         assertEqual(await actomaton.state, ._1)
 
-        let result = await actomaton.send(._1To2, tracksFeedbacks: false)
+        let results = await actomaton.send(._1To2, tracksFeedbacks: false)
 
         // Wait for `._1To2`'s effect only (upto `_2To3`'s next state-transition without its effect)
         await clock.advance(by: .ticks(1))
-        await result.completion()
+        await results.completion()
 
         assertEqual(
             await actomaton.state,
@@ -147,11 +147,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
         assertEqual(await actomaton.state, ._1)
 
         // Single effect, tracking feedbacks.
-        let result = await actomaton.send(._1To2, tracksFeedbacks: true)
+        let results = await actomaton.send(._1To2, tracksFeedbacks: true)
 
         // Wait for all: `._1To2`, `._2To3`, `._3To4`, `._increment`, `._4To5`, `._5To6`.
         await clock.advance(by: .ticks(6))
-        await result.completion()
+        await results.completion()
 
         assertEqual(
             await actomaton.state,
@@ -168,11 +168,11 @@ final class FeedbackTrackingTaskTests: MainTestCase
         assertEqual(await actomaton.state, ._3)
 
         // Sequence effect, tracking feedbacks.
-        let result = await actomaton.send(._3To4, tracksFeedbacks: true)
+        let results = await actomaton.send(._3To4, tracksFeedbacks: true)
 
         // Wait for all: `._3To4`, `._increment`, `._4To5`, `._5To6`.
         await clock.advance(by: .ticks(4))
-        await result.completion()
+        await results.completion()
 
         assertEqual(
             await actomaton.state,

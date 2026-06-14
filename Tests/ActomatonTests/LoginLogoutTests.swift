@@ -87,22 +87,22 @@ final class LoginLogoutTests: MainTestCase
     // `loggedOut => loggingIn => loggedIn => loggingOut => loggedOut` succeeds.
     func test_login_logout() async throws
     {
-        var result: SendResult<Never>?
+        var results: SendResults<Never>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
-        result = await actomaton.send(.login)
+        results = await actomaton.send(.login)
         assertEqual(await actomaton.state, .loggingIn)
 
         await clock.advance(by: .ticks(1))
-        await result?.completion() // wait for previous effect
+        await results?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedIn)
 
-        result = await actomaton.send(.logout)
+        results = await actomaton.send(.logout)
         assertEqual(await actomaton.state, .loggingOut)
 
         await clock.advance(by: .ticks(1))
-        await result?.completion() // wait for previous effect
+        await results?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         let isLoginCancelled = await flags.isLoginCancelled
@@ -112,7 +112,7 @@ final class LoginLogoutTests: MainTestCase
     // `loggedOut => loggingIn ==(ForceLogout)==> loggingOut => loggedOut` succeeds.
     func test_login_forceLogout() async throws
     {
-        var result: SendResult<Never>?
+        var results: SendResults<Never>?
 
         assertEqual(await actomaton.state, .loggedOut)
 
@@ -121,12 +121,12 @@ final class LoginLogoutTests: MainTestCase
 
         // Wait for a while and interrupt by `forceLogout`.
         await clock.advance(by: .ticks(0.1))
-        result = await actomaton.send(.forceLogout)
+        results = await actomaton.send(.forceLogout)
 
         assertEqual(await actomaton.state, .loggingOut)
 
         await clock.advance(by: .ticks(1))
-        await result?.completion() // wait for previous effect
+        await results?.completion() // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         let isLoginCancelled = await flags.isLoginCancelled

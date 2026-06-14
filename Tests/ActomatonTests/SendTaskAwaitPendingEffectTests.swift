@@ -132,13 +132,13 @@ private struct SuspendQueue: EffectQueue, Hashable
 private struct CompletionTimeoutError: Error {}
 
 private func awaitCompletionWithTimeout(
-    _ result: SendResult<Never>,
+    _ results: SendResults<Never>,
     timeout: Duration = .milliseconds(500)
 ) async throws
 {
     try await withThrowingTaskGroup(of: Void.self) { group in
         group.addTask {
-            await result.completion()
+            await results.completion()
         }
         group.addTask {
             try await Task.sleep(for: timeout)

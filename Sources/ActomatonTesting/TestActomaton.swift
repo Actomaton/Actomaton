@@ -181,13 +181,13 @@ public actor TestActomaton<Action, State, Emission>
                 line: line
             )
 
-            return TestActomatonTask(sendResult: nil, timeout: timeout)
+            return TestActomatonTask(sendResults: nil, timeout: timeout)
         }
 
         let expected = runtimeState.current
 
         let output = self.machine.send(.send(action))
-        let sendResult = self.effectManager.processSendOutput(
+        let sendResults = self.effectManager.processSendOutput(
             output,
             id: id,
             priority: nil,
@@ -204,7 +204,7 @@ public actor TestActomaton<Action, State, Emission>
                 file: filePath,
                 line: line
             )
-            return .init(sendResult: sendResult, timeout: timeout)
+            return .init(sendResults: sendResults, timeout: timeout)
         }
 
         self.assertStateChange(
@@ -221,7 +221,7 @@ public actor TestActomaton<Action, State, Emission>
         // `receivedActions` by `machine.send`'s recursive resolution, so the fail-fast check on the
         // next `send` sees it. Asynchronous feedback is awaited deterministically by `receive` via
         // `receivedActionSignal`, not eagerly drained here.
-        return .init(sendResult: sendResult, timeout: timeout)
+        return .init(sendResults: sendResults, timeout: timeout)
     }
 
     /// Asserts an action was received from an effect and verifies the resulting state change.

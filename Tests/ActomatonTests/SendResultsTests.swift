@@ -1,7 +1,7 @@
 import Actomaton
 import XCTest
 
-final class SendResultTests: MainTestCase
+final class SendResultsTests: MainTestCase
 {
     func test_actomatonSend_returnsEmissions() async throws
     {
@@ -11,8 +11,8 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.start, tracksFeedbacks: true)
-        let values = await result.emissions
+        let results = await actomaton.send(.start, tracksFeedbacks: true)
+        let values = await results.emissions
         let visitedActions = await actomaton.state.visitedActions
 
         XCTAssertEqual(values, ["start", "finish"])
@@ -27,8 +27,8 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = driver.send(.start, tracksFeedbacks: true)
-        let values = await result.emissions
+        let results = driver.send(.start, tracksFeedbacks: true)
+        let values = await results.emissions
 
         XCTAssertEqual(values, ["start", "finish"])
         XCTAssertEqual(driver.state.visitedActions, [.start, .finish])
@@ -46,13 +46,13 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.throwImmediately)
-        let results = await result.allResults
+        let results = await actomaton.send(.throwImmediately)
+        let allResults = await results.allResults
 
-        XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(result.isCancelled, false, "Finished by an in-band failure, not cancellation.")
-        guard case let .failure(error)? = results.first else {
-            return XCTFail("Expected a single `.failure` element, got \(results).")
+        XCTAssertEqual(allResults.count, 1)
+        XCTAssertEqual(results.isCancelled, false, "Finished by an in-band failure, not cancellation.")
+        guard case let .failure(error)? = allResults.first else {
+            return XCTFail("Expected a single `.failure` element, got \(allResults).")
         }
         XCTAssertEqual(error as? TestError, TestError())
     }
@@ -67,10 +67,10 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.emitThenThrow)
+        let results = await actomaton.send(.emitThenThrow)
 
         var collected: [Result<String, any Error>] = []
-        for await element in result {
+        for await element in results {
             collected.append(element)
         }
 
@@ -97,22 +97,22 @@ final class SendResultTests: MainTestCase
         //   - one sleeps briefly then emits "delayed"
         // Under fail-fast aggregation the throw would cancel the sleeping sibling and "delayed"
         // would never arrive (or arrive as a CancellationError failure).
-        let result = await actomaton.send(.concurrent)
+        let results = await actomaton.send(.concurrent)
 
         // Drive the sleeping sibling's clock; without this, the effect would never
         // complete under `TEST_CLOCK=1`.
         await clock.advance(by: .ticks(1))
 
-        let results = await result.allResults
+        let allResults = await results.allResults
 
-        let successes = results.compactMap { try? $0.get() }
-        let failures = results.filter { if case .failure = $0 { return true } else { return false } }
+        let successes = allResults.compactMap { try? $0.get() }
+        let failures = allResults.filter { if case .failure = $0 { return true } else { return false } }
 
         XCTAssertEqual(successes, ["delayed"], "Sibling effect must survive and emit its value.")
         XCTAssertEqual(failures.count, 1, "Exactly one effect failed in-band.")
     }
 
-    /// A single `SendResult` must be able to surface MULTIPLE `.failure` elements: one effect's
+    /// A single `SendResults` must be able to surface MULTIPLE `.failure` elements: one effect's
     /// error never terminates the stream, so every effect's error (plus all preceding emissions)
     /// is observed. A sequence emits two values then throws while a sibling single effect also
     /// throws.
@@ -124,11 +124,11 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.multipleFailures)
-        let results = await result.allResults
+        let results = await actomaton.send(.multipleFailures)
+        let allResults = await results.allResults
 
-        let successes = results.compactMap { try? $0.get() }
-        let failures: [TestError] = results.compactMap {
+        let successes = allResults.compactMap { try? $0.get() }
+        let failures: [TestError] = allResults.compactMap {
             if case let .failure(error) = $0 {
                 return error as? TestError
             }
@@ -140,7 +140,7 @@ final class SendResultTests: MainTestCase
         XCTAssertEqual(Set(successes), ["a", "b"], "All sequence emissions before the throw are delivered.")
         XCTAssertEqual(failures.count, 2, "Both effects' errors surface in-band; one `.failure` never ends the stream.")
         XCTAssertEqual(Set(failures.map(\.id)), [1, 2], "Each effect's distinct error is observed.")
-        XCTAssertFalse(result.isCancelled, "Finished by in-band failures, not cancellation.")
+        XCTAssertFalse(results.isCancelled, "Finished by in-band failures, not cancellation.")
     }
 
     /// A `.failure` arriving early must NOT close the stream: a sibling that fails only *after*
@@ -157,15 +157,15 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.failEarlyAndLate)
+        let results = await actomaton.send(.failEarlyAndLate)
 
         // Drive the late effect's clock; without this, the effect would never
         // complete under `TEST_CLOCK=1`.
         await clock.advance(by: .ticks(1))
 
-        let results = await result.allResults
+        let allResults = await results.allResults
 
-        let failures: [TestError] = results.compactMap {
+        let failures: [TestError] = allResults.compactMap {
             if case let .failure(error) = $0 {
                 return error as? TestError
             }
@@ -174,13 +174,13 @@ final class SendResultTests: MainTestCase
             }
         }
 
-        XCTAssertEqual(results.count, 2, "No `.success` elements; only the two failures.")
+        XCTAssertEqual(allResults.count, 2, "No `.success` elements; only the two failures.")
         XCTAssertEqual(
             Set(failures.map(\.id)),
             [1, 2],
             "Both failures surface — the late one arrived after the stream stayed open past the early one."
         )
-        XCTAssertFalse(result.isCancelled, "Finished by in-band failures, not cancellation.")
+        XCTAssertFalse(results.isCancelled, "Finished by in-band failures, not cancellation.")
     }
 
     /// A `CancellationError` thrown from inside an effect is swallowed (not reported as a
@@ -193,11 +193,11 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.throwCancellation)
-        let results = await result.allResults
+        let results = await actomaton.send(.throwCancellation)
+        let allResults = await results.allResults
 
-        XCTAssertTrue(results.isEmpty, "CancellationError must not surface as an in-band element.")
-        XCTAssertFalse(result.isCancelled, "The effect threw cancellation; the chain itself wasn't cancelled.")
+        XCTAssertTrue(allResults.isEmpty, "CancellationError must not surface as an in-band element.")
+        XCTAssertFalse(results.isCancelled, "The effect threw cancellation; the chain itself wasn't cancelled.")
     }
 
     func test_firstResult_returnsInBandFailure() async throws
@@ -208,9 +208,9 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.throwImmediately)
+        let results = await actomaton.send(.throwImmediately)
 
-        guard case let .failure(error)? = await result.firstResult else {
+        guard case let .failure(error)? = await results.firstResult else {
             return XCTFail("Expected first result to be an in-band failure.")
         }
 
@@ -225,10 +225,10 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = await actomaton.send(.throwImmediately)
+        let results = await actomaton.send(.throwImmediately)
 
-        await result.completion()
-        XCTAssertFalse(result.isCancelled)
+        await results.completion()
+        XCTAssertFalse(results.isCancelled)
     }
 
     func test_mealyDriverSend_singleEffectThrows_deliversInBandFailure() async throws
@@ -239,8 +239,8 @@ final class SendResultTests: MainTestCase
             effectContext: effectContext
         )
 
-        let result = driver.send(.throwImmediately)
-        let errors = await result.errors
+        let results = driver.send(.throwImmediately)
+        let errors = await results.errors
 
         XCTAssertEqual(errors.count, 1)
         XCTAssertEqual(errors.first as? TestError, TestError())
@@ -258,14 +258,14 @@ final class SendResultTests: MainTestCase
         let singleResults = await singleResult.allResults
         XCTAssertTrue(
             singleResults.isEmpty,
-            "Untracked single-effect feedback emissions must not leak into the original SendResult."
+            "Untracked single-effect feedback emissions must not leak into the original SendResults."
         )
 
         let sequenceResult = await actomaton.send(.sequenceRoot)
         let sequenceResults = await sequenceResult.allResults
         XCTAssertTrue(
             sequenceResults.isEmpty,
-            "Untracked sequence feedback emissions must not leak into the original SendResult."
+            "Untracked sequence feedback emissions must not leak into the original SendResults."
         )
     }
 
@@ -278,9 +278,9 @@ final class SendResultTests: MainTestCase
         )
         let completionFlag = CompletionFlag()
 
-        let result = await actomaton.send(.start, tracksFeedbacks: true)
+        let results = await actomaton.send(.start, tracksFeedbacks: true)
         let completionTask = Task {
-            await result.completion()
+            await results.completion()
             await completionFlag.markCompleted()
         }
 
@@ -368,7 +368,7 @@ private let errorReducer = Reducer<ErrorAction, ErrorState, Void, String> { acti
 
     case .multipleFailures:
         // A `.stream` sequence emits two values then throws (1 failure), running concurrently
-        // with a `.single` effect that also throws (another failure). The single `SendResult`
+        // with a `.single` effect that also throws (another failure). The single `SendResults`
         // must surface BOTH errors in-band along with both emissions — proving one `.failure`
         // never terminates the stream.
         let sequence = Effect<ErrorAction, String>.stream { send, _ in

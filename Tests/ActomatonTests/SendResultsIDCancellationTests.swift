@@ -1,12 +1,12 @@
 import Actomaton
 import XCTest
 
-/// Tests for cancelling a whole `send` (its ``SendResult``) via a reducer-side `Effect.cancel(id:)`,
-/// enabled by registering the `SendResult` through `send(id:)`.
+/// Tests for cancelling a whole `send` (its ``SendResults``) via a reducer-side `Effect.cancel(id:)`,
+/// enabled by registering the `SendResults` through `send(id:)`.
 ///
 /// The triggered effect itself carries **no** `id` here, so cancellation flows purely through the
-/// `SendResult` registered under the `send`-level `id` → its supervisor → the underlying effect.
-final class SendResultIDCancellationTests: MainTestCase
+/// `SendResults` registered under the `send`-level `id` → its supervisor → the underlying effect.
+final class SendResultsIDCancellationTests: MainTestCase
 {
     private var flags = Flags()
 
@@ -25,21 +25,21 @@ final class SendResultIDCancellationTests: MainTestCase
         flags = Flags()
     }
 
-    /// `Effect.cancel(id:)` matching the `send`-id cancels the `SendResult` (like `SendResult.cancel()`).
-    func test_effectCancel_cancelsSendResult() async throws
+    /// `Effect.cancel(id:)` matching the `send`-id cancels the `SendResults` (like `SendResults.cancel()`).
+    func test_effectCancel_cancelsSendResults() async throws
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(.start, id: TimerID())
+        let results = await actomaton.send(.start, id: TimerID())
 
         await clock.advance(by: .ticks(0.1))
 
         await actomaton.send(.stop) // -> Effect.cancel(id: TimerID())
-        await result.completion()
+        await results.completion()
 
         XCTAssertTrue(
-            result.isCancelled,
-            "`Effect.cancel(id:)` matching the registered send-id cancels the `SendResult`."
+            results.isCancelled,
+            "`Effect.cancel(id:)` matching the registered send-id cancels the `SendResults`."
         )
 
         await clock.advance(by: .ticks(2))
@@ -52,24 +52,24 @@ final class SendResultIDCancellationTests: MainTestCase
         assertEqual(await actomaton.state.isFinished, false)
     }
 
-    /// A non-matching `Effect.cancel(id:)` leaves the `SendResult` running to natural completion.
-    func test_effectCancel_differentID_doesNotCancelSendResult() async throws
+    /// A non-matching `Effect.cancel(id:)` leaves the `SendResults` running to natural completion.
+    func test_effectCancel_differentID_doesNotCancelSendResults() async throws
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(.start, id: TimerID())
+        let results = await actomaton.send(.start, id: TimerID())
 
         await clock.advance(by: .ticks(0.1))
 
         await actomaton.send(.stopOther) // -> Effect.cancel(id: OtherID())
         await settle()
 
-        XCTAssertFalse(result.isCancelled, "A different id must not cancel this SendResult.")
+        XCTAssertFalse(results.isCancelled, "A different id must not cancel this SendResults.")
 
         await clock.advance(by: .ticks(1))
-        await result.completion()
+        await results.completion()
 
-        XCTAssertFalse(result.isCancelled)
+        XCTAssertFalse(results.isCancelled)
         let isCancelled = await flags.isCancelled
         XCTAssertFalse(isCancelled)
         assertEqual(await actomaton.state.isFinished, true)
@@ -94,20 +94,20 @@ final class SendResultIDCancellationTests: MainTestCase
     }
 
     /// With `tracksFeedbacks: true`, cancelling the registered send-id tears down the whole feedback
-    /// chain — the same whole-chain semantics as `SendResult.cancel()`.
+    /// chain — the same whole-chain semantics as `SendResults.cancel()`.
     func test_effectCancel_tracksFeedbacks_tearsDownWholeChain() async throws
     {
         let actomaton = makeActomaton()
 
-        let result = await actomaton.send(.feedbackRoot, id: ChainID(), tracksFeedbacks: true)
+        let results = await actomaton.send(.feedbackRoot, id: ChainID(), tracksFeedbacks: true)
 
         await clock.advance(by: .ticks(1.5))
         assertEqual(await actomaton.state.isChildStarted, true)
 
         await actomaton.send(.stopChain) // -> Effect.cancel(id: ChainID())
-        await result.completion()
+        await results.completion()
 
-        XCTAssertTrue(result.isCancelled)
+        XCTAssertTrue(results.isCancelled)
 
         await clock.advance(by: .ticks(2))
         assertEqual(await actomaton.state.isChainFinished, false)
