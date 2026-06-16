@@ -346,13 +346,13 @@ enum Main {
         results = await actomaton.send(.login)
         assertEqual(await actomaton.state, .loggingIn)
 
-        await results?.completion() // wait for previous effect
+        await results?.completion // wait for previous effect
         assertEqual(await actomaton.state, .loggedIn)
 
         results = await actomaton.send(.logout)
         assertEqual(await actomaton.state, .loggingOut)
 
-        await results?.completion() // wait for previous effect
+        await results?.completion // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         XCTAssertFalse(isLoginCancelled)
@@ -373,7 +373,7 @@ enum Main {
 
         assertEqual(await actomaton.state, .loggingOut)
 
-        await results?.completion() // wait for previous effect
+        await results?.completion // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
     }
 }
@@ -384,7 +384,7 @@ Here we see the notions of `EffectQueue` and the `SendResults<Emission>` returne
 - `EffectQueue` is for automatic cancellation or suspension of effects.
   In this example, `Newest1EffectQueue` is used so that only the newest 1 effect (`forceLogout`) will survive,
   and the rest of older queued effects (e.g. an in-flight `login`) will be automatically cancelled.
-- (Optional) `SendResults<Emission>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await results.completion()` to wait for all of them to be completed, or `results.cancel()` to cancel all. Note that `Actomaton` already manages such effects for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
+- (Optional) `SendResults<Emission>` returned from `actomaton.send(action)` is another fancy way of dealing with "all the effects triggered by `action`". We can call `await results.completion` to wait for all of them to be completed, or `results.cancel()` to cancel all. Note that `Actomaton` already manages such effects for us internally, so we normally don't need to handle them by ourselves (use this as a last resort!).
 
 ### Example 1-4. `EffectQueue`
 

@@ -227,7 +227,7 @@ final class SendResultsTests: MainTestCase
 
         let results = await actomaton.send(.throwImmediately)
 
-        await results.completion()
+        await results.completion
         XCTAssertFalse(results.isCancelled)
     }
 
@@ -280,7 +280,7 @@ final class SendResultsTests: MainTestCase
 
         let results = await actomaton.send(.start, tracksFeedbacks: true)
         let completionTask = Task {
-            await results.completion()
+            await results.completion
             await completionFlag.markCompleted()
         }
 

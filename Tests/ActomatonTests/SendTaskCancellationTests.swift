@@ -113,7 +113,7 @@ final class SendTaskCancellationTests: MainTestCase
 
         // Cancel while `._2To3` is still in-flight.
         results.cancel()
-        await results.completion()
+        await results.completion
 
         // Advance well past every remaining sleep so the in-flight effect would
         // have completed had cancellation not propagated.
@@ -159,7 +159,7 @@ final class SendTaskCancellationTests: MainTestCase
         assertEqual(await actomaton.state, ._2)
 
         results.cancel()
-        await results.completion()
+        await results.completion
 
         await clock.advance(by: .ticks(10))
 
@@ -196,7 +196,7 @@ final class SendTaskCancellationTests: MainTestCase
         assertEqual(await actomaton.state, ._3)
 
         results.cancel()
-        await results.completion()
+        await results.completion
 
         await clock.advance(by: .ticks(10))
 

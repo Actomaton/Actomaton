@@ -73,9 +73,9 @@ final class DistributedGenericActionTests: XCTestCase
         let hostProxy = try GenericPeer.resolve(id: host.id, using: clientSystem)
         try await hostProxy.send(.connect(peers: [client.id]))
 
-        // `.completion()` awaits the whole effect chain, including the reverse letter to the client.
+        // `.completion` awaits the whole effect chain, including the reverse letter to the client.
         await host.whenLocal { local in
-            await local.sendLocal(.post("hello")).completion()
+            await local.sendLocal(.post("hello")).completion
         }
 
         let clientState = try await client.state

@@ -28,7 +28,7 @@ public struct TestActomatonTask<Emission>: Sendable
     public func cancel() async
     {
         self.sendResults?.cancel()
-        await self.sendResults?.completion()
+        await self.sendResults?.completion
     }
 
     /// Waits for the underlying send result to finish, throwing ``TimeoutError`` if it does not

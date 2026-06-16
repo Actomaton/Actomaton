@@ -61,7 +61,7 @@ final class SendTaskAwaitPendingEffectTests: MainTestCase
         // If the AsyncStream bridge is broken, resultB would never complete and this would hang.
         try await withThrowingTaskGroup(of: Void.self) { [clock] group in
             group.addTask {
-                await resultB.completion()
+                await resultB.completion
             }
             group.addTask {
                 // B completes at tick 6.
@@ -91,7 +91,7 @@ final class SendTaskAwaitPendingEffectTests: MainTestCase
 
         // A completes at tick 3, then B is dequeued and starts running.
         await clock.advance(by: .ticks(3.5))
-        await resultA.completion()
+        await resultA.completion
 
         guard let completedCount = await actomaton?.state.completedCount else {
             return XCTFail("Actomaton should still be alive before explicit release.")
@@ -138,7 +138,7 @@ private func awaitCompletionWithTimeout(
 {
     try await withThrowingTaskGroup(of: Void.self) { group in
         group.addTask {
-            await results.completion()
+            await results.completion
         }
         group.addTask {
             try await Task.sleep(for: timeout)

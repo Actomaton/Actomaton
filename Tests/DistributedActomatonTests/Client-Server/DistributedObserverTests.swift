@@ -38,10 +38,10 @@ final class DistributedObserverTests: XCTestCase
             actorSystem: serverSystem
         )
 
-        // Trigger the server locally; `.completion()` awaits the effect — including every awaited
+        // Trigger the server locally; `.completion` awaits the effect — including every awaited
         // `observer.receive(...)` / `observer.stateChanged(...)` round-trip to the client.
         await server.whenLocal { local in
-            await local.sendLocal(.push(observerID: observer.id)).completion()
+            await local.sendLocal(.push(observerID: observer.id)).completion
         }
 
         XCTAssertEqual(received.withLock { $0 }, emissions, "emissions pushed over the wire to the observer")

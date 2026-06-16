@@ -120,9 +120,11 @@ public struct SendResults<Emission>: AsyncSequence
 
     /// Awaits completion of the effect chain without collecting anything. Never throws —
     /// effect errors are reported in-band as `.failure` elements, not by throwing.
-    public func completion() async
+    public var completion: Void
     {
-        for await _ in self {}
+        get async {
+            for await _ in self {}
+        }
     }
 }
 

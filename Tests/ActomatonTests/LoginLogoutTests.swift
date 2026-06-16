@@ -95,14 +95,14 @@ final class LoginLogoutTests: MainTestCase
         assertEqual(await actomaton.state, .loggingIn)
 
         await clock.advance(by: .ticks(1))
-        await results?.completion() // wait for previous effect
+        await results?.completion // wait for previous effect
         assertEqual(await actomaton.state, .loggedIn)
 
         results = await actomaton.send(.logout)
         assertEqual(await actomaton.state, .loggingOut)
 
         await clock.advance(by: .ticks(1))
-        await results?.completion() // wait for previous effect
+        await results?.completion // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         let isLoginCancelled = await flags.isLoginCancelled
@@ -126,7 +126,7 @@ final class LoginLogoutTests: MainTestCase
         assertEqual(await actomaton.state, .loggingOut)
 
         await clock.advance(by: .ticks(1))
-        await results?.completion() // wait for previous effect
+        await results?.completion // wait for previous effect
         assertEqual(await actomaton.state, .loggedOut)
 
         let isLoginCancelled = await flags.isLoginCancelled

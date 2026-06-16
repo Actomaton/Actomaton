@@ -35,7 +35,7 @@ final class SendResultsIDCancellationTests: MainTestCase
         await clock.advance(by: .ticks(0.1))
 
         await actomaton.send(.stop) // -> Effect.cancel(id: TimerID())
-        await results.completion()
+        await results.completion
 
         XCTAssertTrue(
             results.isCancelled,
@@ -67,7 +67,7 @@ final class SendResultsIDCancellationTests: MainTestCase
         XCTAssertFalse(results.isCancelled, "A different id must not cancel this SendResults.")
 
         await clock.advance(by: .ticks(1))
-        await results.completion()
+        await results.completion
 
         XCTAssertFalse(results.isCancelled)
         let isCancelled = await flags.isCancelled
@@ -86,8 +86,8 @@ final class SendResultsIDCancellationTests: MainTestCase
         await clock.advance(by: .ticks(0.1))
 
         await actomaton.send(.stop)
-        await first.completion()
-        await second.completion()
+        await first.completion
+        await second.completion
 
         XCTAssertTrue(first.isCancelled)
         XCTAssertTrue(second.isCancelled)
@@ -105,7 +105,7 @@ final class SendResultsIDCancellationTests: MainTestCase
         assertEqual(await actomaton.state.isChildStarted, true)
 
         await actomaton.send(.stopChain) // -> Effect.cancel(id: ChainID())
-        await results.completion()
+        await results.completion
 
         XCTAssertTrue(results.isCancelled)
 

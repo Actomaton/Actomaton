@@ -53,7 +53,7 @@ final class SendResultsCancellationTests: MainTestCase
 
         await clock.advance(by: .ticks(0.1))
         results.cancel()
-        await results.completion()
+        await results.completion
 
         await clock.advance(by: .ticks(2))
 
@@ -72,7 +72,7 @@ final class SendResultsCancellationTests: MainTestCase
         assertEqual(await actomaton.state.isFeedbackChildStarted, true)
 
         results.cancel()
-        await results.completion()
+        await results.completion
 
         await clock.advance(by: .ticks(2))
 
@@ -91,7 +91,7 @@ final class SendResultsCancellationTests: MainTestCase
         let secondResult = await actomaton.send(.queuedSecond)
 
         secondResult.cancel()
-        await secondResult.completion()
+        await secondResult.completion
         await settle()
 
         let isQueuedSecondCancelled = await flags.isQueuedSecondCancelled
@@ -101,7 +101,7 @@ final class SendResultsCancellationTests: MainTestCase
         )
 
         await clock.advance(by: .ticks(2.5))
-        await firstResult.completion()
+        await firstResult.completion
 
         await clock.advance(by: .ticks(2))
 

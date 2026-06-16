@@ -274,7 +274,7 @@ final class EffectStreamTests: MainTestCase
         await clock.advance(by: .ticks(2.6))
 
         // Should NOT hang — `autoFinish: true` calls `continuation.finish()` on closure return.
-        await results.completion()
+        await results.completion
 
         assertEqual(await actomaton.state, 2)
     }
@@ -362,13 +362,13 @@ final class EffectStreamTests: MainTestCase
         await clock.advance(by: .ticks(2.6))
         assertEqual(await actomaton.state, 2)
 
-        // Stream did not finish on its own — `results.completion()` would hang here.
+        // Stream did not finish on its own — `results.completion` would hang here.
         XCTAssertFalse(results.isCancelled)
 
         // Explicit cancellation is required to complete the effect.
         await actomaton.send(.stop)
 
-        await results.completion()
+        await results.completion
 
         assertEqual(await actomaton.state, 2)
     }

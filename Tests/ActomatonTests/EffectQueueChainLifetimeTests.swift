@@ -64,7 +64,7 @@ final class EffectQueueChainLifetimeTests: MainTestCase
         self.actomaton = actomaton
 
         let results = await actomaton.send(.first, tracksFeedbacks: true)
-        await results.completion()
+        await results.completion
 
         assertEqual(
             await actomaton.state,
@@ -102,7 +102,7 @@ final class EffectQueueChainLifetimeTests: MainTestCase
         let results = await actomaton.send(.first, tracksFeedbacks: true)
 
         let completed = await awaitWithTimeout(.seconds(3)) {
-            await results.completion()
+            await results.completion
         }
         if !completed {
             results.cancel() // unwind the deadlocked chain so the test suite can proceed

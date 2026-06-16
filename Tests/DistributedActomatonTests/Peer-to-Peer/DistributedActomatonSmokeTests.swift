@@ -20,12 +20,12 @@ final class DistributedActomatonSmokeTests: XCTestCase
             actorSystem: LocalTestingDistributedActorSystem()
         )
 
-        // `SendResults.completion()` awaits the whole effect chain deterministically,
+        // `SendResults.completion` awaits the whole effect chain deterministically,
         // so no polling is needed before asserting.
         await actomaton.whenLocal { local in
-            await local.sendLocal(1).completion()
-            await local.sendLocal(2).completion()
-            await local.sendLocal(3).completion()
+            await local.sendLocal(1).completion
+            await local.sendLocal(2).completion
+            await local.sendLocal(3).completion
         }
 
         let values = await recorder.values

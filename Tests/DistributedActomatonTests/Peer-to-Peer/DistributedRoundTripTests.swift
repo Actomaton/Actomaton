@@ -92,10 +92,10 @@ final class DistributedRoundTripTests: XCTestCase
         let hostProxy = try ChatActomaton.resolve(id: host.id, using: clientSystem)
         try await hostProxy.send(.subscribe(peerID: client.id))
 
-        // Host posts locally; `.completion()` awaits the whole effect chain — including the
+        // Host posts locally; `.completion` awaits the whole effect chain — including the
         // reducer-driven `peer.send(.received(...))` back to the client — so no polling is needed.
         await host.whenLocal { local in
-            await local.sendLocal(.post("hello")).completion()
+            await local.sendLocal(.post("hello")).completion
         }
 
         // The follow-up `.received` committed on the client node: observation is purely local.

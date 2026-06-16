@@ -37,7 +37,7 @@ final class DistributedResolvableSinkTests: XCTestCase
         )
 
         await server.whenLocal { local in
-            await local.sendLocal(.push(receiverID: client.id)).completion()
+            await local.sendLocal(.push(receiverID: client.id)).completion
         }
 
         let clientState = try await client.state

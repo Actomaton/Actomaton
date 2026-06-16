@@ -31,7 +31,7 @@ final class EffectContextClockTests: XCTestCase
         assertEqual(await actomaton.state, .running)
 
         await clock.advance(by: .ticks(1))
-        await results.completion()
+        await results.completion
 
         assertEqual(await actomaton.state, .finished)
     }
@@ -63,7 +63,7 @@ final class EffectContextClockTests: XCTestCase
         assertEqual(await actomaton.state, .running)
 
         await clock.advance(by: .ticks(2))
-        await results.completion()
+        await results.completion
 
         assertEqual(await actomaton.state, .finished)
     }
