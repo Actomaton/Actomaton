@@ -32,6 +32,10 @@ let package = Package(
             name: "DistributedActomaton",
             targets: ["DistributedActomaton"]
         ),
+        .library(
+            name: "DistributedActomatonTesting",
+            targets: ["DistributedActomatonTesting"]
+        ),
     ],
     dependencies: {
         var deps: [Package.Dependency] = [
@@ -98,6 +102,10 @@ let package = Package(
             ]
         ),
         .target(
+            name: "DistributedActomatonTesting",
+            dependencies: []
+        ),
+        .target(
             name: "TestFixtures",
             dependencies: [
                 "Actomaton",
@@ -126,6 +134,7 @@ let package = Package(
             name: "DistributedActomatonTests",
             dependencies: [
                 "DistributedActomaton",
+                "DistributedActomatonTesting",
             ]
         ),
         .testTarget(
@@ -140,7 +149,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ReadMeTests",
-            dependencies: ["Actomaton", "ActomatonDebugging"]
+            dependencies: ["Actomaton", "ActomatonDebugging", "DistributedActomaton"]
         )
     ],
     swiftLanguageModes: [.v6]

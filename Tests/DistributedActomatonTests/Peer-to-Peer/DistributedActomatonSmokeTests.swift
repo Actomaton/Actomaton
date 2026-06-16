@@ -8,7 +8,7 @@ final class DistributedActomatonSmokeTests: XCTestCase
     {
         let recorder = Recorder()
 
-        let actomaton = DistributedActomaton<Int, Int, LocalTestingDistributedActorSystem>(
+        let actomaton = DistributedActomaton<Int, Int, Never, LocalTestingDistributedActorSystem>(
             state: 0,
             reducer: Reducer { action, state, _ in
                 state += action
@@ -20,13 +20,12 @@ final class DistributedActomatonSmokeTests: XCTestCase
             actorSystem: LocalTestingDistributedActorSystem()
         )
 
-        // Await each send's effect task before the next send so the recorder's
-        // append order is deterministic (concurrent fire-and-forget effects would
-        // otherwise race, e.g. recording [1, 6, 3]).
+        // `SendResults.completion()` awaits the whole effect chain deterministically,
+        // so no polling is needed before asserting.
         await actomaton.whenLocal { local in
-            await local.sendLocal(1)?.value
-            await local.sendLocal(2)?.value
-            await local.sendLocal(3)?.value
+            await local.sendLocal(1).completion()
+            await local.sendLocal(2).completion()
+            await local.sendLocal(3).completion()
         }
 
         let values = await recorder.values
