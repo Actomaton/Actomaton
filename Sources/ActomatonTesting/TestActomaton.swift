@@ -27,12 +27,12 @@ import XCTest
 /// ```
 ///
 /// - Note:
-///   `State: SendableMetatype` is required (in addition to `Equatable`) so that the
-///   `State: Equatable` conformance witness can be sent across isolation when `self` is captured
-///   in `@Sendable` closures (e.g. `effectManager.setUp` callbacks, `TaskGroup.addTask`).
-///   `State` values themselves do NOT need to be `Sendable`.
+///   `State: SendableMetatype` lets this actor keep state values non-`Sendable` while still using
+///   `State`'s metatype across `@Sendable` effect-manager callbacks. State comparison is required
+///   only by the assertion APIs (`send` / `receive`), so their `State: Equatable` constraint lives on
+///   those members rather than on the actor type itself.
 public actor TestActomaton<Action, State, Emission>
-    where Action: Sendable, State: Equatable & SendableMetatype, Emission: Sendable
+    where Action: Sendable, State: SendableMetatype, Emission: Sendable
 {
     private typealias InternalAction = TestActomatonAction<Action>
     private typealias RuntimeState = TestActomatonRuntimeState<Action, State>
@@ -155,6 +155,7 @@ public actor TestActomaton<Action, State, Emission>
         file filePath: StaticString = #filePath,
         line: UInt = #line
     ) async -> TestActomatonTask<Emission>
+        where State: Equatable
     {
         let runtimeState = self.machine.state
 
@@ -233,6 +234,7 @@ public actor TestActomaton<Action, State, Emission>
         file filePath: StaticString = #filePath,
         line: UInt = #line
     ) async
+        where State: Equatable
     {
         await self._receive(
             matching: isMatching,
@@ -263,6 +265,7 @@ extension TestActomaton where Action: Equatable
         file filePath: StaticString = #filePath,
         line: UInt = #line
     ) async
+        where State: Equatable
     {
         await self._receive(
             matching: { $0 == expectedAction },
@@ -298,6 +301,7 @@ extension TestActomaton
         filePath: StaticString,
         line: UInt
     ) async
+        where State: Equatable
     {
         guard await self.waitForReceivedAction(
             timeout: timeout,
@@ -466,6 +470,7 @@ extension TestActomaton
         line: UInt,
         assert: ((_ state: inout State) -> Void)?
     )
+        where State: Equatable
     {
         var expected = expected
         assert?(&expected)
