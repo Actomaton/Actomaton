@@ -138,11 +138,11 @@ struct CollectState: Codable, Equatable, Sendable {}
 
 enum CollectAction: Codable, Sendable
 {
-    case values  // sync `v0` + async `v1`
+    case values // sync `v0` + async `v1`
     case failing // sync `before` + a sibling effect that throws
-    case silent  // no outcomes
-    case ping    // emits `ping`, then feeds `.pong`
-    case pong    // emits `pong`
+    case silent // no outcomes
+    case ping // emits `ping`, then feeds `.pong`
+    case pong // emits `pong`
 }
 
 private struct CollectError: Error {}

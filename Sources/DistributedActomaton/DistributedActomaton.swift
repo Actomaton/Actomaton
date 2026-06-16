@@ -37,7 +37,8 @@ import Distributed
 /// as `Codable` ``DistributedEffectResult`` values (so they cross the wire). For truly incremental
 /// or push-based results, the host's reducer sends a
 /// *follow-up action* back to the caller — the "reverse letter" / action-broadcast pattern.
-/// Cancellation likewise travels as an ordinary action (`send(.cancelXxx)` driving a reducer-side ``Effect/cancel(id:)``).
+/// Cancellation likewise travels as an ordinary action (`send(.cancelXxx)` driving a reducer-side
+/// ``Effect/cancel(id:)``).
 public distributed actor DistributedActomaton<Action, State, Emission, ActorSystem>
     where Action: Codable & Sendable, State: Codable & Sendable,
     ActorSystem: DistributedActorSystem<any Codable>
