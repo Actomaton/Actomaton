@@ -28,14 +28,18 @@ import Distributed
 ///
 /// ## Remote observation is a non-goal
 ///
-/// A remote caller cannot stream a `send`'s emissions or await its completion: `send` returns
-/// `Void`, and a ``SendResults`` (an `AsyncSequence` backed by a local `Task`) cannot cross the
-/// wire. This is intentional. When a peer needs results back, the host's reducer sends a *follow-up
-/// action* to the caller — the "reverse letter" / action-broadcast pattern — so every streaming or
-/// observation channel stays local to whichever node owns it. Cancellation likewise travels as an
-/// ordinary action (`send(.cancelXxx)` driving a reducer-side ``Effect/cancel(id:)``).
+/// A remote caller cannot *stream* a `send`'s emissions incrementally: a ``SendResults`` (an
+/// `AsyncSequence` backed by a local `Task`) cannot cross the wire, so `send` returns `Void`. This
+/// is intentional — every live streaming/observation channel stays local to whichever node owns it.
+/// A caller that can wait for the chain to settle may instead use
+/// ``sendCollectAll(_:id:tracksFeedbacks:)`` (or ``sendCollectFirst(_:id:tracksFeedbacks:)`` for
+/// just the first outcome), which awaits the effects on the host and returns the collected outcomes
+/// as `Codable` ``DistributedEffectResult`` values (so they cross the wire). For truly incremental
+/// or push-based results, the host's reducer sends a
+/// *follow-up action* back to the caller — the "reverse letter" / action-broadcast pattern.
+/// Cancellation likewise travels as an ordinary action (`send(.cancelXxx)` driving a reducer-side ``Effect/cancel(id:)``).
 public distributed actor DistributedActomaton<Action, State, Emission, ActorSystem>
-    where Action: Codable & Sendable, State: Codable & Sendable, Emission: Codable & Sendable,
+    where Action: Codable & Sendable, State: Codable & Sendable,
     ActorSystem: DistributedActorSystem<any Codable>
 {
     private let machine: MealyMachine<Action, State, Effect<Action, Emission>>
@@ -93,6 +97,11 @@ public distributed actor DistributedActomaton<Action, State, Emission, ActorSyst
     /// remote caller observes results not through a return value but by receiving a follow-up
     /// action that the host's reducer sends back (the action-broadcast / "reverse letter" pattern).
     ///
+    /// To instead *await* the triggered effects and get their collected outcomes back across the
+    /// wire, use ``sendCollectAll(_:id:tracksFeedbacks:)`` (or ``sendCollectFirst(_:id:tracksFeedbacks:)``)
+    /// — their `Codable` ``DistributedEffectResult`` returns cross the wire, unlike the live
+    /// ``SendResults`` stream this fire-and-forget variant discards.
+    ///
     /// - Parameters:
     ///   - action: The action to deliver to the host's reducer.
     ///   - id:
@@ -106,6 +115,78 @@ public distributed actor DistributedActomaton<Action, State, Emission, ActorSyst
     )
     {
         sendLocal(action, id: id)
+    }
+
+    /// Collecting counterpart of ``send(_:id:)``: sends `action`, awaits completion of the
+    /// triggered effect chain, and returns its **collected outcomes** — successes *and* failures,
+    /// in arrival order — as serializable ``DistributedEffectResult`` values.
+    ///
+    /// With the default `tracksFeedbacks: false` this covers only the directly-triggered effects'
+    /// own work (sleep + run + feedback *dispatch*); pass `true` to also await — and collect
+    /// results from — their downstream feedback descendants.
+    ///
+    /// The actor stays reentrant while suspended awaiting the chain, so effects that hop back onto
+    /// this actor (feedback dispatch, queue bookkeeping) still make progress — no deadlock.
+    ///
+    /// `[DistributedEffectResult<Emission>]` crosses the wire because it is `Codable`. The live
+    /// ``SendResults`` `AsyncSequence` cannot, and its ``SendResults/allResults`` —
+    /// `[Result<Emission, any Error>]` — is not `Codable` either (neither `Result` nor `any Error`
+    /// is), so each element is bridged into the serializable envelope (failures stringified). This
+    /// returns the *fully collected* results once the chain settles, not an incremental stream.
+    ///
+    /// - Important: This keeps the distributed call open (suspended, not thread-blocked) for the
+    ///   entire effect duration. A remote caller therefore stays suspended until the host's effects
+    ///   settle, which can hit the actor system's call timeout for long-running effects (the effects
+    ///   keep running on the host regardless). Prefer ``send(_:id:)`` when fire-and-forget is
+    ///   acceptable.
+    ///
+    /// - Parameters:
+    ///   - action: The action to deliver to the host's reducer.
+    ///   - id: Optional cancellation tag for the whole send (see ``send(_:id:)``).
+    ///   - tracksFeedbacks:
+    ///     If `true`, also awaits and collects results from the downstream feedback chains
+    ///     triggered by next actions, not just the directly-triggered effects' own work. Default
+    ///     is `false`.
+    /// - Returns: Every outcome produced by this `action`'s effect chain, in arrival order. Empty
+    ///   if the chain produced nothing (or was cancelled before producing any).
+    public distributed func sendCollectAll(
+        _ action: Action,
+        id: DistributedSendID? = nil,
+        tracksFeedbacks: Bool = false
+    ) async -> [DistributedEffectResult<Emission>]
+        where Emission: Codable & Sendable
+    {
+        await sendLocal(action, id: id, tracksFeedbacks: tracksFeedbacks)
+            .allResults
+            .map(DistributedEffectResult.init)
+    }
+
+    /// Like ``sendCollectAll(_:id:tracksFeedbacks:)`` but returns only the **first** outcome the
+    /// effect chain produces (success or failure), as a serializable ``DistributedEffectResult``.
+    ///
+    /// Returns as soon as the first outcome arrives — unlike ``sendCollectAll(_:id:tracksFeedbacks:)``
+    /// it does not await the whole chain. The remaining effects keep running on the host
+    /// (fire-and-forget); they are neither awaited nor cancelled. Pass `id` and route a cancel action
+    /// back if you need to stop them.
+    ///
+    /// - Parameters:
+    ///   - action: The action to deliver to the host's reducer.
+    ///   - id: Optional cancellation tag for the whole send (see ``send(_:id:)``).
+    ///   - tracksFeedbacks:
+    ///     If `true`, the first outcome may also come from a downstream feedback chain, not just the
+    ///     directly-triggered effects. Default is `false`.
+    /// - Returns: The first outcome produced by this `action`'s effect chain, or `nil` if the chain
+    ///   produced nothing (or was cancelled before producing any).
+    public distributed func sendCollectFirst(
+        _ action: Action,
+        id: DistributedSendID? = nil,
+        tracksFeedbacks: Bool = false
+    ) async -> DistributedEffectResult<Emission>?
+        where Emission: Codable & Sendable
+    {
+        await sendLocal(action, id: id, tracksFeedbacks: tracksFeedbacks)
+            .firstResult
+            .map(DistributedEffectResult.init)
     }
 
     // MARK: - Local face
