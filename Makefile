@@ -18,7 +18,7 @@ WASM_SDK_URL ?= https://download.swift.org/swift-6.2.1-release/wasm-sdk/swift-6.
 WASM_SDK_CHECKSUM ?= 482b9f95462b87bedfafca94a092cf9ec4496671ca13b43745097122d20f18af
 WASM_SWIFT ?= swiftly run swift
 WASM_SWIFT_SELECTOR ?= +$(WASM_SWIFT_TOOLCHAIN)
-WASM_BUILD_TARGETS = ActomatonCore ActomatonEffect Actomaton ActomatonDebugging ActomatonTesting
+WASM_BUILD_TARGETS = ActomatonCore ActomatonEffect Actomaton ActomatonDebugging ActomatonTesting DistributedActomaton DistributedActomatonTesting
 WASM_BUILD_TARGET_FLAGS = $(foreach target,$(WASM_BUILD_TARGETS),--target $(target))
 
 # Base path after host name, required for GitHub Pages.
@@ -122,6 +122,8 @@ _docc:
 		--target ActomatonUI \
 		--target ActomatonDebugging \
 		--target ActomatonTesting \
+		--target DistributedActomaton \
+		--target DistributedActomatonTesting \
 		--transform-for-static-hosting \
 		--hosting-base-path $(DOC_HOSTING_BASE_PATH) \
 		--output-path $(DOCBUILD_OUTPUT_DIR)
