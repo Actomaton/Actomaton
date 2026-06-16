@@ -20,7 +20,7 @@ final class DistributedObserverTests: XCTestCase
         let received = Mutex<[ObserverEmission]>([])
         let states = Mutex<[ObserverState]>([])
 
-        let observer = DistributedActomatonObserver<ObserverEmission, ObserverState, InMemoryActorSystem>(
+        let observer = DistributedActomatonObserver<ObserverEmission, ObserverState>(
             actorSystem: clientSystem,
             onEmission: { emission in
                 received.withLock { $0.append(emission) }
@@ -75,7 +75,7 @@ private struct ServerEnv: Sendable
 }
 
 private typealias Server = DistributedActomaton<ServerAction, ObserverState, Never, InMemoryActorSystem>
-private typealias Observer = DistributedActomatonObserver<ObserverEmission, ObserverState, InMemoryActorSystem>
+private typealias Observer = DistributedActomatonObserver<ObserverEmission, ObserverState>
 
 private let serverReducer = Reducer<ServerAction, ObserverState, ServerEnv, Never> { action, state, env in
     switch action {
@@ -97,14 +97,14 @@ private let serverReducer = Reducer<ServerAction, ObserverState, ServerEnv, Neve
 
 // MARK: - Observer sink (local test fixture)
 
-/// Concrete generic observer sink: parameterized only by the server's `Emission`/`State` +
-/// `ActorSystem`, so the server resolves it by its concrete type (no `@Resolvable`). The closures run
-/// on the observer's node and never cross the wire. Useful when the client side is not itself a
-/// `DistributedActomaton`.
-private distributed actor DistributedActomatonObserver<Emission, State, ActorSystem>
-    where Emission: Codable & Sendable, State: Codable & Sendable,
-    ActorSystem: DistributedActorSystem<any Codable>
+/// Concrete generic observer sink: parameterized only by the server's `Emission`/`State`, so the
+/// server resolves it by its concrete type (no `@Resolvable`). The closures run on the observer's
+/// node and never cross the wire. Useful when the client side is not itself a `DistributedActomaton`.
+private distributed actor DistributedActomatonObserver<Emission, State>
+    where Emission: Codable & Sendable, State: Codable & Sendable
 {
+    typealias ActorSystem = InMemoryActorSystem
+
     let onEmission: @Sendable (Emission) -> Void
     let onStateChanged: @Sendable (State) -> Void
 
