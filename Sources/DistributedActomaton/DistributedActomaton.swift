@@ -40,17 +40,11 @@ import Distributed
 /// Cancellation likewise travels as an ordinary action (`send(.cancelXxx)` driving a reducer-side
 /// ``Effect/cancel(id:)``).
 public distributed actor DistributedActomaton<Action, State, Emission, ActorSystem>
-    where Action: Codable & Sendable, State: Codable & Sendable,
-    ActorSystem: DistributedActorSystem<any Codable>
+    where Action: Codable & Sendable, ActorSystem: DistributedActorSystem<any Codable>
 {
     private let machine: MealyMachine<Action, State, Effect<Action, Emission>>
 
     private let effectManager: any EffectManager<Action, State, Effect<Action, Emission>>
-
-    public distributed var state: State
-    {
-        machine.state
-    }
 
     /// Designated initializer that takes an explicit ``EffectManager``.
     public init(
@@ -263,5 +257,13 @@ public distributed actor DistributedActomaton<Action, State, Emission, ActorSyst
     {
         // Safe downcast from the existential storage to the conformer's concrete `Self`.
         runEffM(effectManager as! EffM)
+    }
+}
+
+extension DistributedActomaton where State: Codable & Sendable
+{
+    public distributed var state: State
+    {
+        machine.state
     }
 }
