@@ -308,8 +308,7 @@ extension TestActomaton
             fileID: fileID,
             filePath: filePath,
             line: line
-        )
-        else { return }
+        ) else { return }
 
         guard
             let (receivedAction, stateBefore, stateAfter) = await self.nextReceivedAction()

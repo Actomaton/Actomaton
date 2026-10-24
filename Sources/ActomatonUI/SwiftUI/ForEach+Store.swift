@@ -1,11 +1,11 @@
 #if !DISABLE_COMBINE && canImport(Combine) && canImport(SwiftUI)
 import SwiftUI
 
+@MainActor
 extension ForEach
 {
     /// `ForEach` for `Store` where its state is a collection of child states identified by `id` keyPath.
     /// - SeeAlso: Why `zip` is used: https://stackoverflow.com/a/63145650/666371
-    @MainActor
     public init<C, Action, Environment, InnerContent>(
         store: Store<Action, C, Environment>,
         id: KeyPath<C.Element, ID>,
@@ -41,7 +41,6 @@ extension ForEach
 
     /// `ForEach` for `Store` where its state is a collection of child states identified by `Identifiable` protocol.
     /// - SeeAlso: Why `zip` is used: https://stackoverflow.com/a/63145650/666371
-    @MainActor
     public init<C, Action, Environment, InnerContent>(
         store: Store<Action, C, Environment>,
         @ViewBuilder content: @escaping (Store<Action, C.Element, Environment>) -> InnerContent

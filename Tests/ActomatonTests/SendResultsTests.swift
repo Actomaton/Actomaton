@@ -106,7 +106,14 @@ final class SendResultsTests: MainTestCase
         let allResults = await results.allResults
 
         let successes = allResults.compactMap { try? $0.get() }
-        let failures = allResults.filter { if case .failure = $0 { return true } else { return false } }
+        let failures = allResults.filter {
+            if case .failure = $0 {
+                return true
+            }
+            else {
+                return false
+            }
+        }
 
         XCTAssertEqual(successes, ["delayed"], "Sibling effect must survive and emit its value.")
         XCTAssertEqual(failures.count, 1, "Exactly one effect failed in-band.")

@@ -140,10 +140,7 @@ public final class InMemoryActorSystem: DistributedActorSystem, Sendable
         // Remote node: returning `nil` makes the compiler synthesize a remote proxy.
         guard id.nodeID == nodeID else { return nil }
 
-        guard let actor = state.withLock({ $0.localActors[id] }) else {
-            throw InMemoryActorSystemError.actorNotFound(id)
-        }
-        guard let typed = actor as? Act else {
+        guard let actor = state.withLock({ $0.localActors[id] }), let typed = actor as? Act else {
             throw InMemoryActorSystemError.actorNotFound(id)
         }
         return typed

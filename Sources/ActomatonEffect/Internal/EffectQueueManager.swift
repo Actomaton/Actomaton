@@ -134,7 +134,9 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
             )
         }
 
-        if tasks.isEmpty { return nil }
+        if tasks.isEmpty {
+            return nil
+        }
 
         let tasks_ = tasks
 
@@ -655,8 +657,7 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
         for (effectQueue, pendings) in pendingEffects {
             guard let index = pendings.firstIndex(where: {
                 $0.suspendedEffectTask == suspendedEffectTask
-            })
-            else {
+            }) else {
                 continue
             }
 
@@ -692,10 +693,9 @@ package final class EffectQueueManager<Action, State, Emission>: EffectManager
         // Cancel pending effects.
         for (effectQueue, pendings) in pendingEffects {
             for (i, pending) in pendings.enumerated().reversed() {
-                if let effectID = pending.kind.id, predicate(effectID.value) {
-                    if let removed = pendingEffects[effectQueue]?.remove(at: i) {
-                        removed.onComplete.finish()
-                    }
+                if let effectID = pending.kind.id, predicate(effectID.value),
+                   let removed = pendingEffects[effectQueue]?.remove(at: i) {
+                    removed.onComplete.finish()
                 }
             }
         }
