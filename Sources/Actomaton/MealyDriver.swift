@@ -67,9 +67,15 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
     /// Sends `action` to the underlying ``MealyMachine`` and forwards the resulting output
     /// to ``EffectManager/processSendOutput(_:id:priority:tracksFeedbacks:)``.
     ///
-    /// The reducer is run synchronously under the mutex; the asynchronous-remainder output
-    /// is handed to the effect manager *after* the mutex is released, so the manager's
-    /// task scheduling never re-enters the mutex from the same call stack.
+    /// The reducer and the effect manager's output processing both run synchronously under
+    /// the mutex. The effect manager's bookkeeping (e.g. its running-task tables) is also
+    /// mutated by its cleanup tasks through `withSendability`, which takes the same mutex, so
+    /// `processSendOutput` must not run outside it.
+    ///
+    /// - Warning:
+    ///   The mutex is not recursive. Do not call `send` synchronously from code that runs while
+    ///   the mutex is held: the reducer, or a cancellation handler of an effect that this `send`
+    ///   cancels (e.g. via ``Effect/cancel(id:)``).
     ///
     /// - Parameters:
     ///   - id:
@@ -97,13 +103,15 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
         tracksFeedbacks: Bool = false
     ) -> SendResults<Emission>
     {
-        let output = mutex.withLock { _ in machine.send(action) }
-        return effectManager.processSendOutput(
-            output,
-            id: id,
-            priority: priority,
-            tracksFeedbacks: tracksFeedbacks
-        )
+        mutex.withLock { _ in
+            let output = machine.send(action)
+            return effectManager.processSendOutput(
+                output,
+                id: id,
+                priority: priority,
+                tracksFeedbacks: tracksFeedbacks
+            )
+        }
     }
 
     /// Reducer-side dispatch used internally by the recursive feedback path threaded through
@@ -117,13 +125,15 @@ public final class MealyDriver<Action, State, Emission>: @unchecked Sendable
         emit: @escaping @Sendable (Result<Emission, any Error>) -> Void
     ) -> Task<(), Never>?
     {
-        let output = mutex.withLock { _ in machine.send(action) }
-        return effectManager.processOutput(
-            output,
-            priority: priority,
-            tracksFeedbacks: tracksFeedbacks,
-            emit: emit
-        )
+        mutex.withLock { _ in
+            let output = machine.send(action)
+            return effectManager.processOutput(
+                output,
+                priority: priority,
+                tracksFeedbacks: tracksFeedbacks,
+                emit: emit
+            )
+        }
     }
 
     /// Runs `runEffectManager` under the driver's mutex, supplying the underlying
