@@ -1,3 +1,6 @@
+// Wasm has no `DispatchQueue` and runs single-threaded, so there is no race to test.
+#if !os(WASI)
+
 import Actomaton
 import Foundation
 import Synchronization
@@ -52,3 +55,5 @@ private struct State: Sendable
 {
     var count: Int = 0
 }
+
+#endif
