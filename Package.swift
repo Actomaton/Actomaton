@@ -48,7 +48,10 @@ let package = Package(
             deps.append(.package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.6"))
         }
         if ProcessInfo.processInfo.environment["SWIFTFORMAT"] != nil {
-            deps.append(.package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.55.3"))
+            // Pinned with `exact:` because this dependency is not recorded in `Package.resolved`:
+            // `from:` lets CI pick up each new release while local `.build` keeps an older one,
+            // and the two versions disagree on lint rules.
+            deps.append(.package(url: "https://github.com/nicklockwood/SwiftFormat", exact: "0.64.1"))
         }
         return deps
     }(),
